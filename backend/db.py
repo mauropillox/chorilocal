@@ -1,43 +1,41 @@
-#db.py: Maneja base de datos (clientes, artículos, pedidos).
-
 import sqlite3
 
-def obtener_conexion():
-    conn = sqlite3.connect('ventas.db')
-    return conn
+def conectar():
+    return sqlite3.connect("ventas.db")
 
-def inicializar_bd():
-    conn = obtener_conexion()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS clientes(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            telefono TEXT
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS articulos(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            precio REAL NOT NULL
-        )
-    ''')
+def get_pedidos():
+    con = conectar()
+    cur = con.cursor()
+    cur.execute("SELECT id, cliente, productos, fecha, pdf_generado FROM pedidos")
+    pedidos = [
+        {"id": r[0], "cliente": eval(r[1]), "productos": eval(r[2]), "fecha": r[3], "pdf_generado": bool(r[4])}
+        for r in cur.fetchall()
+    ]
+    con.close()
+    return pedidos
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pedidos(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_cliente INTEGER,
-            fecha TEXT,
-            detalles TEXT,
-            FOREIGN KEY(id_cliente) REFERENCES clientes(id)
-        )
-    ''')
+def add_pedido(pedido):
+    con = conectar()
+    cur = con.cursor()
+    cur.execute("INSERT INTO pedidos (cliente, productos, fecha, pdf_generado) VALUES (?, ?, datetime('now'), ?)",
+                (str(pedido["cliente"]), str(pedido["productos"]), False))
+    con.commit()
+    pid = cur.lastrowid
+    con.close()
+    return {"id": pid, **pedido}
 
-    conn.commit()
-    conn.close()
+def delete_pedido(pedido_id):
+    con = conectar()
+    cur = con.cursor()
+    cur.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
+    con.commit()
+    con.close()
+    return {"status": "deleted"}
 
-if __name__ == "__main__":
-    inicializar_bd()
+def update_pedido_estado(pedido_id, estado):
+    con = conectar()
+    cur = con.cursor()
+    cur.execute("UPDATE pedidos SET pdf_generado = ? WHERE id = ?", (int(estado), pedido_id))
+    con.commit()
+    con.close()
+    return {"id": pedido_id, "pdf_generado": estado}
