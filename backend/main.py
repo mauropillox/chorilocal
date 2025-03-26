@@ -1,13 +1,48 @@
-import sqlite3
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
 from datetime import datetime
+import sqlite3
 
 DB_PATH = "ventas.db"
+app = FastAPI()
+
+# Middleware para CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 def conectar():
     return sqlite3.connect(DB_PATH)
 
-# ============ CLIENTES ============
+# ======== MODELOS ========
+class Cliente(BaseModel):
+    id: int | None = None
+    nombre: str
+    telefono: str = ""
+    direccion: str = ""
 
+class Producto(BaseModel):
+    id: int | None = None
+    nombre: str
+    precio: float
+
+class ProductoConCantidad(Producto):
+    cantidad: int
+
+class Pedido(BaseModel):
+    id: int | None = None
+    cliente: Cliente
+    productos: List[ProductoConCantidad]
+    fecha: str | None = None
+    pdf_generado: bool = False
+
+# ============ ENDPOINTS CLIENTES ============
+@app.get("/clientes")
 def get_clientes():
     conn = conectar()
     cursor = conn.cursor()
@@ -16,19 +51,19 @@ def get_clientes():
     conn.close()
     return clientes
 
-def add_cliente(cliente):
+@app.post("/clientes")
+def add_cliente(cliente: Cliente):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("INSERT INTO clientes (nombre, telefono, direccion) VALUES (?, ?, ?)", 
-                   (cliente["nombre"], cliente.get("telefono", ""), cliente.get("direccion", "")))
+                   (cliente.nombre, cliente.telefono, cliente.direccion))
     conn.commit()
-    cliente_id = cursor.lastrowid
+    cliente.id = cursor.lastrowid
     conn.close()
-    cliente["id"] = cliente_id
     return cliente
 
-# ============ PRODUCTOS ============
-
+# ============ ENDPOINTS PRODUCTOS ============
+@app.get("/productos")
 def get_productos():
     conn = conectar()
     cursor = conn.cursor()
@@ -37,19 +72,19 @@ def get_productos():
     conn.close()
     return productos
 
-def add_producto(producto):
+@app.post("/productos")
+def add_producto(producto: Producto):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)", 
-                   (producto["nombre"], producto["precio"]))
+                   (producto.nombre, producto.precio))
     conn.commit()
-    producto_id = cursor.lastrowid
+    producto.id = cursor.lastrowid
     conn.close()
-    producto["id"] = producto_id
     return producto
 
-# ============ PEDIDOS ============
-
+# ============ ENDPOINTS PEDIDOS ============
+@app.get("/pedidos")
 def get_pedidos():
     conn = conectar()
     cursor = conn.cursor()
@@ -78,22 +113,25 @@ def get_pedidos():
     conn.close()
     return pedidos
 
-def add_pedido(pedido):
+@app.post("/pedidos")
+def add_pedido(pedido: Pedido):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("INSERT INTO pedidos (id_cliente, fecha, pdf_generado) VALUES (?, ?, ?)", 
-                   (pedido["cliente"]["id"], datetime.now().isoformat(), False))
+                   (pedido.cliente.id, datetime.now().isoformat(), False))
     pedido_id = cursor.lastrowid
 
-    for producto in pedido["productos"]:
+    for producto in pedido.productos:
         cursor.execute("INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad) VALUES (?, ?, ?)", 
-                       (pedido_id, producto["id"], producto["cantidad"]))
+                       (pedido_id, producto.id, producto.cantidad))
 
     conn.commit()
     conn.close()
-    return {"id": pedido_id, **pedido}
+    pedido.id = pedido_id
+    return pedido
 
-def delete_pedido(pedido_id):
+@app.delete("/pedidos/{pedido_id}")
+def delete_pedido(pedido_id: int):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM detalles_pedido WHERE id_pedido = ?", (pedido_id,))
@@ -102,10 +140,11 @@ def delete_pedido(pedido_id):
     conn.close()
     return {"ok": True}
 
-def update_pedido_estado(pedido_id, estado):
+@app.patch("/pedidos/{pedido_id}")
+def update_pedido_estado(pedido_id: int):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("UPDATE pedidos SET pdf_generado = ? WHERE id = ?", (int(estado), pedido_id))
+    cursor.execute("UPDATE pedidos SET pdf_generado = 1 WHERE id = ?", (pedido_id,))
     conn.commit()
     conn.close()
     return {"ok": True}
