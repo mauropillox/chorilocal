@@ -6,6 +6,8 @@ services:
       context: ./backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./ventas.db:/app/ventas.db
     networks:
       - app_network
 
