@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/clientes`)
+      .then(res => res.json())
+      .then(data => setClientes(data));
+  }, []);
 
   const agregarCliente = async () => {
     if (!nombre) return alert("Debe ingresar un nombre");
