@@ -38,7 +38,7 @@ export default function HistorialPedidos() {
       });
       yPosition += 10;
 
-      // Actualizar estado a generado
+      // Marcar como generado en el backend
       await fetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedido.id}`, {
         method: "PATCH"
       });
@@ -46,7 +46,7 @@ export default function HistorialPedidos() {
 
     doc.save("pedidos_seleccionados.pdf");
 
-    // Volver a cargar pedidos
+    // Recargar lista de pedidos
     const res = await fetch(`${import.meta.env.VITE_API_URL}/pedidos`);
     const data = await res.json();
     setPedidos(data);
@@ -62,7 +62,6 @@ export default function HistorialPedidos() {
 
   const pendientes = pedidos.filter(p => !p.pdf_generado);
   const generados = pedidos.filter(p => p.pdf_generado);
-
   const pedidosMostrados = activeTab === "pendientes" ? pendientes : generados;
 
   return (
@@ -70,10 +69,16 @@ export default function HistorialPedidos() {
       <h2 className="text-xl font-bold mb-4">Historial de Pedidos</h2>
 
       <div className="flex mb-4 space-x-2">
-        <button onClick={() => setActiveTab("pendientes")} className={\`px-4 py-2 rounded \${activeTab === "pendientes" ? "bg-blue-600 text-white" : "bg-gray-200"}\`}>
+        <button
+          onClick={() => setActiveTab("pendientes")}
+          className={`px-4 py-2 rounded ${activeTab === "pendientes" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+        >
           Pendientes
         </button>
-        <button onClick={() => setActiveTab("generados")} className={\`px-4 py-2 rounded \${activeTab === "generados" ? "bg-green-600 text-white" : "bg-gray-200"}\`}>
+        <button
+          onClick={() => setActiveTab("generados")}
+          className={`px-4 py-2 rounded ${activeTab === "generados" ? "bg-green-600 text-white" : "bg-gray-200"}`}
+        >
           Generados
         </button>
       </div>
