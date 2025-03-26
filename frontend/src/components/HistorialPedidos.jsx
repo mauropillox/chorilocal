@@ -7,7 +7,7 @@ export default function HistorialPedidos() {
 
   useEffect(() => {
     // Fetch the history of orders
-    fetch("http://localhost:8000/pedidos")
+    fetch(`${import.meta.env.VITE_API_URL}`/pedidos")
       .then(res => res.json())
       .then(data => setPedidos(data));
   }, []);

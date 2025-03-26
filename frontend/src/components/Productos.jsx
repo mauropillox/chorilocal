@@ -8,7 +8,7 @@ export default function Productos() {
   const [selectedProducto, setSelectedProducto] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/productos")
+    fetch(`${import.meta.env.VITE_API_URL}`/productos")
       .then(res => res.json())
       .then(data => setProductos(data));
   }, []);
@@ -21,7 +21,7 @@ export default function Productos() {
   const agregarProducto = async () => {
     if (!nombre || !precio) return alert("Debe ingresar el nombre y el precio del producto");
 
-    const res = await fetch("http://localhost:8000/productos", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}`/productos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, precio: parseFloat(precio) })

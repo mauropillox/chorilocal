@@ -8,7 +8,7 @@ export default function Clientes() {
 
   const agregarCliente = async () => {
     if (!nombre) return alert("Debe ingresar un nombre");
-    const res = await fetch("http://localhost:8000/clientes", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}`/clientes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, telefono, direccion })

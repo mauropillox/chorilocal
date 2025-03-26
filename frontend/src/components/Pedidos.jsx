@@ -8,11 +8,11 @@ export default function Pedidos() {
   const [busquedaProducto, setBusquedaProducto] = useState('');
 
   useEffect(() => {
-    fetch("http://localhost:8000/clientes")
+    fetch(`${import.meta.env.VITE_API_URL}`/clientes")
       .then(res => res.json())
       .then(data => setClientes(data));
 
-    fetch("http://localhost:8000/productos")
+    fetch(`${import.meta.env.VITE_API_URL}`/productos")
       .then(res => res.json())
       .then(data => setProductos(data));
   }, []);
@@ -41,7 +41,7 @@ export default function Pedidos() {
 
     const cliente = clientes.find(c => c.id === parseInt(clienteId));
 
-    const res = await fetch("http://localhost:8000/pedidos", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}`/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
