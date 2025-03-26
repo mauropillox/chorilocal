@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 import sqlite3
 
@@ -21,13 +21,13 @@ def conectar():
 
 # ======== MODELOS ========
 class Cliente(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     nombre: str
     telefono: str = ""
     direccion: str = ""
 
 class Producto(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     nombre: str
     precio: float
 
@@ -35,10 +35,10 @@ class ProductoConCantidad(Producto):
     cantidad: int
 
 class Pedido(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     cliente: Cliente
     productos: List[ProductoConCantidad]
-    fecha: str | None = None
+    fecha: Optional[str] = None
     pdf_generado: bool = False
 
 # ============ ENDPOINTS CLIENTES ============
