@@ -12,10 +12,11 @@ app = FastAPI()
 # CORS to allow requests from React (localhost:5173)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Permitir solicitudes desde el frontend
-    allow_methods=["*"],  # Permitir todos los métodos (GET, POST, PUT, DELETE)
-    allow_headers=["*"],  # Permitir todos los encabezados
+    allow_origins=["*"],  # o mejor: ["http://tudominio.com"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 # ---------- MODELS ----------
 
 class ClienteIn(BaseModel):
