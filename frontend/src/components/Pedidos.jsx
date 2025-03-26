@@ -8,21 +8,21 @@ export default function Pedidos() {
   const [busquedaProducto, setBusquedaProducto] = useState('');
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}`/clientes")
+    fetch(`${import.meta.env.VITE_API_URL}/clientes`)
       .then(res => res.json())
       .then(data => setClientes(data));
 
-    fetch(`${import.meta.env.VITE_API_URL}`/productos")
+    fetch(`${import.meta.env.VITE_API_URL}/productos`)
       .then(res => res.json())
       .then(data => setProductos(data));
   }, []);
-  
+
   const agregarProducto = (producto) => {
     if (!productosSeleccionados.some(p => p.id === producto.id)) {
-      setProductosSeleccionados([...productosSeleccionados, { ...producto, cantidad: 1 }]);  // Inicializamos cantidad como 1
+      setProductosSeleccionados([...productosSeleccionados, { ...producto, cantidad: 1 }]);
     }
   };
-  
+
   const cambiarCantidad = (id, cantidad) => {
     setProductosSeleccionados(productosSeleccionados.map(p =>
       p.id === id ? { ...p, cantidad: parseInt(cantidad) || 1 } : p
@@ -41,7 +41,7 @@ export default function Pedidos() {
 
     const cliente = clientes.find(c => c.id === parseInt(clienteId));
 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}`/pedidos", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/pedidos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -67,7 +67,6 @@ export default function Pedidos() {
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-blue-800">Crear Pedido</h2>
 
-      {/* Seleccionar cliente */}
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium">Seleccionar cliente:</label>
         <select
@@ -84,7 +83,6 @@ export default function Pedidos() {
         </select>
       </div>
 
-      {/* Buscar productos */}
       <div>
         <label className="text-sm font-medium">Buscar productos:</label>
         <input
@@ -96,7 +94,6 @@ export default function Pedidos() {
         />
       </div>
 
-      {/* Mostrar productos filtrados */}
       <div>
         <label className="text-sm font-medium">Productos disponibles:</label>
         <ul className="pl-4 space-y-2 mt-2">
@@ -117,7 +114,6 @@ export default function Pedidos() {
         </ul>
       </div>
 
-      {/* Lista de productos seleccionados */}
       <div>
         <h3 className="text-sm font-medium">Productos seleccionados:</h3>
         <ul className="pl-4 space-y-2 mt-2">

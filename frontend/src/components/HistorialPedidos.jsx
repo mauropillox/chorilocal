@@ -6,8 +6,7 @@ export default function HistorialPedidos() {
   const [selectedPedidos, setSelectedPedidos] = useState([]);
 
   useEffect(() => {
-    // Fetch the history of orders
-    fetch(`${import.meta.env.VITE_API_URL}`/pedidos")
+    fetch(`${import.meta.env.VITE_API_URL}/pedidos`)
       .then(res => res.json())
       .then(data => setPedidos(data));
   }, []);
@@ -23,24 +22,19 @@ export default function HistorialPedidos() {
   const generarPDF = () => {
     const doc = new jsPDF();
     let yPosition = 10;
-    
+
     selectedPedidos.forEach((pedidoId) => {
       const pedido = pedidos.find((p) => p.id === pedidoId);
-
       doc.text(`Pedido de ${pedido.cliente.nombre}`, 10, yPosition);
       yPosition += 10;
       doc.text(`Fecha: ${new Date(pedido.fecha).toLocaleDateString()}`, 10, yPosition);
       yPosition += 10;
-
       doc.text("Productos:", 10, yPosition);
       yPosition += 10;
-
       pedido.productos.forEach((p, index) => {
         doc.text(`${index + 1}. ${p.nombre} - $${p.precio} x ${p.cantidad}`, 10, yPosition);
         yPosition += 10;
       });
-
-      // Add some space between orders
       yPosition += 10;
     });
 
@@ -50,7 +44,6 @@ export default function HistorialPedidos() {
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">Historial de Pedidos</h2>
-
       <ul className="pl-4 space-y-2">
         {pedidos.map((pedido) => (
           <li key={pedido.id} className="flex justify-between items-center">
@@ -66,11 +59,7 @@ export default function HistorialPedidos() {
           </li>
         ))}
       </ul>
-
-      <button
-        onClick={generarPDF}
-        className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
-      >
+      <button onClick={generarPDF} className="bg-blue-600 text-white px-4 py-2 rounded mt-4">
         Generar PDF de Pedidos Seleccionados
       </button>
     </div>
