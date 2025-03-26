@@ -5,9 +5,9 @@ services:
     build:
       context: ./backend  # Path to your backend folder (where Dockerfile is)
     ports:
-      - "443:8000"  # Expose FastAPI on port 8000, mapped to 443 for HTTPS
+      - "8000:8000"  # Expose FastAPI backend on port 8000
     environment:
-      - DATABASE_URL=sqlite:///./test.db  # Example of environment variable for DB
+      - DATABASE_URL=sqlite:///./test.db  # Example environment variable for DB
     networks:
       - app_network  # Use a common network
 
@@ -15,9 +15,15 @@ services:
     build:
       context: ./frontend  # Path to your frontend folder (where Dockerfile is)
     ports:
-      - "80:80"  # Expose React app on port 80 (HTTP)
+      - "80:80"   # Expose frontend (React app) on HTTP port 80
+      - "443:443" # Expose frontend on HTTPS port 443
+    volumes:
+      - ./nginx_logs:/var/log/nginx  # Map a local directory for logs (optional)
     networks:
       - app_network  # Use the same network to communicate with backend
+    environment:
+      - NODE_ENV=production  # Example for React app environment setup
+      - SSL_CERT_PATH=/etc/nginx/ssl/cert.pem  # Example SSL path (optional)
 
 networks:
   app_network:
