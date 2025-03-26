@@ -2,30 +2,16 @@
 FROM node:18-alpine as builder
 
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy the React source code
 COPY . .
+ENV NODE_ENV=production
+RUN npm run build -- --mode production
 
-# Build the application
-RUN npm run build
-
-# Debugging step: List the contents of the /app directory
-RUN ls -l /app   # Check to ensure the build folder exists
-
-# Stage 2: Serve the React app using Nginx
+# Stage 2: Serve React app with Nginx
 FROM nginx:alpine
-
-# Copy the build files to Nginx's public folder
-COPY --from=builder /app/build /usr/share/nginx/html
-
-# Expose port 80 to access the app
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-
-# Run Nginx in the foreground
+EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]
