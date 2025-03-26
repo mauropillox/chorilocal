@@ -1,29 +1,55 @@
 #!/bin/bash
+set -e
 
-PROYECTO_DIR="/home/ec2-user/chorizaurio"
-
-# Si no existe el proyecto, lo clona
-if [ ! -d "$PROYECTO_DIR" ]; then
-  echo "<dd01> Clonando repositorio por primera vez..."
-  sudo git clone https://github.com/mauropillox/chorizaurio.git "$PROYECTO_DIR"
+echo "<dd01> Clonando repositorio por primera vez..."
+if [ ! -d "chorizaurio" ]; then
+    git clone https://github.com/mauropillox/chorizaurio.git
 fi
 
-cd "$PROYECTO_DIR" || exit
+cd chorizaurio
 
 echo "<ddf9> Haciendo pull desde GitHub..."
-sudo git pull origin master || exit
+git pull
 
 echo "<dd28> Deteniendo contenedores anteriores..."
-sudo docker-compose down
+docker compose down
+
+# 🔍 Verificar e inicializar la base de datos si es necesario
+echo "<db01> Verificando base de datos..."
+if [ ! -f ventas.db ]; then
+    echo "⚠️  ventas.db no encontrada. Ejecutando init_db.py..."
+    docker run --rm -v "$PWD":/app -w /app python:3.9 python init_db.py
+else
+    docker run --rm -v "$PWD":/app -w /app python:3.9 python - <<EOF
+import sqlite3, sys
+db = sqlite3.connect("ventas.db")
+c = db.cursor()
+
+def check_table_column(table, column):
+    c.execute(f"PRAGMA table_info({table})")
+    columns = [r[1] for r in c.fetchall()]
+    return column in columns
+
+try:
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pedidos'")
+    if not c.fetchone():
+        raise Exception("Tabla pedidos no existe.")
+
+    if not check_table_column("pedidos", "pdf_generado"):
+        raise Exception("Columna pdf_generado no existe en tabla pedidos.")
+except Exception as e:
+    print(f"⚠️  {e} Ejecutando init_db.py para corregir...")
+    sys.exit(42)
+EOF
+
+    if [ $? -eq 42 ]; then
+        docker run --rm -v "$PWD":/app -w /app python:3.9 python init_db.py
+    else
+        echo "✅ Base de datos OK."
+    fi
+fi
 
 echo "<dd42> Reconstruyendo e iniciando contenedores..."
-if sudo docker-compose up --build -d; then
-  echo "✅ Contenedores iniciados."
+docker compose up --build -d
 
-  echo "<dd60> Aplicando migración de base de datos..."
-  sudo docker exec chorizaurio-backend-1 python3 backend/migraciones/migrar_db.py
-
-  echo "✅ Deploy completo."
-else
-  echo "❌ Error durante el build o inicio de contenedores."
-fi
+echo "✅ Deploy completo."

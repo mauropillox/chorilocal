@@ -4,8 +4,42 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import sqlite3
+import sys
 
 DB_PATH = "ventas.db"
+
+def verificar_tablas_y_columnas():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        tablas_requeridas = {
+            "clientes": ["id", "nombre", "telefono", "direccion"],
+            "productos": ["id", "nombre", "precio"],
+            "pedidos": ["id", "id_cliente", "fecha", "pdf_generado"],
+            "detalles_pedido": ["id", "id_pedido", "id_producto", "cantidad"]
+        }
+
+        for tabla, columnas_esperadas in tablas_requeridas.items():
+            # Verificar existencia de la tabla
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (tabla,))
+            if not cursor.fetchone():
+                raise Exception(f"Tabla '{tabla}' no existe.")
+
+            # Verificar columnas de la tabla
+            cursor.execute(f"PRAGMA table_info({tabla})")
+            columnas_actuales = [r[1] for r in cursor.fetchall()]
+            for col in columnas_esperadas:
+                if col not in columnas_actuales:
+                    raise Exception(f"Falta la columna '{col}' en la tabla '{tabla}'.")
+
+    except Exception as e:
+        print(f"❌ Error en la verificación de la base de datos: {e}")
+        sys.exit(1)
+    finally:
+        conn.close()
+
+verificar_tablas_y_columnas()
+
 app = FastAPI()
 
 # Middleware para CORS
