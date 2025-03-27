@@ -9,7 +9,7 @@ import os
 from passlib.context import CryptContext
 import db  # Ahora importamos las funciones de db.py
 
-# ==== CONFIG ====
+# ==== CONFIG ==== 
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM = "HS256"
@@ -18,10 +18,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# ==== DB CHECK ====
+# ==== DB CHECK ==== 
 db.verificar_tablas_y_columnas()
 
-# ==== APP ====
+# ==== APP ==== 
 app = FastAPI()
 
 app.add_middleware(
@@ -31,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# ==== HELPERS ====
+# ==== HELPERS ==== 
 def hash_password(password: str):
     return pwd_context.hash(password)
 
@@ -51,7 +51,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
-# ==== MODELOS ====
+# ==== MODELOS ==== 
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -80,7 +80,7 @@ class Pedido(BaseModel):
     fecha: Optional[str] = None
     pdf_generado: bool = False
 
-# ==== AUTENTICACIÓN ====
+# ==== AUTENTICACIÓN ==== 
 @app.post("/register")
 def register(form_data: OAuth2PasswordRequestForm = Depends()):
     password_hash = hash_password(form_data.password)
@@ -96,7 +96,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = create_access_token(data={"sub": form_data.username, "rol": user["rol"]})
     return {"access_token": token, "token_type": "bearer"}
 
-# ==== CLIENTES ====
+# ==== CLIENTES ==== 
 @app.get("/clientes")
 def get_clientes(user=Depends(get_current_user)):
     return db.get_clientes()  # Usamos la función del db.py
@@ -113,7 +113,7 @@ def update_cliente(cliente_id: int, cliente: Cliente, user=Depends(get_current_u
 def delete_cliente(cliente_id: int, user=Depends(get_current_user)):
     return db.delete_cliente(cliente_id)  # Usamos la función del db.py
 
-# ==== PRODUCTOS ====
+# ==== PRODUCTOS ==== 
 @app.get("/productos")
 def get_productos(user=Depends(get_current_user)):
     return db.get_productos()  # Usamos la función del db.py
@@ -122,7 +122,7 @@ def get_productos(user=Depends(get_current_user)):
 def add_producto(producto: Producto, user=Depends(get_current_user)):
     return db.add_producto(producto.dict())  # Usamos la función del db.py
 
-# ==== PEDIDOS ====
+# ==== PEDIDOS ==== 
 @app.get("/pedidos")
 def get_pedidos(user=Depends(get_current_user)):
     return db.get_pedidos()  # Usamos la función del db.py
@@ -137,4 +137,4 @@ def delete_pedido(pedido_id: int, user=Depends(get_current_user)):
 
 @app.patch("/pedidos/{pedido_id}")
 def update_pedido_estado(pedido_id: int, user=Depends(get_current_user)):
-    return db.update_pedido_estado(pedido_id, True)  # Usamos la función del db.py
+    return db.update_pedido_estado(pedido_id, 1)  # Usamos 1 para representar 'True' en la base de datos
