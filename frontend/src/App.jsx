@@ -1,11 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Clientes from './components/Clientes';
 import Productos from './components/Productos';
 import Pedidos from './components/Pedidos';
-import HistorialPedidos from './components/HistorialPedidos'; // Import the new component
+import HistorialPedidos from './components/HistorialPedidos';
+import Login from './components/Login';
+import { estaAutenticado, guardarToken, obtenerToken, borrarToken } from './auth';
 
 export default function App() {
   const [pestaña, setPestaña] = useState('clientes');
+  const [logueado, setLogueado] = useState(estaAutenticado());
+
+  useEffect(() => {
+    if (!estaAutenticado()) {
+      setLogueado(false);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    borrarToken();
+    setLogueado(false);
+  };
+
+  if (!logueado) {
+    return <Login onLoginSuccess={() => setLogueado(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-4 text-gray-800 flex flex-col items-center">
@@ -15,7 +33,7 @@ export default function App() {
           <p className="text-sm text-blue-500">Gestión de Clientes, Productos, Pedidos y Historial</p>
         </header>
 
-        <nav className="flex justify-center gap-4 mb-6">
+        <nav className="flex justify-center gap-2 mb-6 flex-wrap">
           <button
             className={`px-4 py-2 rounded ${pestaña === 'clientes' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
             onClick={() => setPestaña('clientes')}
@@ -40,13 +58,19 @@ export default function App() {
           >
             Historial de Pedidos
           </button>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded bg-red-600 text-white"
+          >
+            Logout
+          </button>
         </nav>
 
         <section className="bg-white rounded-2xl shadow p-4">
           {pestaña === 'clientes' && <Clientes />}
           {pestaña === 'productos' && <Productos />}
           {pestaña === 'pedidos' && <Pedidos />}
-          {pestaña === 'historial' && <HistorialPedidos />} {/* Render Historial de Pedidos */}
+          {pestaña === 'historial' && <HistorialPedidos />}
         </section>
 
         <footer className="text-center mt-10 text-sm text-blue-400">

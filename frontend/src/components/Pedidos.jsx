@@ -10,22 +10,31 @@ export default function Pedidos() {
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/clientes`)
       .then(res => res.json())
-      .then(data => setClientes(data));
+      .then(setClientes);
 
     fetch(`${import.meta.env.VITE_API_URL}/productos`)
       .then(res => res.json())
-      .then(data => setProductos(data));
+      .then(setProductos);
   }, []);
 
   const agregarProducto = (producto) => {
     if (!productosSeleccionados.some(p => p.id === producto.id)) {
-      setProductosSeleccionados([...productosSeleccionados, { ...producto, cantidad: 1 }]);
+      setProductosSeleccionados([
+        ...productosSeleccionados,
+        { ...producto, cantidad: 1, tipo: 'unidad' }
+      ]);
     }
   };
 
   const cambiarCantidad = (id, cantidad) => {
     setProductosSeleccionados(productosSeleccionados.map(p =>
-      p.id === id ? { ...p, cantidad: parseInt(cantidad) || 1 } : p
+      p.id === id ? { ...p, cantidad: parseFloat(cantidad) || 0 } : p
+    ));
+  };
+
+  const cambiarTipo = (id, tipo) => {
+    setProductosSeleccionados(productosSeleccionados.map(p =>
+      p.id === id ? { ...p, tipo } : p
     ));
   };
 
@@ -44,10 +53,7 @@ export default function Pedidos() {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/pedidos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cliente,
-        productos: productosSeleccionados
-      })
+      body: JSON.stringify({ cliente, productos: productosSeleccionados })
     });
 
     if (res.ok) {
@@ -67,80 +73,76 @@ export default function Pedidos() {
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-blue-800">Crear Pedido</h2>
 
-      <div className="flex flex-col gap-2">
+      <div>
         <label className="text-sm font-medium">Seleccionar cliente:</label>
         <select
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded w-full"
         >
           <option value="">-- Elegí un cliente --</option>
           {clientes.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.nombre} {c.telefono && `(${c.telefono})`}
+              {c.nombre}
             </option>
           ))}
         </select>
       </div>
 
-      <div>
-        <label className="text-sm font-medium">Buscar productos:</label>
-        <input
-          type="text"
-          value={busquedaProducto}
-          onChange={(e) => setBusquedaProducto(e.target.value)}
-          placeholder="Buscar por nombre"
-          className="w-full border p-2 rounded mt-1"
-        />
+      <input
+        type="text"
+        value={busquedaProducto}
+        onChange={(e) => setBusquedaProducto(e.target.value)}
+        placeholder="Buscar productos..."
+        className="w-full border p-2 rounded"
+      />
+
+      <div className="grid gap-2">
+        {productosFiltrados.map(p => (
+          <button
+            key={p.id}
+            onClick={() => agregarProducto(p)}
+            className="bg-blue-600 text-white p-2 rounded"
+          >
+            {p.nombre} (${p.precio})
+          </button>
+        ))}
       </div>
 
-      <div>
-        <label className="text-sm font-medium">Productos disponibles:</label>
-        <ul className="pl-4 space-y-2 mt-2">
-          {productosFiltrados.length > 0 ? (
-            productosFiltrados.map(p => (
-              <li key={p.id}>
-                <button
-                  onClick={() => agregarProducto(p)}
-                  className="w-full text-left p-2 bg-blue-600 text-white rounded mb-2"
-                >
-                  {p.nombre} (${p.precio})
-                </button>
-              </li>
-            ))
-          ) : (
-            <li>No se encontraron productos</li>
-          )}
-        </ul>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-medium">Productos seleccionados:</h3>
-        <ul className="pl-4 space-y-2 mt-2">
-          {productosSeleccionados.length > 0 ? (
-            productosSeleccionados.map(p => (
-              <li key={p.id} className="flex justify-between items-center">
-                <span>{p.nombre} (${p.precio})</span>
+      {productosSeleccionados.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-semibold mb-2">🧊 Productos seleccionados</h3>
+          <ul className="space-y-2">
+            {productosSeleccionados.map(p => (
+              <li key={p.id} className="flex items-center gap-2">
+                <span className="flex-1">{p.nombre}</span>
                 <input
                   type="number"
-                  min="1"
+                  step="0.1"
+                  min="0.1"
                   value={p.cantidad}
                   onChange={(e) => cambiarCantidad(p.id, e.target.value)}
-                  className="w-16 p-1 text-center"
+                  className="w-20 border p-1"
                 />
+                <select
+                  value={p.tipo}
+                  onChange={(e) => cambiarTipo(p.id, e.target.value)}
+                  className="border p-1"
+                >
+                  <option value="unidad">Unidad</option>
+                  <option value="caja">Caja</option>
+                </select>
                 <button
                   onClick={() => eliminarProducto(p.id)}
-                  className="text-red-600 text-sm"
+                  className="text-red-500 text-sm"
                 >
                   Eliminar
                 </button>
               </li>
-            ))
-          ) : (
-            <li>No has seleccionado productos</li>
-          )}
-        </ul>
-      </div>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <button
         onClick={guardarPedido}

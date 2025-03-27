@@ -14,38 +14,47 @@ git pull
 echo "<dd28> Deteniendo contenedores anteriores..."
 docker compose down
 
-# 🔍 Verificar e inicializar la base de datos si es necesario
+# ✅ Verificar existencia de .env
+if [ ! -f .env ]; then
+  echo "⚠️ Falta archivo .env para el backend."
+  exit 1
+fi
+
+# ✅ Verificar e inicializar base de datos
 echo "<db01> Verificando base de datos..."
 if [ ! -f ventas.db ]; then
     echo "⚠️  ventas.db no encontrada. Ejecutando init_db.py..."
-    docker run --rm -v "$PWD":/app -w /app python:3.9 python init_db.py
+    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
 else
-    docker run --rm -v "$PWD":/app -w /app python:3.9 python - <<EOF
+    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python - <<EOF
 import sqlite3, sys
 db = sqlite3.connect("ventas.db")
 c = db.cursor()
 
 def check_table_column(table, column):
     c.execute(f"PRAGMA table_info({table})")
-    columns = [r[1] for r in c.fetchall()]
-    return column in columns
+    return column in [r[1] for r in c.fetchall()]
 
 try:
     c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pedidos'")
     if not c.fetchone():
         raise Exception("Tabla pedidos no existe.")
-
     if not check_table_column("pedidos", "pdf_generado"):
-        raise Exception("Columna pdf_generado no existe en tabla pedidos.")
+        raise Exception("Columna pdf_generado no existe.")
+    if not check_table_column("detalles_pedido", "tipo"):
+        raise Exception("Columna tipo no existe.")
+    if not check_table_column("usuarios", "password_hash"):
+        raise Exception("Tabla usuarios incompleta.")
 except Exception as e:
     print(f"⚠️  {e} Ejecutando init_db.py para corregir...")
     sys.exit(42)
 EOF
 
     if [ $? -eq 42 ]; then
-        docker run --rm -v "$PWD":/app -w /app python:3.9 python init_db.py
+        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
     else
-        echo "✅ Base de datos OK."
+        echo "✅ Base de datos OK. Ejecutando migración..."
+        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python migrar_db.py
     fi
 fi
 
