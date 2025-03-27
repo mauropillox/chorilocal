@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -36,6 +35,7 @@ export default defineConfig({
   resolve: {
     alias: {
       buffer: 'buffer',
+      'react-router-dom': require.resolve('react-router-dom'), // Alias added here
     },
   },
   build: {
