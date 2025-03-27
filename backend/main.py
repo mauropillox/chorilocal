@@ -89,11 +89,11 @@ def register(form_data: OAuth2PasswordRequestForm = Depends()):
     raise HTTPException(status_code=400, detail="Usuario ya existe")
 
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db.get_usuario(form_data.username)
-    if not user or not verify_password(form_data.password, user["password_hash"]):
+def login(username: str = Form(...), password: str = Form(...)):
+    user = db.get_usuario(username)
+    if not user or not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    token = create_access_token(data={"sub": form_data.username, "rol": user["rol"]})
+    token = create_access_token(data={"sub": username, "rol": user["rol"]})
     return {"access_token": token, "token_type": "bearer"}
 
 # ==== CLIENTES ==== 

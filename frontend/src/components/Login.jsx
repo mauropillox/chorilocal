@@ -1,7 +1,10 @@
-// frontend/src/Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { guardarToken } from "./auth";
+
+// Función para guardar el token en localStorage
+export const guardarToken = (token) => {
+  localStorage.setItem("access_token", token);
+};
 
 export default function Login() {
   const [usuario, setUsuario] = useState("");
@@ -11,7 +14,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); // Limpiar error previo
 
     const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
       method: "POST",
@@ -24,8 +27,8 @@ export default function Login() {
 
     if (res.ok) {
       const data = await res.json();
-      guardarToken(data.access_token);
-      navigate("/");
+      guardarToken(data.access_token); // Guardar el token en localStorage
+      navigate("/clientes"); // Redirigir a la página de clientes
     } else {
       setError("Credenciales incorrectas");
     }
