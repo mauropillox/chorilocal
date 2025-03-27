@@ -1,48 +1,29 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, validator
 from typing import List, Optional
-from datetime import datetime
-import sqlite3
-import sys
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+import os
+from passlib.context import CryptContext
+import db  # Ahora importamos las funciones de db.py
 
-DB_PATH = "ventas.db"
+# ==== CONFIG ====
+DB_PATH = os.getenv("DB_PATH", "ventas.db")
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-def verificar_tablas_y_columnas():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    try:
-        tablas_requeridas = {
-            "clientes": ["id", "nombre", "telefono", "direccion"],
-            "productos": ["id", "nombre", "precio"],
-            "pedidos": ["id", "id_cliente", "fecha", "pdf_generado"],
-            "detalles_pedido": ["id", "id_pedido", "id_producto", "cantidad"]
-        }
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-        for tabla, columnas_esperadas in tablas_requeridas.items():
-            # Verificar existencia de la tabla
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (tabla,))
-            if not cursor.fetchone():
-                raise Exception(f"Tabla '{tabla}' no existe.")
+# ==== DB CHECK ====
+db.verificar_tablas_y_columnas()
 
-            # Verificar columnas de la tabla
-            cursor.execute(f"PRAGMA table_info({tabla})")
-            columnas_actuales = [r[1] for r in cursor.fetchall()]
-            for col in columnas_esperadas:
-                if col not in columnas_actuales:
-                    raise Exception(f"Falta la columna '{col}' en la tabla '{tabla}'.")
-
-    except Exception as e:
-        print(f"❌ Error en la verificación de la base de datos: {e}")
-        sys.exit(1)
-    finally:
-        conn.close()
-
-verificar_tablas_y_columnas()
-
+# ==== APP ====
 app = FastAPI()
 
-# Middleware para CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -50,10 +31,27 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-def conectar():
-    return sqlite3.connect(DB_PATH)
+# ==== HELPERS ====
+def hash_password(password: str):
+    return pwd_context.hash(password)
 
-# ======== MODELOS ========
+def verify_password(password: str, hash: str):
+    return pwd_context.verify(password, hash)
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return {"username": payload.get("sub"), "rol": payload.get("rol")}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+# ==== MODELOS ====
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -66,7 +64,14 @@ class Producto(BaseModel):
     precio: float
 
 class ProductoConCantidad(Producto):
-    cantidad: int
+    cantidad: float
+    tipo: str  # 'unidad' o 'caja'
+
+    @validator('tipo')
+    def validar_tipo(cls, v):
+        if v not in ['unidad', 'caja']:
+            raise ValueError("El tipo debe ser 'unidad' o 'caja'")
+        return v
 
 class Pedido(BaseModel):
     id: Optional[int] = None
@@ -75,110 +80,61 @@ class Pedido(BaseModel):
     fecha: Optional[str] = None
     pdf_generado: bool = False
 
-# ============ ENDPOINTS CLIENTES ============
+# ==== AUTENTICACIÓN ====
+@app.post("/register")
+def register(form_data: OAuth2PasswordRequestForm = Depends()):
+    password_hash = hash_password(form_data.password)
+    if db.add_usuario(form_data.username, password_hash):  # Llamada a la función de db.py
+        return {"ok": True}
+    raise HTTPException(status_code=400, detail="Usuario ya existe")
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = db.get_usuario(form_data.username)
+    if not user or not verify_password(form_data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    token = create_access_token(data={"sub": form_data.username, "rol": user["rol"]})
+    return {"access_token": token, "token_type": "bearer"}
+
+# ==== CLIENTES ====
 @app.get("/clientes")
-def get_clientes():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nombre, telefono, direccion FROM clientes")
-    clientes = [{"id": r[0], "nombre": r[1], "telefono": r[2], "direccion": r[3]} for r in cursor.fetchall()]
-    conn.close()
-    return clientes
+def get_clientes(user=Depends(get_current_user)):
+    return db.get_clientes()  # Usamos la función del db.py
 
 @app.post("/clientes")
-def add_cliente(cliente: Cliente):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO clientes (nombre, telefono, direccion) VALUES (?, ?, ?)", 
-                   (cliente.nombre, cliente.telefono, cliente.direccion))
-    conn.commit()
-    cliente.id = cursor.lastrowid
-    conn.close()
-    return cliente
+def add_cliente(cliente: Cliente, user=Depends(get_current_user)):
+    return db.add_cliente(cliente.dict())  # Usamos la función del db.py
 
-# ============ ENDPOINTS PRODUCTOS ============
+@app.put("/clientes/{cliente_id}")
+def update_cliente(cliente_id: int, cliente: Cliente, user=Depends(get_current_user)):
+    return db.update_cliente(cliente_id, cliente.dict())  # Usamos la función del db.py
+
+@app.delete("/clientes/{cliente_id}")
+def delete_cliente(cliente_id: int, user=Depends(get_current_user)):
+    return db.delete_cliente(cliente_id)  # Usamos la función del db.py
+
+# ==== PRODUCTOS ====
 @app.get("/productos")
-def get_productos():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nombre, precio FROM productos")
-    productos = [{"id": r[0], "nombre": r[1], "precio": r[2]} for r in cursor.fetchall()]
-    conn.close()
-    return productos
+def get_productos(user=Depends(get_current_user)):
+    return db.get_productos()  # Usamos la función del db.py
 
 @app.post("/productos")
-def add_producto(producto: Producto):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)", 
-                   (producto.nombre, producto.precio))
-    conn.commit()
-    producto.id = cursor.lastrowid
-    conn.close()
-    return producto
+def add_producto(producto: Producto, user=Depends(get_current_user)):
+    return db.add_producto(producto.dict())  # Usamos la función del db.py
 
-# ============ ENDPOINTS PEDIDOS ============
+# ==== PEDIDOS ====
 @app.get("/pedidos")
-def get_pedidos():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT p.id, p.fecha, p.pdf_generado, c.id, c.nombre, c.telefono, c.direccion
-        FROM pedidos p
-        JOIN clientes c ON p.id_cliente = c.id
-    """)
-    pedidos = []
-    for row in cursor.fetchall():
-        pedido_id, fecha, pdf_generado, cid, nombre, telefono, direccion = row
-        cursor.execute("""
-            SELECT pr.id, pr.nombre, pr.precio, dp.cantidad
-            FROM detalles_pedido dp
-            JOIN productos pr ON dp.id_producto = pr.id
-            WHERE dp.id_pedido = ?
-        """, (pedido_id,))
-        productos = [{"id": r[0], "nombre": r[1], "precio": r[2], "cantidad": r[3]} for r in cursor.fetchall()]
-        pedidos.append({
-            "id": pedido_id,
-            "fecha": fecha,
-            "pdf_generado": bool(pdf_generado),
-            "cliente": {"id": cid, "nombre": nombre, "telefono": telefono, "direccion": direccion},
-            "productos": productos
-        })
-    conn.close()
-    return pedidos
+def get_pedidos(user=Depends(get_current_user)):
+    return db.get_pedidos()  # Usamos la función del db.py
 
 @app.post("/pedidos")
-def add_pedido(pedido: Pedido):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO pedidos (id_cliente, fecha, pdf_generado) VALUES (?, ?, ?)", 
-                   (pedido.cliente.id, datetime.now().isoformat(), False))
-    pedido_id = cursor.lastrowid
-
-    for producto in pedido.productos:
-        cursor.execute("INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad) VALUES (?, ?, ?)", 
-                       (pedido_id, producto.id, producto.cantidad))
-
-    conn.commit()
-    conn.close()
-    pedido.id = pedido_id
-    return pedido
+def add_pedido(pedido: Pedido, user=Depends(get_current_user)):
+    return db.add_pedido(pedido.dict())  # Usamos la función del db.py
 
 @app.delete("/pedidos/{pedido_id}")
-def delete_pedido(pedido_id: int):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM detalles_pedido WHERE id_pedido = ?", (pedido_id,))
-    cursor.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
+def delete_pedido(pedido_id: int, user=Depends(get_current_user)):
+    return db.delete_pedido(pedido_id)  # Usamos la función del db.py
 
 @app.patch("/pedidos/{pedido_id}")
-def update_pedido_estado(pedido_id: int):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE pedidos SET pdf_generado = 1 WHERE id = ?", (pedido_id,))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
+def update_pedido_estado(pedido_id: int, user=Depends(get_current_user)):
+    return db.update_pedido_estado(pedido_id, True)  # Usamos la función del db.py
