@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Form  # Añadir Form aquí
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, validator
@@ -89,7 +89,7 @@ def register(form_data: OAuth2PasswordRequestForm = Depends()):
     raise HTTPException(status_code=400, detail="Usuario ya existe")
 
 @app.post("/login")
-def login(username: str = Form(...), password: str = Form(...)):
+def login(username: str = Form(...), password: str = Form(...)):  # Cambiar a 'Form'
     user = db.get_usuario(username)
     if not user or not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
