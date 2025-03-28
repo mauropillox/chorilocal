@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Clientes from './components/Clientes';
 import Productos from './components/Productos';
 import Pedidos from './components/Pedidos';
@@ -8,9 +8,11 @@ import Login from './components/Login';
 import { estaAutenticado, guardarToken, obtenerToken, borrarToken } from './auth';
 
 export default function App() {
+  const navigate = useNavigate();
   const [logueado, setLogueado] = useState(estaAutenticado());
 
   useEffect(() => {
+    // Handle auto logout if the token is no longer valid
     if (!estaAutenticado()) {
       setLogueado(false);
     }
@@ -19,6 +21,7 @@ export default function App() {
   const handleLogout = () => {
     borrarToken();
     setLogueado(false);
+    navigate('/');  // Redirect to login page after logging out
   };
 
   if (!logueado) {
