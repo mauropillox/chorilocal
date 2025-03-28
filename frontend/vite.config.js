@@ -19,12 +19,12 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-icon-192.png', // Don't use leading `/` to ensure it's relative
+            src: 'pwa-icon-192.png', // Use relative paths
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-icon-512.png', // Don't use leading `/` to ensure it's relative
+            src: 'pwa-icon-512.png', // Use relative paths
             sizes: '512x512',
             type: 'image/png',
           },
