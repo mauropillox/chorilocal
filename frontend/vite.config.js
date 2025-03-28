@@ -19,36 +19,20 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-icon-192.png',  // This will be generated automatically
+            src: 'pwa-icon-192.png', // Don't use leading `/` to ensure it's relative
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-icon-512.png',  // This will be generated automatically
+            src: 'pwa-icon-512.png', // Don't use leading `/` to ensure it's relative
             sizes: '512x512',
             type: 'image/png',
           },
         ],
       },
-      // This part automatically generates icons
-      workbox: {
-        globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg}'],  // Modify as necessary for your files
-      },
-      icons: {
-        // You can specify your base image here to generate icons of various sizes
-        src: '/logo.png',  // Make sure this is the correct path to your base logo
-        sizes: [192, 512],  // You can define more sizes if needed
-        purpose: 'any maskable',
-      },
     }),
   ],
-  resolve: {
-    alias: {
-      buffer: 'buffer',
-    },
-  },
   build: {
     outDir: 'build',
-    assetsDir: 'assets',  // Ensure the assets go to the correct directory
   },
 });
