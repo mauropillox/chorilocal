@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // Keep service worker up-to-date
-      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'Casa de Congelados',
         short_name: 'Congelados',
@@ -19,27 +19,36 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-icon-192.png',  // Ensure this is in the public folder
+            src: '/pwa-icon-192.png',  // This will be generated automatically
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-icon-512.png',  // Ensure this is in the public folder
+            src: '/pwa-icon-512.png',  // This will be generated automatically
             sizes: '512x512',
             type: 'image/png',
           },
         ],
       },
+      // This part automatically generates icons
+      workbox: {
+        globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,svg}'],  // Modify as necessary for your files
+      },
+      icons: {
+        // You can specify your base image here to generate icons of various sizes
+        src: '/logo.png',  // Make sure this is the correct path to your base logo
+        sizes: [192, 512],  // You can define more sizes if needed
+        purpose: 'any maskable',
+      },
     }),
   ],
   resolve: {
     alias: {
-      buffer: 'buffer', // Alias for buffer
-      'react-router-dom': require.resolve('react-router-dom'), // Resolve the path correctly for react-router-dom
+      buffer: 'buffer',
     },
   },
   build: {
-    outDir: 'build',  // Specify the output directory explicitly
-    assetsDir: 'assets',  // Make sure assets go to a specific folder
+    outDir: 'build',
+    assetsDir: 'assets',  // Ensure the assets go to the correct directory
   },
 });
