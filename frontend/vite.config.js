@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
+      registerType: 'autoUpdate', // Keep service worker up-to-date
+      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
         name: 'Casa de Congelados',
         short_name: 'Congelados',
@@ -19,12 +19,12 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-icon-192.png',
+            src: '/pwa-icon-192.png',  // Ensure this is in the public folder
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-icon-512.png',
+            src: '/pwa-icon-512.png',  // Ensure this is in the public folder
             sizes: '512x512',
             type: 'image/png',
           },
@@ -34,11 +34,12 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      buffer: 'buffer',
-      'react-router-dom': require.resolve('react-router-dom'), // Alias added here
+      buffer: 'buffer', // Alias for buffer
+      'react-router-dom': require.resolve('react-router-dom'), // Resolve the path correctly for react-router-dom
     },
   },
   build: {
     outDir: 'build',  // Specify the output directory explicitly
+    assetsDir: 'assets',  // Make sure assets go to a specific folder
   },
 });
