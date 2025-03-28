@@ -12,10 +12,10 @@ echo "<ddf9> Haciendo pull desde GitHub..."
 git pull
 
 echo "<dd28> Deteniendo contenedores anteriores..."
-docker compose down
+docker compose down || true
 
 # ✅ Verificar existencia de .env
-if [ ! -f .env ]; then
+if [ ! -f ../.env ]; then
   echo "⚠️ Falta archivo .env para el backend."
   exit 1
 fi
@@ -23,10 +23,10 @@ fi
 # ✅ Verificar e inicializar base de datos
 echo "<db01> Verificando base de datos..."
 if [ ! -f ventas.db ]; then
-    echo "⚠️  ventas.db no encontrada. Ejecutando init_db.py..."
-    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
+    echo "⚠️ ventas.db no encontrada. Ejecutando init_db.py..."
+    docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
 else
-    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python - <<EOF
+    docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python - <<EOF
 import sqlite3, sys
 db = sqlite3.connect("ventas.db")
 c = db.cursor()
@@ -46,19 +46,19 @@ try:
     if not check_table_column("usuarios", "password_hash"):
         raise Exception("Tabla usuarios incompleta.")
 except Exception as e:
-    print(f"⚠️  {e} Ejecutando init_db.py para corregir...")
+    print(f"⚠️ {e} Ejecutando init_db.py para corregir...")
     sys.exit(42)
 EOF
 
     if [ $? -eq 42 ]; then
-        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
+        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
     else
         echo "✅ Base de datos OK. Ejecutando migración..."
-        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python migrar_db.py
+        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python migrar_db.py
     fi
 fi
 
 echo "<dd42> Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
-echo "✅ Deploy completo."
+echo "✅ Deploy completo. Contenedores corriendo."
