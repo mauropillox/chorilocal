@@ -1,5 +1,5 @@
 // App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Clientes from './components/Clientes';
 import Productos from './components/Productos';
@@ -8,37 +8,46 @@ import HistorialPedidos from './components/HistorialPedidos';
 import Login from './components/Login';
 import Register from './components/Register';
 import { obtenerToken, borrarToken } from './auth';
-import LayoutApp from './LayoutApp'; // Layout con header/nav/pie
+import './App.css';
 
-export default function App() {
+function ContenidoApp() {
+  const navigate = useNavigate();
   const [logueado, setLogueado] = useState(false);
   const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
-    const token = obtenerToken();
-    if (!token) {
-      setVerificando(false);
-      return;
-    }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const exp = payload.exp * 1000;
-      // Si expiró o está inactivo
-      if (Date.now() >= exp || payload.activo === false) {
-        borrarToken();
+    const checkAuth = () => {
+      const token = obtenerToken();
+      console.log('Token obtenido:', token);
+      if (!token) {
+        console.log('No se encontró token');
         setVerificando(false);
         return;
       }
-      setLogueado(true);
-    } catch (err) {
-      borrarToken();
-    }
-    setVerificando(false);
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Payload del token:', payload);
+        const exp = payload.exp * 1000;
+        if (Date.now() >= exp || payload.activo === false) {
+          console.log('Token expirado o inactivo');
+          borrarToken();
+          setVerificando(false);
+          return;
+        }
+        setLogueado(true);
+      } catch (e) {
+        console.log('Error al parsear el token:', e);
+        borrarToken();
+      }
+      setVerificando(false);
+    };
+    checkAuth();
   }, []);
 
   const handleLogout = () => {
     borrarToken();
     setLogueado(false);
+    navigate('/');
   };
 
   if (verificando) {
@@ -50,93 +59,58 @@ export default function App() {
   }
 
   return (
+    <Routes>
+      {!logueado ? (
+        <>
+          <Route path="/registro" element={<Register />} />
+          <Route path="*" element={<Login onLoginSuccess={() => setLogueado(true)} />} />
+        </>
+      ) : (
+        <>
+          <Route
+            path="/clientes"
+            element={
+              <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-4 text-gray-800 flex flex-col items-center">
+                <div className="w-full max-w-md">
+                  <header className="text-center mb-6">
+                    <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-2" />
+                    <h1 className="text-3xl font-extrabold text-blue-700">❄️ Casa de Congelados</h1>
+                    <p className="text-sm text-blue-500">Gestión de Clientes, Productos, Pedidos y Historial</p>
+                  </header>
+                  <nav className="flex justify-center gap-2 mb-6 flex-wrap">
+                    <Link to="/clientes" className="px-4 py-2 rounded bg-white text-blue-600">Clientes</Link>
+                    <Link to="/productos" className="px-4 py-2 rounded bg-white text-blue-600">Productos</Link>
+                    <Link to="/pedidos" className="px-4 py-2 rounded bg-white text-blue-600">Pedidos</Link>
+                    <Link to="/historial" className="px-4 py-2 rounded bg-white text-blue-600">Historial</Link>
+                    <button onClick={handleLogout} className="px-4 py-2 rounded bg-red-600 text-white">Logout</button>
+                  </nav>
+                  <section className="bg-white rounded-2xl shadow p-4">
+                    <Routes>
+                      <Route path="/clientes" element={<Clientes />} />
+                      <Route path="/productos" element={<Productos />} />
+                      <Route path="/pedidos" element={<Pedidos />} />
+                      <Route path="/historial" element={<HistorialPedidos />} />
+                      <Route path="*" element={<Navigate to="/clientes" />} />
+                    </Routes>
+                  </section>
+                  <footer className="text-center mt-10 text-sm text-blue-400">
+                    © 2025 Casa de Congelados. Todos los derechos reservados.
+                  </footer>
+                </div>
+              </div>
+            }
+          />
+          <Route path="*" element={<Navigate to="/clientes" />} />
+        </>
+      )}
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
     <Router>
-      <Routes>
-        {/* Login */}
-        <Route
-          path="/login"
-          element={
-            logueado ? (
-              <Navigate to="/clientes" />
-            ) : (
-              <Login
-                onLoginSuccess={() => setLogueado(true)}
-              />
-            )
-          }
-        />
-        {/* Registro */}
-        <Route
-          path="/registro"
-          element={
-            logueado ? (
-              <Navigate to="/clientes" />
-            ) : (
-              <Register />
-            )
-          }
-        />
-
-        {/* Rutas protegidas */}
-        <Route
-          path="/clientes"
-          element={
-            logueado ? (
-              <LayoutApp handleLogout={handleLogout}>
-                <Clientes />
-              </LayoutApp>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-        <Route
-          path="/productos"
-          element={
-            logueado ? (
-              <LayoutApp handleLogout={handleLogout}>
-                <Productos />
-              </LayoutApp>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-        <Route
-          path="/pedidos"
-          element={
-            logueado ? (
-              <LayoutApp handleLogout={handleLogout}>
-                <Pedidos />
-              </LayoutApp>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-        <Route
-          path="/historial"
-          element={
-            logueado ? (
-              <LayoutApp handleLogout={handleLogout}>
-                <HistorialPedidos />
-              </LayoutApp>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-
-        {/* Root: si está logueado -> clientes, si no -> login */}
-        <Route
-          path="/"
-          element={
-            logueado ? <Navigate to="/clientes" /> : <Navigate to="/login" />
-          }
-        />
-        {/* Cualquier otra ruta -> / */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <ContenidoApp />
     </Router>
   );
 }
