@@ -14,13 +14,13 @@ git pull
 echo "<dd28> Deteniendo contenedores anteriores..."
 docker compose down || true
 
-# ✅ Verificar existencia de .env (para backend)
+# ✅ Verificar existencia de .env
 if [ ! -f ../.env ]; then
   echo "⚠️ Falta archivo .env para el backend."
   exit 1
 fi
 
-# ✅ Verificar e inicializar base de datos
+# ✅ Base de datos
 echo "<db01> Verificando base de datos..."
 if [ ! -f ventas.db ]; then
     echo "⚠️ ventas.db no encontrada. Ejecutando init_db.py..."
@@ -30,11 +30,9 @@ else
 import sqlite3, sys
 db = sqlite3.connect("ventas.db")
 c = db.cursor()
-
 def check_table_column(table, column):
     c.execute(f"PRAGMA table_info({table})")
     return column in [r[1] for r in c.fetchall()]
-
 try:
     c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pedidos'")
     if not c.fetchone():
@@ -58,21 +56,23 @@ EOF
     fi
 fi
 
-# ✅ Verificar y copiar certificados SSL
+# ✅ Copiar certificados SSL
 CERT_ORIG=/etc/letsencrypt/live/pedidosfriosur.com
 CERT_DEST=certs
 
 echo "<ssl01> Verificando certificados SSL..."
 if [ -f "$CERT_ORIG/fullchain.pem" ] && [ -f "$CERT_ORIG/privkey.pem" ]; then
     mkdir -p "$CERT_DEST"
-    cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
-    cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
+    sudo cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
+    sudo cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
+    sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
     chmod 644 "$CERT_DEST/"*.pem
     echo "✅ Certificados SSL copiados correctamente."
 else
     echo "⚠️ Certificados SSL no encontrados en $CERT_ORIG"
 fi
 
+# ✅ Reconstruir contenedores
 echo "<dd42> Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
