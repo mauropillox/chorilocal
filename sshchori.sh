@@ -5,19 +5,17 @@ KEY_PATH="$HOME/.ssh/llavenueva.pem"
 PUBLIC_IP=3.14.2.178
 LOCAL_ENV_PATH=".env"
 
-# Verificamos que exista la clave
 if [ ! -f "$KEY_PATH" ]; then
   echo "❌ No se encontró la clave privada en $KEY_PATH"
   exit 1
 fi
 
-# Verificamos que exista el .env local
 if [ ! -f "$LOCAL_ENV_PATH" ]; then
   echo "⚠️ No se encontró el archivo .env local en $LOCAL_ENV_PATH"
   exit 1
 fi
 
-# 🚀 Conexión remota y preparación de entorno
+# Conectar por SSH directamente, instalar todo lo necesario y preparar entorno
 echo "🔐 Conectando a ec2-user@$PUBLIC_IP..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   set -e
@@ -80,7 +78,7 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   fi
 
   if [ "$NEED_RENEW" = true ]; then
-    echo "🔧 Renovando certificado SSL..."
+    echo "🔧 Renovando o generando certificado SSL..."
     sudo docker compose down || true
     sudo fuser -k 80/tcp || true
     sudo fuser -k 443/tcp || true
@@ -88,16 +86,23 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   else
     echo "✅ Certificados SSL ya presentes y válidos."
   fi
+
+  echo "🗂️ Copiando certificados a carpeta certs/ del proyecto..."
+  mkdir -p certs
+  sudo cp /etc/letsencrypt/live/pedidosfriosur.com/fullchain.pem certs/
+  sudo cp /etc/letsencrypt/live/pedidosfriosur.com/privkey.pem certs/
+  sudo chown ec2-user:ec2-user certs/*.pem
+  chmod 644 certs/*.pem
 ENDSSH
 
-# 📤 Subir el archivo .env al servidor remoto
+# Subir el archivo .env al nivel adecuado del proyecto
 echo "📤 Copiando .env al servidor remoto..."
 scp -i "$KEY_PATH" "$LOCAL_ENV_PATH" ec2-user@"$PUBLIC_IP":/home/ec2-user/chorizaurio/.env || {
   echo "⚠️ No se pudo copiar .env automáticamente"
   exit 1
 }
 
-# 🏗 Ejecutar deploy.sh remotamente
+# Volver a conectarse y ejecutar deploy.sh desde el directorio clonado
 echo "🏃 Ejecutando deploy.sh remotamente..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   set -e
@@ -123,6 +128,6 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   docker compose logs --tail=100
 ENDSSH
 
-# 🔁 Conexión final para seguir manualmente
+# 🔁 Conexión interactiva final
 echo "✅ Deploy finalizado. Conectando a la instancia para trabajar manualmente..."
 ssh -i "$KEY_PATH" ec2-user@"$PUBLIC_IP"
