@@ -1,10 +1,11 @@
-// frontend/src/auth.js
 export function guardarToken(token) {
   localStorage.setItem("token", token);
 }
 
 export function obtenerToken() {
-  return localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  if (!token || token === "null" || token === "undefined") return null;
+  return token;
 }
 
 export function borrarToken() {
@@ -12,5 +13,5 @@ export function borrarToken() {
 }
 
 export function estaAutenticado() {
-  return !!localStorage.getItem("token");
+  return !!obtenerToken();
 }

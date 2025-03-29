@@ -266,3 +266,29 @@ def verificar_tablas_y_columnas():
         print(f"❌ Error en verificación de base de datos: {e}")
     finally:
         con.close()
+
+def add_usuario(username, password_hash, rol="usuario"):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    # Revisar si ya existe el usuario
+    c.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
+    if c.fetchone():
+        conn.close()
+        return False
+
+    # Verificamos si es el primer usuario del sistema
+    c.execute("SELECT COUNT(*) FROM usuarios")
+    count = c.fetchone()[0]
+
+    if count == 0:
+        rol = "admin"
+        activo = 1
+    else:
+        activo = 0  # Requiere activación manual
+
+    c.execute("INSERT INTO usuarios (username, password_hash, rol, activo) VALUES (?, ?, ?, ?)",
+              (username, password_hash, rol, activo))
+    conn.commit()
+    conn.close()
+    return True
