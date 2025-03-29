@@ -29,7 +29,7 @@ export default function Login({ onLoginSuccess }) {
       }
 
       guardarToken(data.access_token);
-      onLoginSuccess(); // <- actualiza logueado en App.jsx
+      onLoginSuccess(); // dispara setLogueado(true)
     } catch (err) {
       console.error(err);
       setError('Error de conexión');

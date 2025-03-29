@@ -40,7 +40,7 @@ export default function Register() {
       }
 
       setOk(true);
-      setTimeout(() => navigate('/'), 2500); // redirige al login tras 2.5s
+      setTimeout(() => navigate('/'), 2500);
     } catch (err) {
       console.error(err);
       setError('Error de conexión');

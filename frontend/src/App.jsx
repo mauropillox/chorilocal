@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import LayoutApp from './LayoutApp';
@@ -16,6 +17,7 @@ function App() {
 
     if (!token) {
       console.log("No se encontró token");
+      setLogueado(false); // importante
       setVerificando(false);
       return;
     }
@@ -38,7 +40,7 @@ function App() {
     } catch (e) {
       console.log("Error al decodificar token:", e);
       borrarToken();
-      setLogueado(false);
+      setLogueado(false); // importante
     }
 
     setVerificando(false);
