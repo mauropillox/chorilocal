@@ -13,22 +13,28 @@ import './App.css';
 function ContenidoApp() {
   const navigate = useNavigate();
   const [logueado, setLogueado] = useState(false);
+  const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
     const checkAuth = () => {
-      if (!estaAutenticado()) return;
       const token = obtenerToken();
+      if (!token) {
+        setVerificando(false);
+        return;
+      }
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const exp = payload.exp * 1000;
-        if (Date.now() >= exp) {
+        if (Date.now() >= exp || !payload.activo) {
           borrarToken();
+          setVerificando(false);
           return;
         }
         setLogueado(true);
       } catch (e) {
         borrarToken();
       }
+      setVerificando(false);
     };
     checkAuth();
   }, []);
@@ -38,6 +44,14 @@ function ContenidoApp() {
     setLogueado(false);
     navigate('/');
   };
+
+  if (verificando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
+        <p className="text-gray-600 text-sm">Verificando autenticación...</p>
+      </div>
+    );
+  }
 
   if (!logueado) {
     return (
