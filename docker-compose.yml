@@ -22,8 +22,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Montamos directamente el directorio de certificados reales al contenedor
-      - /etc/letsencrypt/live/pedidosfriosur.com:/etc/letsencrypt/live/pedidosfriosur.com:ro
+      # Montamos los certificados reales desde Let’s Encrypt a una ruta interna genérica
+      - /etc/letsencrypt/live/pedidosfriosur.com/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/pedidosfriosur.com/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
     depends_on:
       - backend
     restart: unless-stopped
