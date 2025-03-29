@@ -1,28 +1,33 @@
-version: "3.8"
+version: "3.9"
 
 services:
   backend:
+    container_name: chorizaurio-backend
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    image: chorizaurio-backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./ventas.db:/app/ventas.db
-    networks:
-      - app_network
+    # si tienes variables de entorno, agrégalas aquí
+    environment:
+      # EJEMPLO: -e ENV_VAR=valor
+      # ENV_VAR: "valor"
+    restart: unless-stopped
 
   frontend:
+    container_name: chorizaurio-frontend
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+    image: chorizaurio-frontend
+    # Nginx escucha en 80 y 443. Mapeamos a los mismos puertos del host:
     ports:
       - "80:80"
       - "443:443"
+    # Montamos los certificados Let’s Encrypt dentro del contenedor
     volumes:
-      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certs:/etc/nginx/ssl:ro
-    networks:
-      - app_network
-
-networks:
-  app_network:
-    driver: bridge
+      - /etc/letsencrypt/live/pedidosfriosur.com:/etc/letsencrypt/live/pedidosfriosur.com:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
