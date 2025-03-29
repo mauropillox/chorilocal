@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-// Función para guardar el token en localStorage
-export const guardarToken = (token) => {
-  localStorage.setItem("access_token", token);
-};
+// Importamos la función que ya existe en auth.js:
+import { guardarToken } from "../auth";
 
 export default function Login() {
   const [usuario, setUsuario] = useState("");
@@ -14,8 +11,10 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Limpiar error previo
+    setError("");
 
+    // Ojo: Asumimos que tu backend define el endpoint /login
+    // y devuelve { "access_token": "..." } al iniciar sesión.
     const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -27,8 +26,9 @@ export default function Login() {
 
     if (res.ok) {
       const data = await res.json();
-      guardarToken(data.access_token); // Guardar el token en localStorage
-      navigate("/clientes"); // Redirigir a la página de clientes
+      // Usamos guardarToken(token) de auth.js:
+      guardarToken(data.access_token);
+      navigate("/clientes");
     } else {
       setError("Credenciales incorrectas");
     }
