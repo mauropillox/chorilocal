@@ -56,20 +56,21 @@ EOF
     fi
 fi
 
-# ✅ Copiar certificados SSL
+# ✅ Copiar certificados SSL al contenedor
+echo "<ssl01> Verificando certificados SSL..."
 CERT_ORIG=/etc/letsencrypt/live/pedidosfriosur.com
 CERT_DEST=certs
 
-echo "<ssl01> Verificando certificados SSL..."
 if [ -f "$CERT_ORIG/fullchain.pem" ] && [ -f "$CERT_ORIG/privkey.pem" ]; then
     mkdir -p "$CERT_DEST"
     sudo cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
     sudo cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
     sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
     chmod 644 "$CERT_DEST/"*.pem
-    echo "✅ Certificados SSL copiados correctamente."
+    echo "✅ Certificados copiados a $CERT_DEST/"
 else
-    echo "⚠️ Certificados SSL no encontrados en $CERT_ORIG"
+    echo "❌ No se encontraron certificados SSL en $CERT_ORIG"
+    exit 1
 fi
 
 # ✅ Reconstruir contenedores
