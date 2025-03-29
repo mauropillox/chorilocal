@@ -83,10 +83,6 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
     sudo fuser -k 80/tcp || true
     sudo fuser -k 443/tcp || true
     sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com --non-interactive --agree-tos -m contacto@pedidosfriosur.com
-    mkdir -p certs
-    sudo cp "$CERT_DIR/fullchain.pem" certs/
-    sudo cp "$CERT_DIR/privkey.pem" certs/
-    sudo chown ec2-user:ec2-user certs/*.pem
   else
     echo "✅ Certificados SSL ya presentes y válidos."
   fi

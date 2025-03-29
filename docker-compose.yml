@@ -9,6 +9,7 @@ services:
     image: chorizaurio-backend
     ports:
       - "8000:8000"
+    # Pon tus variables de entorno aquí (si las necesitas)
     environment: {}
     restart: unless-stopped
 
@@ -21,8 +22,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    # Enlazamos la carpeta local "certs/" -> "/etc/nginx/ssl" dentro del contenedor
     volumes:
-      - /etc/letsencrypt/live/pedidosfriosur.com:/etc/letsencrypt/live/pedidosfriosur.com:ro
+      - ./certs:/etc/nginx/ssl:ro
     depends_on:
       - backend
     restart: unless-stopped

@@ -14,7 +14,7 @@ git pull
 echo "<dd28> Deteniendo contenedores anteriores..."
 docker compose down || true
 
-# ✅ Verificar existencia de .env
+# ✅ Verificar existencia de .env (para backend)
 if [ ! -f ../.env ]; then
   echo "⚠️ Falta archivo .env para el backend."
   exit 1
