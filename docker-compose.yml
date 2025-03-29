@@ -9,10 +9,7 @@ services:
     image: chorizaurio-backend
     ports:
       - "8000:8000"
-    # si tienes variables de entorno, agrégalas aquí
-    environment:
-      # EJEMPLO: -e ENV_VAR=valor
-      # ENV_VAR: "valor"
+    environment: {}
     restart: unless-stopped
 
   frontend:
@@ -21,11 +18,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: chorizaurio-frontend
-    # Nginx escucha en 80 y 443. Mapeamos a los mismos puertos del host:
     ports:
       - "80:80"
       - "443:443"
-    # Montamos los certificados Let’s Encrypt dentro del contenedor
     volumes:
       - /etc/letsencrypt/live/pedidosfriosur.com:/etc/letsencrypt/live/pedidosfriosur.com:ro
     depends_on:
