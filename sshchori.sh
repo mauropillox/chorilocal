@@ -77,15 +77,24 @@ if [ "$NEED_RENEW" = true ]; then
   sudo fuser -k 443/tcp || true
   sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com \
     --non-interactive --agree-tos -m contacto@pedidosfriosur.com --force-renewal
-  echo "⏱ Esperando 5 segundos para que se actualicen los certificados..."
-  sleep 5
 fi
 
-if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+# Esperar en bucle para que se actualicen los certificados (hasta 15 segundos)
+MAX_WAIT=15
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+  if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
+    echo "✅ Certificados disponibles en $CERT_DIR."
+    break
+  fi
+  echo "⏱ Esperando 5 segundos para que se actualicen los certificados..."
+  sleep 5
+  WAITED=$((WAITED + 5))
+done
+
+if [ $WAITED -ge $MAX_WAIT ]; then
   echo "❌ Aún no se encontraron certificados en $CERT_DIR. Abortando."
   exit 1
-else
-  echo "✅ Certificados disponibles en $CERT_DIR."
 fi
 ENDSSH
 
