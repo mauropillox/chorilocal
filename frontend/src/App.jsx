@@ -12,24 +12,33 @@ function App() {
 
   useEffect(() => {
     const token = obtenerToken();
+    console.log("Token:", token);
+
     if (!token) {
+      console.log("No se encontró token");
       setVerificando(false);
       return;
     }
 
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log("Payload:", payload);
+
       const exp = payload.exp * 1000;
       const activo = payload.activo;
 
       if (Date.now() >= exp || !activo) {
+        console.log("Token expirado o cuenta inactiva");
         borrarToken();
         setLogueado(false);
       } else {
+        console.log("Token válido y cuenta activa");
         setLogueado(true);
       }
     } catch (e) {
+      console.log("Error al decodificar token:", e);
       borrarToken();
+      setLogueado(false);
     }
 
     setVerificando(false);
@@ -53,7 +62,10 @@ function App() {
             <Route path="*" element={<Navigate to="/" />} />
           </>
         ) : (
-          <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
+          <>
+            <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
+            <Route path="*" element={<Navigate to="/clientes" />} />
+          </>
         )}
       </Routes>
     </Router>
