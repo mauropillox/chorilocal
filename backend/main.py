@@ -91,8 +91,15 @@ def login(username: str = Form(...), password: str = Form(...)):
     user = db.get_usuario(username)
     if not user or not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    token = create_access_token(data={"sub": username, "rol": user["rol"]})
+    if not user["activo"]:
+        raise HTTPException(status_code=403, detail="Cuenta inactiva. Esperá aprobación.")
+    token = create_access_token(data={
+        "sub": username,
+        "rol": user["rol"],
+        "activo": user["activo"]  # <--- se incluye acá también
+    })
     return {"access_token": token, "token_type": "bearer"}
+
 
 # ==== CLIENTES ====
 @app.get("/clientes")
