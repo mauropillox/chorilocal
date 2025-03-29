@@ -13,7 +13,6 @@ function App() {
   useEffect(() => {
     const token = obtenerToken();
     if (!token) {
-      console.log("Token no encontrado o inválido.");
       setVerificando(false);
       return;
     }
@@ -24,14 +23,12 @@ function App() {
       const activo = payload.activo;
 
       if (Date.now() >= exp || !activo) {
-        console.log("Token expirado o cuenta inactiva.");
         borrarToken();
         setLogueado(false);
       } else {
         setLogueado(true);
       }
     } catch (e) {
-      console.log("Error al decodificar token:", e);
       borrarToken();
     }
 
@@ -51,26 +48,14 @@ function App() {
       <Routes>
         {!logueado ? (
           <>
+            <Route path="/" element={<Login onLoginSuccess={() => setLogueado(true)} />} />
             <Route path="/registro" element={<Register />} />
-            <Route path="*" element={<Login onLoginSuccess={() => setLogueado(true)} />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </>
         ) : (
           <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
         )}
       </Routes>
-
-      {/* Botón de logout forzado para testing */}
-      {logueado && (
-        <button
-          onClick={() => {
-            borrarToken();
-            window.location.reload();
-          }}
-          className="fixed bottom-2 right-2 bg-yellow-500 text-white px-3 py-1 rounded shadow-lg text-xs z-50"
-        >
-          🧪 Logout Dev
-        </button>
-      )}
     </Router>
   );
 }

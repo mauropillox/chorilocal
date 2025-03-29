@@ -9,6 +9,7 @@ import os
 from passlib.context import CryptContext
 import db
 
+# === Configuración ===
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM = "HS256"
@@ -28,6 +29,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# === Helpers ===
 def hash_password(password: str):
     return pwd_context.hash(password)
 
@@ -47,6 +49,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+# === Modelos ===
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -75,12 +78,9 @@ class Pedido(BaseModel):
     fecha: Optional[str] = None
     pdf_generado: bool = False
 
-# ==== AUTENTICACIÓN ====
+# === Autenticación ===
 @app.post("/register")
-def register(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    rol: str = Form("usuario")  # Campo de rol por defecto como "usuario"
-):
+def register(form_data: OAuth2PasswordRequestForm = Depends(), rol: str = Form("usuario")):
     password_hash = hash_password(form_data.password)
     if db.add_usuario(form_data.username, password_hash, rol):
         return {"ok": True}
@@ -93,15 +93,10 @@ def login(username: str = Form(...), password: str = Form(...)):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     if not user["activo"]:
         raise HTTPException(status_code=403, detail="Cuenta inactiva. Esperá aprobación.")
-    token = create_access_token(data={
-        "sub": username,
-        "rol": user["rol"],
-        "activo": user["activo"]  # <--- se incluye acá también
-    })
+    token = create_access_token(data={"sub": username, "rol": user["rol"], "activo": user["activo"]})
     return {"access_token": token, "token_type": "bearer"}
 
-
-# ==== CLIENTES ====
+# === Endpoints protegidos ===
 @app.get("/clientes")
 def get_clientes(user=Depends(get_current_user)):
     return db.get_clientes()
@@ -118,7 +113,6 @@ def update_cliente(cliente_id: int, cliente: Cliente, user=Depends(get_current_u
 def delete_cliente(cliente_id: int, user=Depends(get_current_user)):
     return db.delete_cliente(cliente_id)
 
-# ==== PRODUCTOS ====
 @app.get("/productos")
 def get_productos(user=Depends(get_current_user)):
     return db.get_productos()
@@ -127,7 +121,6 @@ def get_productos(user=Depends(get_current_user)):
 def add_producto(producto: Producto, user=Depends(get_current_user)):
     return db.add_producto(producto.dict())
 
-# ==== PEDIDOS ====
 @app.get("/pedidos")
 def get_pedidos(user=Depends(get_current_user)):
     return db.get_pedidos()
@@ -144,11 +137,6 @@ def delete_pedido(pedido_id: int, user=Depends(get_current_user)):
 def update_pedido_estado(pedido_id: int, user=Depends(get_current_user)):
     return db.update_pedido_estado(pedido_id, 1)
 
-# ==== COMENTADO: Configuración HTTPS futura ====
+# === Comentario para futuro uso de HTTPS ===
 # from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 # app.add_middleware(HTTPSRedirectMiddleware)
-#
-# Para activar SSL, necesitarás:
-# - Certificados válidos en /etc/letsencrypt/live/
-# - Configurar Uvicorn o Nginx con SSL en la instancia
-# - Permitir tráfico HTTPS (puerto 443) en el Security Group
