@@ -14,11 +14,28 @@ git pull
 echo "🛑 Deteniendo contenedores anteriores..."
 docker compose down || true
 
-# ✅ Verificar existencia de .env
+# ✅ Verificar existencia de .env (para el backend)
 if [ ! -f ../.env ]; then
   echo "⚠️ Falta archivo .env para el backend."
   exit 1
 fi
+
+# ✅ Build del frontend con la variable correcta
+echo "🌐 Verificando frontend..."
+cd frontend
+
+if [ ! -f .env ]; then
+  echo "VITE_API_URL=https://pedidosfriosur.com" > .env
+  echo "✅ Archivo .env del frontend creado con VITE_API_URL"
+else
+  echo "✅ Archivo .env del frontend ya existe. Verificalo si da error."
+fi
+
+echo "🧱 Ejecutando npm install y build..."
+npm install
+npm run build
+
+cd ..
 
 # ✅ Base de datos
 echo "🗃️ Verificando base de datos..."
@@ -56,20 +73,7 @@ EOF
     fi
 fi
 
-# ----- Sección SSL comentada (No se usa en este entorno de pruebas) -----
-#: <<'COMMENT_SSL'
-# echo "🔐 Verificando certificados SSL..."
-# CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
-# if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
-#   echo "❌ Certificados no encontrados en $CERT_DIR. Abortando."
-#   exit 1
-# else
-#   echo "✅ Certificados presentes en $CERT_DIR."
-# fi
-#: COMMENT_SSL
-# -----------------------------------------------------------------------
-
 echo "🚀 Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
-echo "✅ Deploy completo. Contenedores corriendo."
+echo "✅ Deploy completo. Accedé a: https://pedidosfriosur.com"
