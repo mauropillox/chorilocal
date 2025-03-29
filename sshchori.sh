@@ -18,7 +18,6 @@ fi
 echo "🔐 Conectando a ec2-user@$PUBLIC_IP..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
 set -e
-
 echo "🔍 Verificando herramientas necesarias..."
 if ! command -v git &>/dev/null; then
   echo "📦 Instalando git..."
@@ -41,10 +40,17 @@ if ! docker compose version &>/dev/null; then
   sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 fi
 
-if ! command -v certbot &>/dev/null; then
-  echo "📦 Instalando Certbot..."
-  sudo yum install -y certbot
-fi
+# Comentamos la sección SSL ya que en este entorno no se usa
+#: <<'COMMENT_SSL'
+# echo "🔐 Verificando certificados SSL..."
+# CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
+# if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+#   echo "❌ Certificados no encontrados en $CERT_DIR. Abortando."
+#   exit 1
+# else
+#   echo "✅ Certificados presentes en $CERT_DIR."
+# fi
+#: COMMENT_SSL
 
 echo "📁 Preparando proyecto..."
 if [ ! -d chorizaurio ]; then
@@ -57,44 +63,6 @@ else
   git reset --hard HEAD
   git clean -fd
   git pull
-fi
-
-echo "🔐 Verificando certificados SSL..."
-CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
-NEED_RENEW=false
-
-if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
-  echo "🚫 Certificados no encontrados en $CERT_DIR"
-  NEED_RENEW=true
-else
-  echo "✅ Certificados ya presentes."
-fi
-
-if [ "$NEED_RENEW" = true ]; then
-  echo "🔧 Forzando generación de certificados SSL..."
-  sudo docker compose down || true
-  sudo fuser -k 80/tcp || true
-  sudo fuser -k 443/tcp || true
-  sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com \
-    --non-interactive --agree-tos -m contacto@pedidosfriosur.com --force-renewal
-fi
-
-# Esperar en bucle para que se actualicen los certificados (hasta 15 segundos)
-MAX_WAIT=15
-WAITED=0
-while [ $WAITED -lt $MAX_WAIT ]; do
-  if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
-    echo "✅ Certificados disponibles en $CERT_DIR."
-    break
-  fi
-  echo "⏱ Esperando 5 segundos para que se actualicen los certificados..."
-  sleep 5
-  WAITED=$((WAITED + 5))
-done
-
-if [ $WAITED -ge $MAX_WAIT ]; then
-  echo "❌ Aún no se encontraron certificados en $CERT_DIR. Abortando."
-  exit 1
 fi
 ENDSSH
 

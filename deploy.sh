@@ -56,29 +56,19 @@ EOF
     fi
 fi
 
-# ✅ Copiar certificados SSL al contenedor si no están
-echo "🔐 Verificando certificados SSL..."
-CERT_SRC=/etc/letsencrypt/live/pedidosfriosur.com
-CERT_DEST=certs
+# ----- Sección SSL comentada (No se usa en este entorno de pruebas) -----
+#: <<'COMMENT_SSL'
+# echo "🔐 Verificando certificados SSL..."
+# CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
+# if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+#   echo "❌ Certificados no encontrados en $CERT_DIR. Abortando."
+#   exit 1
+# else
+#   echo "✅ Certificados presentes en $CERT_DIR."
+# fi
+#: COMMENT_SSL
+# -----------------------------------------------------------------------
 
-if [ ! -f "$CERT_DEST/fullchain.pem" ] || [ ! -f "$CERT_DEST/privkey.pem" ]; then
-    echo "📂 Copiando certificados desde $CERT_SRC a $CERT_DEST..."
-    if [ -f "$CERT_SRC/fullchain.pem" ] && [ -f "$CERT_SRC/privkey.pem" ]; then
-        mkdir -p "$CERT_DEST"
-        sudo cp "$CERT_SRC/fullchain.pem" "$CERT_DEST/"
-        sudo cp "$CERT_SRC/privkey.pem" "$CERT_DEST/"
-        sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
-        chmod 644 "$CERT_DEST/"*.pem
-        echo "✅ Certificados copiados a $CERT_DEST/"
-    else
-        echo "❌ No se encontraron certificados en $CERT_SRC ni en $CERT_DEST. Abortando."
-        exit 1
-    fi
-else
-    echo "✅ Certificados ya presentes en $CERT_DEST/"
-fi
-
-# ✅ Reconstruir e iniciar contenedores
 echo "🚀 Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
