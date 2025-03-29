@@ -1,62 +1,66 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-// Importamos la función que ya existe en auth.js:
-import { guardarToken } from "../auth";
+import { useState } from 'react';
+import { guardarToken } from '../auth';
+import logo from '../assets/logo.png'; // Ruta relativa correcta
 
-export default function Login() {
-  const [usuario, setUsuario] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
+export default function Login({ onLoginSuccess }) {
+  const [usuario, setUsuario] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
 
-    // Ojo: Asumimos que tu backend define el endpoint /login
-    // y devuelve { "access_token": "..." } al iniciar sesión.
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        username: usuario,
-        password: password,
-      }),
-    });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
+        method: 'POST',
+        body: new URLSearchParams({ username: usuario, password: contrasena }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      // Usamos guardarToken(token) de auth.js:
-      guardarToken(data.access_token);
-      navigate("/clientes");
-    } else {
-      setError("Credenciales incorrectas");
+      const data = await response.json();
+
+      if (response.ok) {
+        guardarToken(data.access_token);
+        onLoginSuccess();
+      } else {
+        setError(data.detail || 'Error desconocido');
+      }
+    } catch (err) {
+      setError('Error de red o del servidor');
     }
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-96 space-y-4">
-        <h2 className="text-xl font-bold text-center">Iniciar Sesión</h2>
-        {error && <div className="text-red-600">{error}</div>}
-        <input
-          type="text"
-          placeholder="Usuario"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
-        <button type="submit" className="bg-blue-600 text-white w-full py-2 rounded">
-          Entrar
-        </button>
-      </form>
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center p-4">
+      <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-sm">
+        <div className="flex justify-center mb-6">
+          <img src={logo} alt="Logo" className="h-16" />
+        </div>
+        <h2 className="text-2xl font-bold text-center mb-4">Iniciar Sesión</h2>
+
+        {error && <div className="text-red-400 mb-4 text-sm text-center">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="text"
+            placeholder="Usuario"
+            className="p-2 rounded bg-gray-700 text-white"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            className="p-2 rounded bg-gray-700 text-white"
+            value={contrasena}
+            onChange={(e) => setContrasena(e.target.value)}
+          />
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">
+            Entrar
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
