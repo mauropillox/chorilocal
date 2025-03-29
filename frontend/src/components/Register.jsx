@@ -1,80 +1,55 @@
+// Register.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Register() {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      const res = await fetch('/api/register', {
+      const form = new URLSearchParams();
+      form.append('username', username);
+      form.append('password', password);
+      const res = await fetch(import.meta.env.VITE_API_URL + '/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(form),
+        body: form
       });
-
-      if (res.ok) {
-        setSuccess(true);
-      } else {
-        const data = await res.json();
-        setError(data.detail || 'Error al registrar');
-      }
+      if (!res.ok) throw new Error('Error de registro');
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 3000);
     } catch (err) {
-      setError('Error de red');
+      setError('El usuario ya existe o hubo un error');
     }
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-blue-700 mb-2">Crear Cuenta</h2>
-      {success ? (
-        <div className="text-green-600">
-          ✅ Registro exitoso. Esperá a que un administrador active tu cuenta.
-          <br />
-          <button onClick={() => navigate('/')} className="mt-4 underline text-blue-600">
-            Ir al login
-          </button>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="username"
-            placeholder="Usuario"
-            value={form.username}
-            onChange={handleChange}
-            required
-            className="w-full border rounded p-2"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Contraseña"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full border rounded p-2"
-          />
-          {error && <p className="text-red-600">{error}</p>}
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
-            Registrarme
-          </button>
-        </form>
-      )}
-      <p className="text-sm text-blue-500 mt-4">
-        ¿Ya tenés cuenta?{' '}
-        <Link to="/" className="underline text-blue-700">
-          Iniciar sesión
-        </Link>
-      </p>
-    </div>
+    <form onSubmit={handleRegister} className="flex flex-col gap-4">
+      <input
+        type="text"
+        placeholder="Usuario"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        className="border p-2 rounded"
+      />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="border p-2 rounded"
+      />
+      <button type="submit" className="bg-green-600 text-white py-2 rounded">
+        Registrarme
+      </button>
+      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {success && <p className="text-green-600 text-sm">Cuenta registrada. Esperá aprobación del administrador...</p>}
+      <p className="text-sm text-gray-600">¿Ya tenés cuenta? <Link to="/" className="text-blue-500">Iniciá sesión</Link></p>
+    </form>
   );
 }

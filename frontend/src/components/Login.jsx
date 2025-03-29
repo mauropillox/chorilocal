@@ -1,77 +1,61 @@
+// Login.jsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { guardarToken } from '../auth';
 
 export default function Login({ onLoginSuccess }) {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      const res = await fetch('/api/login', {
+      const form = new URLSearchParams();
+      form.append('username', username);
+      form.append('password', password);
+      const res = await fetch(import.meta.env.VITE_API_URL + '/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(form),
+        body: form
       });
-
+      if (!res.ok) throw new Error('Error de login');
       const data = await res.json();
-      if (res.ok) {
-        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
-        if (!payload.activo) {
-          setError('Tu cuenta aún no ha sido activada por un administrador.');
-          return;
-        }
-        guardarToken(data.access_token);
-        onLoginSuccess();
-        navigate('/clientes');
-      } else {
-        setError(data.detail || 'Error al iniciar sesión');
+      const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+      if (!payload.activo) {
+        setError('Tu cuenta aún no fue activada por un administrador.');
+        return;
       }
-    } catch {
-      setError('Error de red');
+      guardarToken(data.access_token);
+      onLoginSuccess();
+      navigate('/clientes');
+    } catch (err) {
+      setError('Credenciales incorrectas');
     }
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-blue-700 mb-2">Iniciar Sesión</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          name="username"
-          placeholder="Usuario"
-          value={form.username}
-          onChange={handleChange}
-          required
-          className="w-full border rounded p-2"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Contraseña"
-          value={form.password}
-          onChange={handleChange}
-          required
-          className="w-full border rounded p-2"
-        />
-        {error && <p className="text-red-600">{error}</p>}
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
-          Entrar
-        </button>
-      </form>
-      <p className="text-sm text-blue-500 mt-4">
-        ¿No tenés cuenta?{' '}
-        <button onClick={() => navigate('/registro')} className="underline text-blue-700">
-          Registrate
-        </button>
-      </p>
-    </div>
+    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+      <input
+        type="text"
+        placeholder="Usuario"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        className="border p-2 rounded"
+      />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="border p-2 rounded"
+      />
+      <button type="submit" className="bg-blue-600 text-white py-2 rounded">
+        Iniciar Sesión
+      </button>
+      {error && <p className="text-red-600 text-sm">{error}</p>}
+      <p className="text-sm text-gray-600">¿No tenés cuenta? <Link to="/registro" className="text-blue-500">Registrate acá</Link></p>
+    </form>
   );
 }
