@@ -14,36 +14,33 @@ git pull
 echo "🛑 Deteniendo contenedores anteriores..."
 docker compose down || true
 
-# ✅ Verificar existencia de .env (para el backend)
-if [ ! -f ../.env ]; then
-  echo "⚠️ Falta archivo .env para el backend."
+# ✅ Verificar existencia de .env para el backend
+if [ ! -f .env ]; then
+  echo "❌ Falta archivo .env para el backend (./.env)"
   exit 1
 fi
 
-# ✅ Build del frontend con la variable correcta
-echo "🌐 Verificando frontend..."
-cd frontend
-
-if [ ! -f .env ]; then
-  echo "VITE_API_URL=https://pedidosfriosur.com" > .env
-  echo "✅ Archivo .env del frontend creado con VITE_API_URL"
+# ✅ Verificar existencia de archivo .env para el frontend
+if [ ! -f frontend/.env ]; then
+  echo "❌ Falta archivo frontend/.env"
+  exit 1
 else
   echo "✅ Archivo .env del frontend ya existe. Verificalo si da error."
 fi
 
-echo "🧱 Ejecutando npm install y build..."
-npm install
-npm run build
-
-cd ..
+# ✅ Validar VITE_API_URL
+if ! grep -q "VITE_API_URL=http" frontend/.env; then
+  echo "⚠️ VITE_API_URL no está definido correctamente en frontend/.env"
+  exit 1
+fi
 
 # ✅ Base de datos
 echo "🗃️ Verificando base de datos..."
 if [ ! -f ventas.db ]; then
     echo "⚠️ ventas.db no encontrada. Ejecutando init_db.py..."
-    docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
+    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
 else
-    docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python - <<EOF
+    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python - <<EOF
 import sqlite3, sys
 db = sqlite3.connect("ventas.db")
 c = db.cursor()
@@ -66,14 +63,21 @@ except Exception as e:
 EOF
 
     if [ $? -eq 42 ]; then
-        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
+        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
     else
         echo "✅ Base de datos OK. Ejecutando migración..."
-        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python migrar_db.py || true
+        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python migrar_db.py || true
     fi
 fi
 
+# ✅ Compilar frontend con Node en contenedor (no requiere npm global)
+echo "🧱 Ejecutando build del frontend en contenedor..."
+docker run --rm -v "$PWD/frontend":/app -w /app --env-file .env node:18-alpine sh -c "
+  npm install && npm run build -- --mode production
+"
+
+# ✅ Desplegar contenedores
 echo "🚀 Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
-echo "✅ Deploy completo. Accedé a: https://pedidosfriosur.com"
+echo "✅ Deploy completo. Contenedores corriendo en http://pedidosfriosur.com"
