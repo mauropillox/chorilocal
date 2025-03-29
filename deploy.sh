@@ -58,6 +58,21 @@ EOF
     fi
 fi
 
+# ✅ Verificar y copiar certificados SSL
+CERT_ORIG=/etc/letsencrypt/live/pedidosfriosur.com
+CERT_DEST=certs
+
+echo "<ssl01> Verificando certificados SSL..."
+if [ -f "$CERT_ORIG/fullchain.pem" ] && [ -f "$CERT_ORIG/privkey.pem" ]; then
+    mkdir -p "$CERT_DEST"
+    cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
+    cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
+    chmod 644 "$CERT_DEST/"*.pem
+    echo "✅ Certificados SSL copiados correctamente."
+else
+    echo "⚠️ Certificados SSL no encontrados en $CERT_ORIG"
+fi
+
 echo "<dd42> Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 

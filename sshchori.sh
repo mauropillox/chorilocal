@@ -15,7 +15,7 @@ if [ ! -f "$LOCAL_ENV_PATH" ]; then
   exit 1
 fi
 
-# Conectar por SSH directamente, instalar todo lo necesario y clonar repositorio
+# Conectar por SSH directamente, instalar todo lo necesario y preparar entorno
 echo "🔐 Conectando a ec2-user@$PUBLIC_IP..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   set -e
@@ -61,17 +61,34 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   fi
 
   echo "🔒 Verificando certificados SSL..."
-  if [ ! -f ./certs/fullchain.pem ] || [ ! -f ./certs/privkey.pem ]; then
-    echo "🚫 Certificados no encontrados. Intentando detener servicios en el puerto 80..."
+  CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
+  NEED_RENEW=false
+
+  if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+    echo "🚫 Certificados no encontrados en $CERT_DIR"
+    NEED_RENEW=true
+  else
+    echo "🧪 Probando si el certificado necesita renovación..."
+    if ! sudo certbot renew --dry-run | grep -q "No renewals were attempted"; then
+      echo "🔁 Certificado necesita renovación"
+      NEED_RENEW=true
+    else
+      echo "✅ Certificado válido, sin necesidad de renovar"
+    fi
+  fi
+
+  if [ "$NEED_RENEW" = true ]; then
+    echo "🔧 Renovando certificado SSL..."
+    sudo docker compose down || true
     sudo fuser -k 80/tcp || true
     sudo fuser -k 443/tcp || true
     sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com --non-interactive --agree-tos -m contacto@pedidosfriosur.com
     mkdir -p certs
-    sudo cp /etc/letsencrypt/live/pedidosfriosur.com/fullchain.pem certs/
-    sudo cp /etc/letsencrypt/live/pedidosfriosur.com/privkey.pem certs/
+    sudo cp "$CERT_DIR/fullchain.pem" certs/
+    sudo cp "$CERT_DIR/privkey.pem" certs/
     sudo chown ec2-user:ec2-user certs/*.pem
   else
-    echo "✅ Certificados SSL ya presentes."
+    echo "✅ Certificados SSL ya presentes y válidos."
   fi
 ENDSSH
 
@@ -96,6 +113,7 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   fi
 
   chmod +x deploy.sh
+
   # Si existe migrar_db.py, lo dejamos, si no lo removemos de deploy.sh
   if [ ! -f migrar_db.py ]; then
     sed -i '/migrar_db\.py/d' deploy.sh
@@ -106,8 +124,8 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   echo "📦 Logs de contenedores activos:"
   docker ps
   docker compose logs --tail=100
-
-  exec bash
 ENDSSH
 
-echo "✅ Todo listo. Ya estás conectado a la instancia."
+# 🔁 Conexión interactiva final
+echo "✅ Deploy finalizado. Conectando a la instancia para trabajar manualmente..."
+ssh -i "$KEY_PATH" ec2-user@"$PUBLIC_IP"
