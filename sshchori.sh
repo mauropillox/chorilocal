@@ -15,7 +15,6 @@ if [ ! -f "$LOCAL_ENV_PATH" ]; then
   exit 1
 fi
 
-# Conectar por SSH directamente, instalar todo lo necesario y preparar entorno
 echo "🔐 Conectando a ec2-user@$PUBLIC_IP..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   set -e
@@ -60,7 +59,7 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
     git pull
   fi
 
-  echo "🔒 Verificando certificados SSL..."
+  echo "🔐 Verificando certificados SSL..."
   CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
   NEED_RENEW=false
 
@@ -68,41 +67,32 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
     echo "🚫 Certificados no encontrados en $CERT_DIR"
     NEED_RENEW=true
   else
-    echo "🧪 Probando si el certificado necesita renovación..."
-    if ! sudo certbot renew --dry-run | grep -q "No renewals were attempted"; then
-      echo "🔁 Certificado necesita renovación"
-      NEED_RENEW=true
-    else
-      echo "✅ Certificado válido, sin necesidad de renovar"
-    fi
+    echo "✅ Certificados ya presentes."
   fi
 
   if [ "$NEED_RENEW" = true ]; then
-    echo "🔧 Renovando o generando certificado SSL..."
+    echo "🔧 Forzando generación de certificados SSL..."
     sudo docker compose down || true
     sudo fuser -k 80/tcp || true
     sudo fuser -k 443/tcp || true
-    sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com --non-interactive --agree-tos -m contacto@pedidosfriosur.com
-  else
-    echo "✅ Certificados SSL ya presentes y válidos."
+    sudo certbot certonly --standalone -d pedidosfriosur.com -d www.pedidosfriosur.com \
+      --non-interactive --agree-tos -m contacto@pedidosfriosur.com --force-renewal
   fi
 
-  echo "🗂️ Copiando certificados a carpeta certs/ del proyecto..."
-  mkdir -p certs
-  sudo cp /etc/letsencrypt/live/pedidosfriosur.com/fullchain.pem certs/
-  sudo cp /etc/letsencrypt/live/pedidosfriosur.com/privkey.pem certs/
-  sudo chown ec2-user:ec2-user certs/*.pem
-  chmod 644 certs/*.pem
+  if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+    echo "❌ Aún no se encontraron certificados en $CERT_DIR. Abortando."
+    exit 1
+  else
+    echo "✅ Certificados disponibles en $CERT_DIR."
+  fi
 ENDSSH
 
-# Subir el archivo .env al nivel adecuado del proyecto
 echo "📤 Copiando .env al servidor remoto..."
 scp -i "$KEY_PATH" "$LOCAL_ENV_PATH" ec2-user@"$PUBLIC_IP":/home/ec2-user/chorizaurio/.env || {
   echo "⚠️ No se pudo copiar .env automáticamente"
   exit 1
 }
 
-# Volver a conectarse y ejecutar deploy.sh desde el directorio clonado
 echo "🏃 Ejecutando deploy.sh remotamente..."
 ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   set -e
@@ -128,6 +118,5 @@ ssh -t -i "$KEY_PATH" ec2-user@"$PUBLIC_IP" <<'ENDSSH'
   docker compose logs --tail=100
 ENDSSH
 
-# 🔁 Conexión interactiva final
 echo "✅ Deploy finalizado. Conectando a la instancia para trabajar manualmente..."
 ssh -i "$KEY_PATH" ec2-user@"$PUBLIC_IP"
