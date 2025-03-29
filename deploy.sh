@@ -1,36 +1,29 @@
 #!/bin/bash
 set -e
 
-# Colores ANSI
-GREEN='\033[1;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[1;36m'
-RED='\033[1;31m'
-NC='\033[0m' # sin color
-
-echo -e "${CYAN}<dd01>${NC} Clonando repositorio por primera vez..."
+echo "📥 Clonando repositorio por primera vez..."
 if [ ! -d "chorizaurio" ]; then
     git clone https://github.com/mauropillox/chorizaurio.git
 fi
 
 cd chorizaurio
 
-echo -e "${CYAN}<ddf9>${NC} Haciendo pull desde GitHub..."
+echo "🔄 Haciendo pull desde GitHub..."
 git pull
 
-echo -e "${CYAN}<dd28>${NC} Deteniendo contenedores anteriores..."
+echo "🛑 Deteniendo contenedores anteriores..."
 docker compose down || true
 
 # ✅ Verificar existencia de .env
 if [ ! -f ../.env ]; then
-  echo -e "${YELLOW}⚠️ Falta archivo .env para el backend.${NC}"
+  echo "⚠️ Falta archivo .env para el backend."
   exit 1
 fi
 
 # ✅ Base de datos
-echo -e "${CYAN}<db01>${NC} Verificando base de datos..."
+echo "🗃️ Verificando base de datos..."
 if [ ! -f ventas.db ]; then
-    echo -e "${YELLOW}⚠️ ventas.db no encontrada. Ejecutando init_db.py...${NC}"
+    echo "⚠️ ventas.db no encontrada. Ejecutando init_db.py..."
     docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
 else
     docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python - <<EOF
@@ -58,24 +51,30 @@ EOF
     if [ $? -eq 42 ]; then
         docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
     else
-        echo -e "${GREEN}✅ Base de datos OK. Ejecutando migración...${NC}"
+        echo "✅ Base de datos OK. Ejecutando migración..."
         docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python migrar_db.py
     fi
 fi
 
-# ✅ Verificar certificados SSL directamente montados
-echo -e "${CYAN}<ssl01>${NC} Verificando certificados SSL..."
-CERT_DIR="/etc/letsencrypt/live/pedidosfriosur.com"
+# ✅ Copiar certificados SSL al contenedor
+echo "🔐 Verificando certificados SSL..."
+CERT_ORIG="/etc/letsencrypt/live/pedidosfriosur.com"
+CERT_DEST="./certs"
 
-if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
-  echo -e "${RED}❌ Certificados no encontrados en $CERT_DIR. Abortando.${NC}"
-  exit 1
+if [ -f "$CERT_ORIG/fullchain.pem" ] && [ -f "$CERT_ORIG/privkey.pem" ]; then
+    echo "✅ Certificados encontrados, copiando a $CERT_DEST..."
+    mkdir -p "$CERT_DEST"
+    sudo cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
+    sudo cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
+    sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
+    chmod 644 "$CERT_DEST/"*.pem
 else
-  echo -e "${GREEN}✅ Certificados SSL existentes en $CERT_DIR${NC}"
+    echo "❌ Certificados no encontrados en $CERT_ORIG. Abortando."
+    exit 1
 fi
 
 # ✅ Reconstruir contenedores
-echo -e "${CYAN}<dd42>${NC} Reconstruyendo e iniciando contenedores..."
+echo "🚀 Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
-echo -e "${GREEN}✅ Deploy completo. Contenedores corriendo.${NC}"
+echo "✅ Deploy completo. Contenedores corriendo."
