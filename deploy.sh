@@ -52,28 +52,33 @@ EOF
         docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python init_db.py
     else
         echo "✅ Base de datos OK. Ejecutando migración..."
-        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python migrar_db.py
+        docker run --rm -v "$PWD":/app -w /app --env-file ../.env python:3.9 python migrar_db.py || true
     fi
 fi
 
-# ✅ Copiar certificados SSL al contenedor
+# ✅ Copiar certificados SSL al contenedor si no están
 echo "🔐 Verificando certificados SSL..."
-CERT_ORIG="/etc/letsencrypt/live/pedidosfriosur.com"
-CERT_DEST="./certs"
+CERT_SRC=/etc/letsencrypt/live/pedidosfriosur.com
+CERT_DEST=certs
 
-if [ -f "$CERT_ORIG/fullchain.pem" ] && [ -f "$CERT_ORIG/privkey.pem" ]; then
-    echo "✅ Certificados encontrados, copiando a $CERT_DEST..."
-    mkdir -p "$CERT_DEST"
-    sudo cp "$CERT_ORIG/fullchain.pem" "$CERT_DEST/"
-    sudo cp "$CERT_ORIG/privkey.pem" "$CERT_DEST/"
-    sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
-    chmod 644 "$CERT_DEST/"*.pem
+if [ ! -f "$CERT_DEST/fullchain.pem" ] || [ ! -f "$CERT_DEST/privkey.pem" ]; then
+    echo "📂 Copiando certificados desde $CERT_SRC a $CERT_DEST..."
+    if [ -f "$CERT_SRC/fullchain.pem" ] && [ -f "$CERT_SRC/privkey.pem" ]; then
+        mkdir -p "$CERT_DEST"
+        sudo cp "$CERT_SRC/fullchain.pem" "$CERT_DEST/"
+        sudo cp "$CERT_SRC/privkey.pem" "$CERT_DEST/"
+        sudo chown ec2-user:ec2-user "$CERT_DEST/"*.pem
+        chmod 644 "$CERT_DEST/"*.pem
+        echo "✅ Certificados copiados a $CERT_DEST/"
+    else
+        echo "❌ No se encontraron certificados en $CERT_SRC ni en $CERT_DEST. Abortando."
+        exit 1
+    fi
 else
-    echo "❌ Certificados no encontrados en $CERT_ORIG. Abortando."
-    exit 1
+    echo "✅ Certificados ya presentes en $CERT_DEST/"
 fi
 
-# ✅ Reconstruir contenedores
+# ✅ Reconstruir e iniciar contenedores
 echo "🚀 Reconstruyendo e iniciando contenedores..."
 docker compose up --build -d
 
