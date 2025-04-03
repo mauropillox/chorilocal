@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+// Clientes.jsx
+import { useEffect, useState } from 'react';
 import Select from 'react-select';
+import { fetchConToken } from '../auth';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
@@ -9,110 +11,142 @@ export default function Clientes() {
   const [selectedCliente, setSelectedCliente] = useState(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/clientes`)
-      .then(res => res.json())
-      .then(data => setClientes(data));
+    cargarClientes();
   }, []);
 
-  const resetFormulario = () => {
-    setNombre('');
-    setTelefono('');
-    setDireccion('');
-    setSelectedCliente(null);
+  const cargarClientes = async () => {
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/clientes`);
+    if (res.ok) {
+      const data = await res.json();
+      setClientes(data);
+    } else {
+      console.error("Error al cargar clientes:", res.status);
+    }
   };
 
-  const agregarOEditarCliente = async () => {
-    if (!nombre) return alert("Debe ingresar un nombre");
+  const agregarCliente = async () => {
+    if (!nombre) return alert('Debe ingresar un nombre');
+
+    const payload = { nombre, telefono, direccion };
+    let url = `${import.meta.env.VITE_API_URL}/clientes`;
+    let method = 'POST';
 
     if (selectedCliente) {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes/${selectedCliente.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, telefono, direccion })
-      });
-      if (res.ok) {
-        const actualizado = await res.json();
-        setClientes(clientes.map(c => c.id === actualizado.id ? actualizado : c));
-        resetFormulario();
-      }
+      url = `${import.meta.env.VITE_API_URL}/clientes/${selectedCliente.value}`;
+      method = 'PUT';
+    }
+
+    const res = await fetchConToken(url, {
+      method,
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await cargarClientes();
+      setNombre('');
+      setTelefono('');
+      setDireccion('');
+      setSelectedCliente(null);
     } else {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, telefono, direccion })
-      });
-      if (res.ok) {
-        const nuevo = await res.json();
-        setClientes([...clientes, nuevo]);
-        resetFormulario();
-      }
+      alert("Error al guardar cliente");
     }
   };
 
   const eliminarCliente = async (id) => {
-    if (!confirm("¿Seguro que querés eliminar este cliente?")) return;
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/clientes/${id}`, {
-      method: "DELETE"
+    if (!confirm("¿Estás seguro que querés eliminar este cliente?")) return;
+
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/clientes/${id}`, {
+      method: 'DELETE',
     });
+
     if (res.ok) {
       setClientes(clientes.filter(c => c.id !== id));
-      resetFormulario();
+      setSelectedCliente(null);
+    } else {
+      alert("Error al eliminar cliente");
     }
   };
 
   const clienteOptions = clientes.map(c => ({
     value: c.id,
-    label: c.nombre
+    label: `${c.nombre} (Tel: ${c.telefono || 'Sin teléfono'}, Dir: ${c.direccion || 'Sin dirección'})`,
+    nombre: c.nombre,
+    telefono: c.telefono,
+    direccion: c.direccion
   }));
+
+  const cargarClienteParaEditar = (cliente) => {
+    setSelectedCliente(cliente);
+    setNombre(cliente.nombre);
+    setTelefono(cliente.telefono);
+    setDireccion(cliente.direccion);
+  };
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Clientes</h2>
+      <h2 className="text-xl font-bold mb-4">Gestión de Clientes</h2>
 
       <div className="mb-4">
-        <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} className="border p-2 mr-2 rounded" />
-        <input type="text" placeholder="Teléfono" value={telefono} onChange={e => setTelefono(e.target.value)} className="border p-2 mr-2 rounded" />
-        <input type="text" placeholder="Dirección" value={direccion} onChange={e => setDireccion(e.target.value)} className="border p-2 mr-2 rounded" />
-        <button onClick={agregarOEditarCliente} className="bg-blue-500 text-white px-4 py-2 rounded">
-          {selectedCliente ? "Guardar cambios" : "Agregar"}
-        </button>
-        {selectedCliente && (
-          <button onClick={resetFormulario} className="ml-2 text-gray-500 underline">Cancelar</button>
-        )}
-      </div>
-
-      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Seleccionar cliente:</label>
         <Select
           options={clienteOptions}
-          value={selectedCliente ? { value: selectedCliente.id, label: selectedCliente.nombre } : null}
-          onChange={(option) => {
-            const cliente = clientes.find(c => c.id === option.value);
-            setSelectedCliente(cliente);
-            setNombre(cliente.nombre);
-            setTelefono(cliente.telefono);
-            setDireccion(cliente.direccion);
-          }}
-          placeholder="Seleccionar cliente..."
+          value={selectedCliente}
+          onChange={cargarClienteParaEditar}
           className="w-full"
+          placeholder="Seleccionar cliente"
         />
       </div>
 
-      {selectedCliente && (
-        <div className="bg-blue-50 border p-4 rounded shadow-md mt-2 space-y-2">
-          <h3 className="font-bold text-lg text-blue-700">📋 Cliente seleccionado</h3>
-          <p><strong>Nombre:</strong> {selectedCliente.nombre}</p>
-          <p><strong>Teléfono:</strong> {selectedCliente.telefono || "No especificado"}</p>
-          <p><strong>Dirección:</strong> {selectedCliente.direccion || "No especificado"}</p>
-          <div className="flex justify-end">
-            <button
-              onClick={() => eliminarCliente(selectedCliente.id)}
-              className="text-red-600 border border-red-600 px-4 py-1 rounded hover:bg-red-600 hover:text-white"
-            >
-              Eliminar cliente
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          className="border p-2 rounded w-full sm:w-auto"
+        />
+        <input
+          type="text"
+          placeholder="Teléfono"
+          value={telefono}
+          onChange={(e) => setTelefono(e.target.value)}
+          className="border p-2 rounded w-full sm:w-auto"
+        />
+        <input
+          type="text"
+          placeholder="Dirección"
+          value={direccion}
+          onChange={(e) => setDireccion(e.target.value)}
+          className="border p-2 rounded w-full sm:w-auto"
+        />
+        <button
+          onClick={agregarCliente}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {selectedCliente ? 'Actualizar' : 'Agregar'}
+        </button>
+        {selectedCliente && (
+          <button
+            onClick={() => {
+              setNombre('');
+              setTelefono('');
+              setDireccion('');
+              setSelectedCliente(null);
+            }}
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+        )}
+        {selectedCliente && (
+          <button
+            onClick={() => eliminarCliente(selectedCliente.value)}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Eliminar
+          </button>
+        )}
+      </div>
     </div>
   );
 }

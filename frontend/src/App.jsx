@@ -1,77 +1,86 @@
-// App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import LayoutApp from './LayoutApp';
-import Login from './components/Login';
-import Register from './components/Register';
-import { obtenerToken, borrarToken } from './auth';
-import './App.css';
+// src/App.jsx
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
+import LayoutApp from "./LayoutApp";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Clientes from "./components/Clientes";
+import Productos from "./components/Productos";
+import Pedidos from "./components/Pedidos";
+import HistorialPedidos from "./components/HistorialPedidos";
+import AdminPanel from "./components/AdminPanel";
+// ❌ Old: import { AuthProvider, AuthContext } from "./components/AuthContext";
+// ✅ New:
+import { AuthProvider } from "./components/AuthContext";
+import { RequireAuth } from "./components/RequireAuth";
+import { RequireAdmin } from "./components/RequireAdmin";
+import TokenDebug from "./components/TokenDebug";
 
-function App() {
-  const [logueado, setLogueado] = useState(false);
-  const [verificando, setVerificando] = useState(true);
-
-  useEffect(() => {
-    const token = obtenerToken();
-    console.log("Token:", token);
-
-    if (!token) {
-      console.log("No se encontró token");
-      setLogueado(false); // importante
-      setVerificando(false);
-      return;
-    }
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log("Payload:", payload);
-
-      const exp = payload.exp * 1000;
-      const activo = payload.activo;
-
-      if (Date.now() >= exp || !activo) {
-        console.log("Token expirado o cuenta inactiva");
-        borrarToken();
-        setLogueado(false);
-      } else {
-        console.log("Token válido y cuenta activa");
-        setLogueado(true);
-      }
-    } catch (e) {
-      console.log("Error al decodificar token:", e);
-      borrarToken();
-      setLogueado(false); // importante
-    }
-
-    setVerificando(false);
-  }, []);
-
-  if (verificando) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-blue-50">
-        <p className="text-gray-600 text-sm">Verificando autenticación...</p>
-      </div>
-    );
-  }
+function AppRoutes() {
+  // If you used to do something like: 
+  //   const { user, cargando } = useContext(AuthContext);
+  // Now do: 
+  //   const { token, tokenPayload } = useAuth();
+  // or skip if not needed.
 
   return (
-    <Router>
-      <Routes>
-        {!logueado ? (
-          <>
-            <Route path="/" element={<Login onLoginSuccess={() => setLogueado(true)} />} />
-            <Route path="/registro" element={<Register />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </>
-        ) : (
-          <>
-            <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
-            <Route path="*" element={<Navigate to="/clientes" />} />
-          </>
-        )}
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/registro" element={<Register />} />
+      <Route path="/" element={<LayoutApp />}>
+        <Route
+          path="clientes"
+          element={
+            <RequireAuth>
+              <Clientes />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="productos"
+          element={
+            <RequireAuth>
+              <Productos />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="pedidos"
+          element={
+            <RequireAuth>
+              <Pedidos />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="historial"
+          element={
+            <RequireAuth>
+              <HistorialPedidos />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="admin"
+          element={
+            <RequireAdmin>
+              <AdminPanel />
+            </RequireAdmin>
+          }
+        />
+      </Route>
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+        <TokenDebug />
+      </Router>
+    </AuthProvider>
+  );
+}

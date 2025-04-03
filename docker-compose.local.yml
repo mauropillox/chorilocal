@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chorizaurio-backend
+    env_file:
+      - .env
+    volumes:
+      - ./ventas.db:/app/ventas.db
+      - ./backend/resetadmin.py:/app/resetadmin.py  # <--- agregá esta línea
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chorizaurio-frontend
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.docker
+    ports:
+      - "3000:80"
+    restart: unless-stopped

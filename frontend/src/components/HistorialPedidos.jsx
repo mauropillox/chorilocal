@@ -1,121 +1,210 @@
-import { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
+import { useEffect, useState } from 'react';
+import { fetchConToken } from '../auth';
+import { toast } from 'react-toastify';
 
 export default function HistorialPedidos() {
   const [pedidos, setPedidos] = useState([]);
-  const [selectedPedidos, setSelectedPedidos] = useState([]);
-  const [activeTab, setActiveTab] = useState("pendientes");
+  const [mostrarGenerados, setMostrarGenerados] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [seleccionados, setSeleccionados] = useState([]);
+  const pedidosPorPagina = 10;
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/pedidos`)
-      .then(res => res.json())
-      .then(data => setPedidos(data));
+    cargarPedidos();
   }, []);
 
-  const handleCheckboxChange = (pedidoId) => {
-    setSelectedPedidos((prevSelected) =>
-      prevSelected.includes(pedidoId)
-        ? prevSelected.filter((id) => id !== pedidoId)
-        : [...prevSelected, pedidoId]
+  const cargarPedidos = async () => {
+    setCargando(true);
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos`);
+      if (res.ok) {
+        const data = await res.json();
+        const ordenados = data.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+        setPedidos(ordenados);
+      } else {
+        const error = await res.text();
+        console.error('Error al cargar pedidos:', error);
+        toast.error('❌ Error al cargar pedidos');
+      }
+    } catch (err) {
+      console.error('Error de red:', err);
+      toast.error('❌ Error de red al cargar pedidos');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const cambiarEstado = async (id, nuevoEstado) => {
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_generado: nuevoEstado }),
+      });
+      if (res.ok) {
+        cargarPedidos();
+        toast.success(`Estado del pedido #${id} actualizado`);
+      } else {
+        const error = await res.text();
+        console.error('Error al cambiar estado del pedido:', error);
+        toast.error('❌ Error al cambiar estado del pedido');
+      }
+    } catch (err) {
+      console.error('Error al cambiar estado:', err);
+      toast.error('❌ Error al cambiar estado del pedido');
+    }
+  };
+
+  const eliminarPedido = async (id) => {
+    if (!confirm("¿Seguro que querés eliminar este pedido?")) return;
+
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setPedidos((prev) => prev.filter(p => p.id !== id));
+        toast.success(`Pedido #${id} eliminado`);
+      } else {
+        const error = await res.text();
+        console.error('Error al eliminar pedido:', error);
+        toast.error('❌ Error al eliminar el pedido');
+      }
+    } catch (err) {
+      console.error('Error al eliminar el pedido:', err);
+      toast.error('❌ Error al eliminar el pedido');
+    }
+  };
+
+  const toggleSeleccion = (id) => {
+    setSeleccionados((prev) =>
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
     );
   };
 
   const generarPDF = async () => {
-    const doc = new jsPDF();
-    let yPosition = 10;
+    if (seleccionados.length === 0) return toast.info("Seleccioná al menos un pedido");
 
-    for (let pedidoId of selectedPedidos) {
-      const pedido = pedidos.find((p) => p.id === pedidoId);
-      doc.text(`Pedido de ${pedido.cliente.nombre}`, 10, yPosition);
-      yPosition += 10;
-      doc.text(`Fecha: ${new Date(pedido.fecha).toLocaleDateString()}`, 10, yPosition);
-      yPosition += 10;
-      doc.text("Productos:", 10, yPosition);
-      yPosition += 10;
-      pedido.productos.forEach((p, index) => {
-        doc.text(`${index + 1}. ${p.nombre} - $${p.precio} x ${p.cantidad}`, 10, yPosition);
-        yPosition += 10;
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedido_ids: seleccionados }),
       });
-      yPosition += 10;
 
-      // Marcar como generado en el backend
-      await fetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedido.id}`, {
-        method: "PATCH"
-      });
+      if (!res.ok) throw new Error('Error al generar PDF');
+
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = "archivo.pdf";
+
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match?.[1]) filename = match[1];
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success(`✅ PDF generado: ${filename}`);
+      setSeleccionados([]);
+      cargarPedidos();
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ Ocurrió un error al generar el PDF");
     }
-
-    doc.save("pedidos_seleccionados.pdf");
-
-    // Recargar lista de pedidos
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/pedidos`);
-    const data = await res.json();
-    setPedidos(data);
-    setSelectedPedidos([]);
   };
 
-  const eliminarPedido = async (pedidoId) => {
-    await fetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}`, {
-      method: "DELETE"
-    });
-    setPedidos(pedidos.filter(p => p.id !== pedidoId));
-  };
-
-  const pendientes = pedidos.filter(p => !p.pdf_generado);
-  const generados = pedidos.filter(p => p.pdf_generado);
-  const pedidosMostrados = activeTab === "pendientes" ? pendientes : generados;
+  const pedidosFiltrados = pedidos.filter(p => Boolean(p.pdf_generado) === mostrarGenerados);
+  const totalPaginas = Math.ceil(pedidosFiltrados.length / pedidosPorPagina);
+  const pedidosPaginados = pedidosFiltrados.slice((pagina - 1) * pedidosPorPagina, pagina * pedidosPorPagina);
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Historial de Pedidos</h2>
+    <div className="bg-white p-6 rounded-xl shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Historial de Pedidos</h2>
 
-      <div className="flex mb-4 space-x-2">
+      <div className="flex gap-4 mb-6">
         <button
-          onClick={() => setActiveTab("pendientes")}
-          className={`px-4 py-2 rounded ${activeTab === "pendientes" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          onClick={() => { setMostrarGenerados(false); setPagina(1); }}
+          className={`px-4 py-2 rounded font-medium ${!mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Pendientes
         </button>
         <button
-          onClick={() => setActiveTab("generados")}
-          className={`px-4 py-2 rounded ${activeTab === "generados" ? "bg-green-600 text-white" : "bg-gray-200"}`}
+          onClick={() => { setMostrarGenerados(true); setPagina(1); }}
+          className={`px-4 py-2 rounded font-medium ${mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Generados
         </button>
       </div>
 
-      <ul className="pl-4 space-y-2">
-        {pedidosMostrados.map((pedido) => (
-          <li key={pedido.id} className="flex justify-between items-center">
-            <div>
-              {activeTab === "pendientes" && (
-                <input
-                  type="checkbox"
-                  checked={selectedPedidos.includes(pedido.id)}
-                  onChange={() => handleCheckboxChange(pedido.id)}
-                  className="mr-2"
-                />
-              )}
-              <span>{`Pedido #${pedido.id} - ${pedido.cliente.nombre}`}</span>
-            </div>
-            {activeTab === "pendientes" && (
-              <button
-                onClick={() => eliminarPedido(pedido.id)}
-                className="ml-4 text-red-600 text-sm"
-              >
-                Eliminar
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {activeTab === "pendientes" && (
-        <button
-          onClick={generarPDF}
-          className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
-        >
-          Generar PDF de Pedidos Seleccionados
+      {mostrarGenerados && seleccionados.length > 0 && (
+        <button onClick={generarPDF} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          📄 Generar PDF de {seleccionados.length} pedido(s)
         </button>
+      )}
+
+      {cargando ? (
+        <p className="text-gray-500">Cargando pedidos...</p>
+      ) : pedidosPaginados.length === 0 ? (
+        <p className="text-gray-500">No hay pedidos en esta categoría.</p>
+      ) : (
+        <>
+          <ul className="space-y-4">
+            {pedidosPaginados.map((pedido) => (
+              <li key={pedido.id} className="border p-4 rounded shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50">
+                <div>
+                  <p className="font-semibold">Pedido #{pedido.id}</p>
+                  <p className="text-sm text-gray-600">Cliente: {pedido.cliente_nombre || 'Sin nombre'}</p>
+                  {pedido.fecha && <p className="text-sm text-gray-500">Fecha: {new Date(pedido.fecha).toLocaleString()}</p>}
+                  {pedido.observaciones && <p className="text-sm text-gray-500">Observaciones: {pedido.observaciones}</p>}
+                  <ul className="text-sm text-gray-700 list-disc pl-4 mt-1">
+                    {pedido.productos?.map((p, i) => (
+                      <li key={i}>{p.nombre} - {p.cantidad} {p.tipo}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex gap-2 mt-3 md:mt-0">
+                  {mostrarGenerados && (
+                    <input type="checkbox" checked={seleccionados.includes(pedido.id)} onChange={() => toggleSeleccion(pedido.id)} />
+                  )}
+                  {!pedido.pdf_generado && (
+                    <button onClick={() => cambiarEstado(pedido.id, true)} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                      Marcar como generado
+                    </button>
+                  )}
+                  {pedido.pdf_generado && (
+                    <button onClick={() => cambiarEstado(pedido.id, false)} className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">
+                      Marcar como pendiente
+                    </button>
+                  )}
+                  {!pedido.pdf_generado && (
+                    <button onClick={() => eliminarPedido(pedido.id)} className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex justify-center mt-6 gap-2">
+            <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="px-3 py-1 text-sm rounded bg-gray-200 hover:bg-gray-300">Anterior</button>
+            {[...Array(totalPaginas)].map((_, i) => (
+              <button key={i} onClick={() => setPagina(i + 1)} className={`px-3 py-1 text-sm rounded ${pagina === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>{i + 1}</button>
+            ))}
+            <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} className="px-3 py-1 text-sm rounded bg-gray-200 hover:bg-gray-300">Siguiente</button>
+          </div>
+        </>
       )}
     </div>
   );
