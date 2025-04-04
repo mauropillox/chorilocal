@@ -1,14 +1,12 @@
 # backend_create_admin.py
-from db import get_db, crear_tablas, obtener_usuario_por_username, crear_usuario
+from db import crear_tablas, obtener_usuario_por_username, crear_usuario
 from auth import obtener_password_hash
 
-def run():
+def crear_admin_si_no_existe():
     crear_tablas()
-    db = next(get_db())
 
-    if not obtener_usuario_por_username(db, "admin"):
+    if not obtener_usuario_por_username("admin"):
         crear_usuario(
-            db,
             username="admin",
             password=obtener_password_hash("admin"),
             rol="admin",
@@ -19,4 +17,4 @@ def run():
         print("ℹ️ Usuario admin ya existe")
 
 if __name__ == "__main__":
-    run()
+    crear_admin_si_no_existe()
