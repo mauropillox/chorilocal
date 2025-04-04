@@ -9,14 +9,13 @@ import db
 from auth import authenticate_user, create_access_token, decode_token, get_usuario_por_id
 from auth import pwd_context
 from dotenv import load_dotenv
-import create_admin  # esto va arriba de todo
-
-create_admin.crear_admin_si_no_existe()  # esto se ejecuta al arrancar
+import logging
 
 load_dotenv()
+import create_admin
+create_admin.crear_admin_si_no_existe()
 
-# Configuración de logging (opcional, para producción/desarrollo)
-import logging
+# Logging config
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -24,46 +23,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Settings
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "clave_de_prueba")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],  # <-- Producción: cambiar por el dominio real
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize DB
+# Init DB
 db.crear_tablas()
 db.crear_tabla_detalles_pedido()
 db.verificar_tablas_y_columnas()
 
-# -- Dependencies
+# ----- Dependencias
 def get_current_user(token: str = Depends(oauth2_scheme)):
     logger.debug("🔐 Recibí token: %s", token)
     payload = decode_token(token)
-    logger.debug("🧠 Payload decodificado: %s", payload)
-
     if payload is None:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
-
     user_id = payload.get("sub")
-    logger.debug("🔎 Buscando usuario por ID: %s", user_id)
-
     if user_id is None:
         raise HTTPException(status_code=401, detail="Token inválido: falta 'sub'")
-
     user = get_usuario_por_id(user_id)
-    logger.debug("👤 Usuario en DB: %s", user)
-
     if user is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if not user["activo"]:
@@ -72,13 +64,11 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 def obtener_usuario_actual_admin(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
-    if payload.get("rol") != "admin":
+    if payload is None or payload.get("rol") != "admin":
         raise HTTPException(status_code=403, detail="No autorizado: se requiere rol admin")
     return payload
 
-# -- Pydantic models
+# ----- Modelos
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -127,7 +117,7 @@ class PedidoProductoInput(BaseModel):
     @field_validator("cantidad")
     def validar_cantidad_valores_validos(cls, v):
         if v % 0.5 != 0:
-            raise ValueError("La cantidad debe ser un múltiplo de 0.5 (ej. 0.5, 1.0, 1.5, 2.0)")
+            raise ValueError("Cantidad debe ser múltiplo de 0.5")
         return v
 
 class PedidoInput(BaseModel):
@@ -140,7 +130,7 @@ class PedidoInput(BaseModel):
 class EstadoPedido(BaseModel):
     pdf_generado: bool
 
-# -- Endpoints
+# ----- Endpoints
 @app.post("/register")
 def register(username: str = Form(...), password: str = Form(...), rol: str = Form("usuario")):
     hashed_pw = pwd_context.hash(password)
@@ -276,6 +266,7 @@ def crear_usuario_admin(
         return {"ok": True}
     raise HTTPException(status_code=400, detail="Usuario ya existe")
 
+# PDF
 from fastapi.responses import FileResponse
 from pdf_utils import generar_pdf_pedidos
 
@@ -288,17 +279,14 @@ def generar_pdf_para_pedidos(
     user=Depends(get_current_user)
 ):
     pedidos = db.get_pedidos_por_ids(datos.pedido_ids)
-
     if not pedidos:
         raise HTTPException(status_code=404, detail="No se encontraron los pedidos")
 
-    # 🧠 Agregar cliente_nombre como en GET /pedidos
     clientes = db.get_clientes()
     for pedido in pedidos:
         cliente = next((c for c in clientes if c["id"] == pedido["cliente_id"]), None)
         pedido["cliente_nombre"] = cliente["nombre"] if cliente else "Desconocido"
 
-        # 🧠 Agregar productos al pedido
         productos = []
         conn = db.conectar()
         cursor = conn.cursor()
