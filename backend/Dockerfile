@@ -1,21 +1,19 @@
-# Usa una imagen base de Python
-FROM python:3.9
+# Usa Python 3.11 slim
+FROM python:3.11-slim
 
-# Establecer el directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copiar el archivo requirements.txt y instalar las dependencias
-COPY requirements.txt /app/
+# Copia requirements y los instala
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto de los archivos de la aplicación
-COPY . /app
+# Copia el resto de los archivos del backend
+COPY . .
 
-# Instalar dependencias adicionales si es necesario
-RUN pip install python-dotenv
-
-# Exponer el puerto que usará la aplicación (8000 en este caso)
+# Expone el puerto 8000
 EXPOSE 8000
 
-# Ejecutar el servidor con uvicorn en lugar de python main.py
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ejecuta el script para crear el admin y luego lanza FastAPI
+CMD ["sh", "-c", "python backend_create_admin.py && uvicorn main:app --host 0.0.0.0 --port 8000"]

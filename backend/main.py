@@ -9,6 +9,9 @@ import db
 from auth import authenticate_user, create_access_token, decode_token, get_usuario_por_id
 from auth import pwd_context
 from dotenv import load_dotenv
+import create_admin  # esto va arriba de todo
+
+create_admin.crear_admin_si_no_existe()  # esto se ejecuta al arrancar
 
 load_dotenv()
 
