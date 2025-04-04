@@ -1,29 +1,22 @@
-# backend/create_admin.py
-import sqlite3
-import bcrypt
-import os
+# backend_create_admin.py
+from db import get_db, crear_tablas, obtener_usuario_por_username, crear_usuario
+from auth import obtener_password_hash
 
-DB_PATH = os.getenv("DB_PATH", "ventas.db")
+def run():
+    crear_tablas()
+    db = next(get_db())
 
-def crear_admin_si_no_existe():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM usuarios WHERE username = ?", ("admin",))
-    if cursor.fetchone():
-        print("Usuario admin ya existe.")
-        return
-
-    hashed_password = bcrypt.hashpw("admin".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-    cursor.execute("""
-        INSERT INTO usuarios (username, hashed_password, rol, activo, last_login)
-        VALUES (?, ?, ?, ?, datetime('now'))
-    """, ("admin", hashed_password, "admin", 1))
-
-    conn.commit()
-    conn.close()
-    print("Usuario admin creado.")
+    if not obtener_usuario_por_username(db, "admin"):
+        crear_usuario(
+            db,
+            username="admin",
+            password=obtener_password_hash("admin"),
+            rol="admin",
+            activo=True
+        )
+        print("✅ Usuario admin creado")
+    else:
+        print("ℹ️ Usuario admin ya existe")
 
 if __name__ == "__main__":
-    crear_admin_si_no_existe()
+    run()
