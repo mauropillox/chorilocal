@@ -71,3 +71,6 @@ def get_usuario_por_id(user_id):
             "activo": row["activo"]
         }
     return None
+
+def login(request_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    print(f"Login attempt: {request_data.username}")

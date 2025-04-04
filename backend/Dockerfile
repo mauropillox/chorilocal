@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 8000
 
 # Ejecuta el script para crear el admin y luego lanza FastAPI
-CMD ["sh", "-c", "python backend_create_admin.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python create_admin.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
