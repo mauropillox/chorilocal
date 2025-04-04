@@ -7,11 +7,13 @@ from auth import pwd_context
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 
 def run():
-    if not os.path.exists(DB_PATH):
-        print("📁 Base de datos no encontrada. Creando...")
-        crear_tablas()
-    else:
-        print("📁 Base de datos ya existe. No se crea de nuevo.")
+    # ⚠️ SOLO PARA PRIMER DEPLOY - Borra DB vieja si existe
+    if os.path.exists(DB_PATH):
+        print("⚠️ Eliminando DB existente para forzar estructura nueva...")
+        os.remove(DB_PATH)
+
+    print("📁 Creando nueva base de datos...")
+    crear_tablas()
 
     if not obtener_usuario_por_username("admin"):
         hashed_pw = pwd_context.hash("admin")
