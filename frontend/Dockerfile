@@ -1,19 +1,21 @@
-# Etapa 1: build de React/Vite
-FROM node:18-alpine AS builder
+# Etapa de build con Node.js
+FROM node:18 AS build
+
 WORKDIR /app
-
-# Copia archivos y dependencias
-COPY package*.json ./
-RUN npm install
-
-# Copia todo el proyecto y setea env
 COPY . .
-COPY .env.docker .env
 
-# Compila el proyecto con Vite
+RUN npm install
 RUN npm run build
 
-# Etapa 2: nginx para servir lo generado
+# Etapa de producción con Nginx
 FROM nginx:alpine
+
+# Copia archivos de build a Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Configuración custom de Nginx (ver abajo)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
