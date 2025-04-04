@@ -1,18 +1,17 @@
 # auth.py
-import sqlite3
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
 import os
-
-# -- NEW: passlib for hashing
+import sqlite3
+from datetime import datetime, timedelta
+from fastapi import HTTPException
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# Configuración básica del token
+# Configuración del token
 SECRET_KEY = os.getenv("SECRET_KEY", "clave_de_prueba")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# Configurar Passlib
+# Hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def conectar():
@@ -29,7 +28,6 @@ def authenticate_user(username: str, plain_password: str):
 
     if row:
         stored_hash = row["password_hash"]
-        # Verificamos el password encriptado con passlib:
         if pwd_context.verify(plain_password, stored_hash):
             return {
                 "id": row["id"],
@@ -53,7 +51,6 @@ def decode_token(token: str):
         print("❌ decode_token error:", e)
         return None
 
-
 def get_usuario_por_id(user_id):
     """Recupera un usuario de la base de datos por ID."""
     conn = conectar()
@@ -71,6 +68,3 @@ def get_usuario_por_id(user_id):
             "activo": row["activo"]
         }
     return None
-
-def login(request_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    print(f"Login attempt: {request_data.username}")
