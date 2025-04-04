@@ -1,5 +1,5 @@
 # backend_create_admin.py
-from db import crear_tablas, obtener_usuario_por_username, crear_usuario
+from db import crear_tablas, get_usuario as obtener_usuario_por_username, crear_usuario
 from auth import obtener_password_hash
 
 def crear_admin_si_no_existe():
