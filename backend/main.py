@@ -13,7 +13,7 @@ import logging
 
 load_dotenv()
 import create_admin
-create_admin.crear_admin_si_no_existe()
+create_admin.run()
 
 # Logging config
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
