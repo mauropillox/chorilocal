@@ -1,5 +1,5 @@
 from db import crear_tablas, get_usuario as obtener_usuario_por_username, add_usuario
-from auth import obtener_password_hash
+from auth import pwd_context
 
 def run():
     crear_tablas()
@@ -7,7 +7,7 @@ def run():
     if not obtener_usuario_por_username("admin"):
         add_usuario(
             username="admin",
-            password_hash=obtener_password_hash("admin"),
+            password_hash=pwd_context.hash("admin"),
             rol="admin",
             activo=1
         )
