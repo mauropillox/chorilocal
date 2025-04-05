@@ -1,8 +1,11 @@
 # db.py
 import sqlite3
 from datetime import datetime
+from dotenv import load_dotenv
+import os
 
-DB_PATH = "ventas.db"
+load_dotenv()
+DB_PATH = os.getenv("DB_PATH", "ventas.db")
 
 def conectar():
     return sqlite3.connect(DB_PATH)
