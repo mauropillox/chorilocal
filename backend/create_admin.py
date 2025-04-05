@@ -6,32 +6,39 @@ from auth import pwd_context
 
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 
-def eliminar_db_si_es_necesario():
+def verificar_estructura_usuarios():
+    """Verifica si la tabla 'usuarios' existe y tiene la columna 'username'."""
     if not os.path.exists(DB_PATH):
         print("📁 No existe la base de datos. Se creará una nueva.")
-        return
+        return False
 
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
-        if cursor.fetchone():
-            print("📁 Base de datos ya existe con tabla 'usuarios'. No se recrea.")
-            return
-        else:
-            print("⚠️ La base existe pero no tiene la tabla 'usuarios'. Se recreará.")
-    except Exception as e:
-        print(f"⚠️ Error al verificar la DB: {e}. Se recreará.")
-    finally:
+        cursor.execute("PRAGMA table_info(usuarios)")
+        columnas = [col[1] for col in cursor.fetchall()]
         conn.close()
 
-    print("⚠️ Eliminando DB existente para forzar estructura nueva...")
-    os.remove(DB_PATH)
+        if "username" in columnas:
+            print("📁 Base de datos ya existe con tabla 'usuarios'. No se recrea.")
+            return True
+        else:
+            print("⚠️ La tabla 'usuarios' existe pero no tiene columna 'username'. Se recreará.")
+            return False
+    except Exception as e:
+        print(f"⚠️ Error verificando estructura de la tabla: {e}. Se recreará.")
+        return False
+
+def eliminar_db():
+    if os.path.exists(DB_PATH):
+        print("⚠️ Eliminando base de datos existente...")
+        os.remove(DB_PATH)
 
 def run():
-    eliminar_db_si_es_necesario()
-    print("📁 Creando nueva base de datos...")
-    crear_tablas()
+    if not verificar_estructura_usuarios():
+        eliminar_db()
+        print("📁 Creando nueva base de datos...")
+        crear_tablas()
 
     if not obtener_usuario_por_username("admin"):
         add_usuario(
