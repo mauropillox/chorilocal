@@ -28,13 +28,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    const formData = new FormData();
-    formData.append("username", username);
-    formData.append("password", password);
+    const params = new URLSearchParams();
+    params.append("username", username);
+    params.append("password", password);
 
     const res = await fetch(`${API_URL}/login`, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
     });
 
     if (!res.ok) {
@@ -65,18 +68,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const token = user?.token || null;
-  const tokenPayload = user
-    ? {
-        sub: user.id,
-        rol: user.rol,
-        activo: user.activo,
-        exp: user.exp,
-      }
-    : null;
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, token, tokenPayload }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
