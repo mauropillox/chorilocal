@@ -31,25 +31,23 @@ export const AuthProvider = ({ children }) => {
     const formData = new FormData();
     formData.append("username", username);
     formData.append("password", password);
-  
+
     const res = await fetch(`${API_URL}/login`, {
       method: "POST",
       body: formData,
     });
-  
+
     if (!res.ok) {
       throw new Error("Credenciales inválidas");
     }
-  
+
     const data = await res.json();
     const token = data.access_token;
-  
-    // Guardar token en localStorage
+
     localStorage.setItem("token", token);
-  
-    // Decodificar payload
+
     const payload = JSON.parse(atob(token.split(".")[1]));
-  
+
     const userData = {
       token,
       id: payload.sub,
@@ -57,18 +55,28 @@ export const AuthProvider = ({ children }) => {
       activo: payload.activo,
       exp: payload.exp,
     };
-  
+
     setUser(userData);
     return userData;
   };
-  
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
+  const token = user?.token || null;
+  const tokenPayload = user
+    ? {
+        sub: user.id,
+        rol: user.rol,
+        activo: user.activo,
+        exp: user.exp,
+      }
+    : null;
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, token, tokenPayload }}>
       {children}
     </AuthContext.Provider>
   );
