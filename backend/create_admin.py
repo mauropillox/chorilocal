@@ -1,3 +1,4 @@
+# create_admin.py
 import os
 import sqlite3
 from db import crear_tablas, get_usuario as obtener_usuario_por_username, add_usuario
@@ -5,42 +6,45 @@ from auth import pwd_context
 
 DB_PATH = os.getenv("DB_PATH", "ventas.db")
 
-def db_tiene_tabla_usuarios():
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
-        existe = cursor.fetchone() is not None
-        conn.close()
-        return existe
-    except Exception as e:
-        print(f"⚠️ Error al revisar la tabla 'usuarios': {e}")
-        return False
-
-def eliminar_db_si_es_necesario():
+def necesita_recrearse_la_db():
     if not os.path.exists(DB_PATH):
         print("📁 No existe la base de datos. Se creará una nueva.")
         return True
 
-    if not db_tiene_tabla_usuarios():
-        print("⚠️ La base existe pero no tiene tabla 'usuarios'. Se recreará.")
-        try:
-            os.remove(DB_PATH)
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verificar existencia de la tabla 'usuarios'
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
+        if not cursor.fetchone():
+            print("⚠️ Tabla 'usuarios' no encontrada.")
             return True
-        except Exception as e:
-            print(f"❌ Error al eliminar la base de datos: {e}")
-            return False
-    else:
+
+        # Verificar que tenga columna 'username'
+        cursor.execute("PRAGMA table_info(usuarios)")
+        columnas = [row[1] for row in cursor.fetchall()]
+        if "username" not in columnas:
+            print("⚠️ La tabla 'usuarios' no tiene la columna 'username'.")
+            return True
+
         print("📁 Base de datos ya existe con tabla 'usuarios'. No se recrea.")
         return False
+    except Exception as e:
+        print(f"⚠️ Error al revisar la DB: {e}")
+        return True
+    finally:
+        conn.close()
 
 def run():
-    debe_crearse = eliminar_db_si_es_necesario()
-
-    if debe_crearse:
+    if necesita_recrearse_la_db():
+        print("⚠️ Eliminando DB existente para forzar estructura nueva...")
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
         print("📁 Creando nueva base de datos...")
         crear_tablas()
 
+    # Crear admin si no existe
     if not obtener_usuario_por_username("admin"):
         add_usuario(
             username="admin",
