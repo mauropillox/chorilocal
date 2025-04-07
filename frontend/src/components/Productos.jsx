@@ -116,7 +116,6 @@ export default function Productos() {
           isDisabled={loading}
           className="w-full"
           placeholder="Seleccionar producto"
-          key={productos.length} // 🔁 clave para forzar re-render si hay problemas con react-select
         />
       </div>
 
