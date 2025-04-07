@@ -117,7 +117,7 @@ def delete_cliente(cliente_id):
 def add_producto(producto):
     conn = conectar()
     cursor = conn.cursor()
-    if "id" in producto:
+    if producto.get("id") is not None:
         cursor.execute("UPDATE productos SET nombre = ?, precio = ? WHERE id = ?",
                        (producto['nombre'], producto['precio'], producto['id']))
     else:

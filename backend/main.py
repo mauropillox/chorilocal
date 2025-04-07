@@ -155,7 +155,7 @@ def get_productos(user=Depends(get_current_user)):
 
 @app.post("/productos")
 def add_producto(producto: Producto, user=Depends(get_current_user)):
-    return db.add_producto(producto.dict())
+    return db.add_producto(producto.dict(exclude_none=True))
 
 @app.put("/productos/{producto_id}")
 def update_producto(producto_id: int, producto: Producto, user=Depends(get_current_user)):
