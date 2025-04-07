@@ -198,14 +198,6 @@ def add_pedido(pedido: PedidoInput, user=Depends(get_current_user)):
     if "pdf_generado" not in pedido_dict:
         pedido_dict["pdf_generado"] = False
 
-    posibles = db.get_pedidos_filtrados(
-        "cliente_id = ? AND fecha >= datetime('now', '-10 seconds')",
-        (pedido_dict["cliente_id"],)
-    )
-    if posibles:
-        raise HTTPException(status_code=409, detail="Ya se envió un pedido similar recientemente.")
-    return db.add_pedido(pedido_dict)
-
 @app.delete("/pedidos/{pedido_id}")
 def delete_pedido(pedido_id: int, user=Depends(get_current_user)):
     return db.delete_pedido(pedido_id)
