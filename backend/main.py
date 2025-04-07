@@ -29,6 +29,7 @@ destino = os.getenv("DB_PATH", "/data/ventas.db")
 if not os.path.exists(destino):
     logger.warning("📁 Copiando ventas.db inicial a disco persistente...")
     shutil.copy(origen, destino)
+logger.info(f"📂 Usando base de datos: {destino}")
 
 # App setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -48,7 +49,7 @@ db.crear_tablas()
 db.crear_tabla_detalles_pedido()
 db.verificar_tablas_y_columnas()
 
-# -------- Dependencias --------
+# Dependencias
 def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     if payload is None:
@@ -65,7 +66,7 @@ def obtener_usuario_actual_admin(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=403, detail="No autorizado: se requiere rol admin")
     return payload
 
-# -------- Modelos --------
+# Modelos
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -110,7 +111,7 @@ class EstadoPedido(BaseModel):
 class PedidosParaPDF(BaseModel):
     pedido_ids: List[int]
 
-# -------- Endpoints --------
+# Endpoints
 @app.post("/register")
 def register(username: str = Form(...), password: str = Form(...), rol: str = Form("usuario")):
     hashed_pw = pwd_context.hash(password)
@@ -197,6 +198,7 @@ def add_pedido(pedido: PedidoInput, user=Depends(get_current_user)):
     pedido_dict = pedido.dict(exclude_unset=True)
     if "pdf_generado" not in pedido_dict:
         pedido_dict["pdf_generado"] = False
+    return db.add_pedido(pedido_dict)
 
 @app.delete("/pedidos/{pedido_id}")
 def delete_pedido(pedido_id: int, user=Depends(get_current_user)):

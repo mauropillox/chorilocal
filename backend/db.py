@@ -7,6 +7,7 @@ import os
 load_dotenv()
 DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 
+print(f"📂 Usando base de datos en: {DB_PATH}")  # Debug: saber qué DB usa
 
 def conectar():
     return sqlite3.connect(DB_PATH)
