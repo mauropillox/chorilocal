@@ -35,7 +35,7 @@ export default function AdminPanel() {
   };
 
   const marcarCargando = (username, estado) => {
-    setLoadingUsuarios(prev => ({ ...prev, [username]: estado }));
+    setLoadingUsuarios((prev) => ({ ...prev, [username]: estado }));
   };
 
   const activarUsuario = async (username) => {
@@ -60,9 +60,7 @@ export default function AdminPanel() {
     if (!confirm(`¿Seguro que querés eliminar al usuario ${username}?`)) return;
     if (loadingUsuarios[username]) return;
     marcarCargando(username, true);
-    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}`, {
-      method: "DELETE",
-    });
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}`, { method: "DELETE" });
     marcarCargando(username, false);
     if (res.ok) cargarUsuarios();
     else alert("Error al eliminar usuario");
@@ -71,9 +69,8 @@ export default function AdminPanel() {
   const actualizarRol = async (username) => {
     if (loadingUsuarios[username]) return;
     marcarCargando(username, true);
-    const nuevoRol = rolesEdit[username];
     const formData = new FormData();
-    formData.append("rol", nuevoRol);
+    formData.append("rol", rolesEdit[username]);
 
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/rol`, {
       method: "PUT",
@@ -106,10 +103,10 @@ export default function AdminPanel() {
     const formData = new FormData();
     formData.append("new_password", nueva);
 
-    const res = await fetchConToken(
-      `${import.meta.env.VITE_API_URL}/usuarios/${username}/reset_password`,
-      { method: "PUT", body: formData }
-    );
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/reset_password`, {
+      method: "PUT",
+      body: formData,
+    });
 
     marcarCargando(username, false);
     if (res.ok) {
@@ -127,31 +124,34 @@ export default function AdminPanel() {
     const password = form.password.value.trim();
     const rol = form.rol.value;
     const activo = form.activo.value;
-  
+
     setMensaje("");
     setErrorForm("");
-  
+
     if (!username || !password) {
       setErrorForm("Todos los campos son obligatorios.");
       return;
     }
-  
-    if (usuarios.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+
+    if (usuarios.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
       setErrorForm(`❌ El usuario "${username}" ya existe.`);
       return;
     }
-  
-    const data = new FormData();
-    data.append("username", username);
-    data.append("password", password);
-    data.append("rol", rol);
-    data.append("activo", activo);
-  
+
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("password", password);
+    formData.append("rol", rol);
+    formData.append("activo", activo);
+
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios`, {
       method: "POST",
-      body: data,
+      body: formData,
     });
-  
+
+    setLoading(false);
     if (res.ok) {
       setMensaje("✅ Usuario creado con éxito");
       form.reset();
@@ -160,10 +160,10 @@ export default function AdminPanel() {
       const text = await res.text();
       setErrorForm(`❌ Error al crear usuario: ${text}`);
     }
-  
+
     setTimeout(() => setMensaje(""), 4000);
   };
-  
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">Panel de Administración</h2>
@@ -219,9 +219,7 @@ export default function AdminPanel() {
               <td className="border px-4 py-2">
                 <select
                   value={rolesEdit[u.username] || u.rol}
-                  onChange={(e) =>
-                    setRolesEdit((prev) => ({ ...prev, [u.username]: e.target.value }))
-                  }
+                  onChange={(e) => setRolesEdit((prev) => ({ ...prev, [u.username]: e.target.value }))}
                   className="border p-1 rounded"
                 >
                   <option value="admin">admin</option>
@@ -241,18 +239,14 @@ export default function AdminPanel() {
                     type={mostrarPasswordReset ? "text" : "password"}
                     placeholder="Nueva contraseña"
                     value={resetPasswords[u.username] || ""}
-                    onChange={(e) =>
-                      setResetPasswords((prev) => ({ ...prev, [u.username]: e.target.value }))
-                    }
+                    onChange={(e) => setResetPasswords((prev) => ({ ...prev, [u.username]: e.target.value }))}
                     className="border rounded px-2 py-1 text-sm"
                   />
                   <button
-                    onClick={() =>
-                      setResetPasswords((prev) => ({
-                        ...prev,
-                        [u.username]: generarPassword(),
-                      }))
-                    }
+                    onClick={() => setResetPasswords((prev) => ({
+                      ...prev,
+                      [u.username]: generarPassword(),
+                    }))}
                     className="bg-yellow-500 text-white px-2 rounded hover:bg-yellow-600"
                   >
                     Sugerir
