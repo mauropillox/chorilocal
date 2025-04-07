@@ -1,4 +1,3 @@
-// Productos.jsx
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
@@ -83,13 +82,14 @@ export default function Productos() {
       <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Seleccionar producto:</label>
+        <label className="block text-sm font-medium mb-1">Buscar y seleccionar producto:</label>
         <Select
           options={productoOptions}
           value={selectedProducto}
           onChange={cargarProductoParaEditar}
+          isSearchable
+          placeholder="Escribí para buscar..."
           className="w-full"
-          placeholder="Seleccionar producto"
         />
       </div>
 
@@ -116,24 +116,24 @@ export default function Productos() {
           {selectedProducto ? 'Actualizar' : 'Agregar'}
         </button>
         {selectedProducto && (
-          <button
-            onClick={() => {
-              setNombre('');
-              setPrecio('');
-              setSelectedProducto(null);
-            }}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-        )}
-        {selectedProducto && (
-          <button
-            onClick={() => eliminarProducto(selectedProducto.value)}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            Eliminar
-          </button>
+          <>
+            <button
+              onClick={() => {
+                setNombre('');
+                setPrecio('');
+                setSelectedProducto(null);
+              }}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => eliminarProducto(selectedProducto.value)}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </>
         )}
       </div>
     </div>

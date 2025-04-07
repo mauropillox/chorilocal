@@ -1,4 +1,3 @@
-// Clientes.jsx
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
@@ -69,7 +68,7 @@ export default function Clientes() {
 
   const clienteOptions = clientes.map(c => ({
     value: c.id,
-    label: `${c.nombre} (Tel: ${c.telefono || 'Sin teléfono'}, Dir: ${c.direccion || 'Sin dirección'})`,
+    label: `${c.nombre} (${c.telefono || 'Sin teléfono'} / ${c.direccion || 'Sin dirección'})`,
     nombre: c.nombre,
     telefono: c.telefono,
     direccion: c.direccion
@@ -87,13 +86,14 @@ export default function Clientes() {
       <h2 className="text-xl font-bold mb-4">Gestión de Clientes</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Seleccionar cliente:</label>
+        <label className="block text-sm font-medium mb-1">Buscar y seleccionar cliente:</label>
         <Select
           options={clienteOptions}
           value={selectedCliente}
           onChange={cargarClienteParaEditar}
+          isSearchable
+          placeholder="Escribí para buscar..."
           className="w-full"
-          placeholder="Seleccionar cliente"
         />
       </div>
 
@@ -126,25 +126,25 @@ export default function Clientes() {
           {selectedCliente ? 'Actualizar' : 'Agregar'}
         </button>
         {selectedCliente && (
-          <button
-            onClick={() => {
-              setNombre('');
-              setTelefono('');
-              setDireccion('');
-              setSelectedCliente(null);
-            }}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-        )}
-        {selectedCliente && (
-          <button
-            onClick={() => eliminarCliente(selectedCliente.value)}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            Eliminar
-          </button>
+          <>
+            <button
+              onClick={() => {
+                setNombre('');
+                setTelefono('');
+                setDireccion('');
+                setSelectedCliente(null);
+              }}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => eliminarCliente(selectedCliente.value)}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </>
         )}
       </div>
     </div>
