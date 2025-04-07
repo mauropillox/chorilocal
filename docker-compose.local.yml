@@ -8,13 +8,9 @@ services:
     container_name: chorizaurio-backend
     env_file:
       - .env
-    volumes:
-      - ./ventas.db:/app/ventas.db
-      - ./backend/resetadmin.py:/app/resetadmin.py  # <--- agregá esta línea
     ports:
       - "8000:8000"
     restart: unless-stopped
-
 
   frontend:
     build:
