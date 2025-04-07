@@ -1,4 +1,5 @@
 // auth.js
+
 export function obtenerToken() {
   const token = localStorage.getItem("token");
   if (!token || token === "null" || token === "undefined") {
@@ -34,7 +35,11 @@ export async function fetchConToken(url, options = {}) {
     console.warn("[fetchConToken] ❌ No hay token disponible");
   }
 
-  headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  // Detecta si el body es FormData. Si no lo es, setea Content-Type como JSON.
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
 
   try {
     const res = await fetch(url, {
@@ -48,4 +53,3 @@ export async function fetchConToken(url, options = {}) {
     return { ok: false };
   }
 }
-

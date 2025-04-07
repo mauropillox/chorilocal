@@ -1,3 +1,4 @@
+// HistorialPedidos.jsx
 import { useEffect, useState } from 'react';
 import { fetchConToken } from '../auth';
 import { toast } from 'react-toastify';
@@ -13,7 +14,7 @@ export default function HistorialPedidos() {
 
   useEffect(() => {
     cargarPedidos();
-  }, []);
+  }, [mostrarGenerados]);
 
   const cargarPedidos = async () => {
     setCargando(true);
@@ -70,7 +71,6 @@ export default function HistorialPedidos() {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}`, {
         method: 'DELETE',
       });
-
       if (res.ok) {
         setPedidos((prev) => prev.filter(p => p.id !== id));
         toast.success(`Pedido #${id} eliminado`);
@@ -144,13 +144,13 @@ export default function HistorialPedidos() {
 
       <div className="flex gap-4 mb-6">
         <button
-          onClick={() => { setMostrarGenerados(false); setPagina(1); cargarPedidos(); }}
+          onClick={() => { setMostrarGenerados(false); setPagina(1); }}
           className={`px-4 py-2 rounded font-medium ${!mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Pendientes
         </button>
         <button
-          onClick={() => { setMostrarGenerados(true); setPagina(1); cargarPedidos(); }}
+          onClick={() => { setMostrarGenerados(true); setPagina(1); }}
           className={`px-4 py-2 rounded font-medium ${mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Generados
