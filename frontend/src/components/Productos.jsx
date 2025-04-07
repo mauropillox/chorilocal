@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
 
@@ -75,7 +75,7 @@ export default function Productos() {
       });
 
       if (res.ok) {
-        setProductos(productos.filter(p => p.id !== id));
+        await cargarProductos();
         setSelectedProducto(null);
       } else {
         alert("Error al eliminar producto");
@@ -88,12 +88,14 @@ export default function Productos() {
     }
   };
 
-  const productoOptions = productos.map(p => ({
-    value: p.id,
-    label: `${p.nombre} ($${p.precio})`,
-    nombre: p.nombre,
-    precio: p.precio
-  }));
+  const productoOptions = useMemo(() => {
+    return productos.map(p => ({
+      value: p.id,
+      label: `${p.nombre} ($${p.precio})`,
+      nombre: p.nombre,
+      precio: p.precio
+    }));
+  }, [productos]);
 
   const cargarProductoParaEditar = (producto) => {
     setSelectedProducto(producto);
@@ -114,6 +116,7 @@ export default function Productos() {
           isDisabled={loading}
           className="w-full"
           placeholder="Seleccionar producto"
+          key={productos.length} // 🔁 clave para forzar re-render si hay problemas con react-select
         />
       </div>
 
