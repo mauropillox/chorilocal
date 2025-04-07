@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-DB_PATH = os.getenv("DB_PATH", "ventas.db")
+DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
+
 
 def conectar():
     return sqlite3.connect(DB_PATH)
