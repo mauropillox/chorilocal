@@ -327,8 +327,12 @@ def generar_pdf_para_pedidos(datos: PedidosParaPDF, user=Depends(get_current_use
 
 @app.get("/pedidos/pendientes")
 def get_pedidos_pendientes(user=Depends(get_current_user)):
-    return db.get_pedidos_filtrados("pdf_generado = 0 AND pdf_descargado = 0")
+    return db.get_pedidos_filtrados(
+        "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+    )
 
 @app.get("/pedidos/generados")
 def get_pedidos_generados(user=Depends(get_current_user)):
-    return db.get_pedidos_filtrados("pdf_generado = 1 AND pdf_descargado = 0")
+    return db.get_pedidos_filtrados(
+        "(pdf_generado = 1) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+    )
