@@ -1,4 +1,3 @@
-// HistorialPedidos.jsx
 import { useEffect, useState } from 'react';
 import { fetchConToken } from '../auth';
 import { toast } from 'react-toastify';
@@ -71,6 +70,7 @@ export default function HistorialPedidos() {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}`, {
         method: 'DELETE',
       });
+
       if (res.ok) {
         setPedidos((prev) => prev.filter(p => p.id !== id));
         toast.success(`Pedido #${id} eliminado`);
