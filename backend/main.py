@@ -246,11 +246,11 @@ def listar_usuarios(usuario=Depends(obtener_usuario_actual_admin)):
 
 @app.post("/usuarios")
 def crear_usuario_admin(
-    user=Depends(obtener_usuario_actual_admin),
     username: str = Form(...),
     password: str = Form(...),
     rol: str = Form("usuario"),
-    activo: int = Form(0)
+    activo: int = Form(0),
+    user=Depends(obtener_usuario_actual_admin)
 ):
     hashed_pw = pwd_context.hash(password)
     if db.add_usuario(username, hashed_pw, rol, activo):
