@@ -1,39 +1,37 @@
-// Productos.jsx
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
-import { toast } from 'react-toastify';
 
 export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
   const [selectedProducto, setSelectedProducto] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     cargarProductos();
   }, []);
 
   const cargarProductos = async () => {
+    setLoading(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
       if (res.ok) {
         const data = await res.json();
         setProductos(data);
       } else {
-        toast.error("❌ Error al cargar productos");
+        alert("Error al cargar productos");
       }
     } catch (err) {
-      console.error("Error de red:", err);
-      toast.error("❌ Error de red al cargar productos");
+      console.error("Error al cargar productos:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const agregarProducto = async () => {
-    if (!nombre || !precio) {
-      toast.info("⚠️ Ingresá nombre y precio");
-      return;
-    }
+    if (!nombre || !precio) return alert('Debe ingresar nombre y precio');
 
     const payload = { nombre, precio: parseFloat(precio) };
     let url = `${import.meta.env.VITE_API_URL}/productos`;
@@ -44,40 +42,50 @@ export default function Productos() {
       method = 'PUT';
     }
 
-    const res = await fetchConToken(url, {
-      method,
-      body: JSON.stringify(payload),
-    });
+    setLoading(true);
+    try {
+      const res = await fetchConToken(url, {
+        method,
+        body: JSON.stringify(payload),
+      });
 
-    if (res.ok) {
-      toast.success(selectedProducto ? "✅ Producto actualizado" : "✅ Producto agregado");
-      await cargarProductos();
-      limpiarFormulario();
-    } else {
-      toast.error("❌ Error al guardar producto");
+      if (res.ok) {
+        await cargarProductos();
+        setNombre('');
+        setPrecio('');
+        setSelectedProducto(null);
+      } else {
+        alert("Error al guardar producto");
+      }
+    } catch (err) {
+      console.error("Error al guardar producto:", err);
+      alert("Error al guardar producto");
+    } finally {
+      setLoading(false);
     }
   };
 
   const eliminarProducto = async (id) => {
-    if (!confirm("¿Estás seguro que querés eliminar este producto?")) return;
+    if (!confirm('¿Estás seguro que querés eliminar este producto?')) return;
 
-    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, {
-      method: 'DELETE',
-    });
+    setLoading(true);
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, {
+        method: 'DELETE',
+      });
 
-    if (res.ok) {
-      toast.success("🗑️ Producto eliminado");
-      await cargarProductos();
-      limpiarFormulario();
-    } else {
-      toast.error("❌ Error al eliminar producto");
+      if (res.ok) {
+        setProductos(productos.filter(p => p.id !== id));
+        setSelectedProducto(null);
+      } else {
+        alert("Error al eliminar producto");
+      }
+    } catch (err) {
+      console.error("Error al eliminar producto:", err);
+      alert("Error al eliminar producto");
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const limpiarFormulario = () => {
-    setNombre('');
-    setPrecio('');
-    setSelectedProducto(null);
   };
 
   const productoOptions = productos.map(p => ({
@@ -94,18 +102,18 @@ export default function Productos() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Gestión de Productos</h2>
+    <div>
+      <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Buscar producto</label>
+        <label className="block text-sm font-medium mb-1">Seleccionar producto:</label>
         <Select
           options={productoOptions}
           value={selectedProducto}
           onChange={cargarProductoParaEditar}
+          isDisabled={loading}
           className="w-full"
-          placeholder="Seleccionar producto para editar"
-          isClearable
+          placeholder="Seleccionar producto"
         />
       </div>
 
@@ -116,6 +124,7 @@ export default function Productos() {
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           className="border p-2 rounded w-full sm:w-auto"
+          disabled={loading}
         />
         <input
           type="number"
@@ -124,23 +133,31 @@ export default function Productos() {
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
           className="border p-2 rounded w-full sm:w-auto"
+          disabled={loading}
         />
         <button
           onClick={agregarProducto}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          disabled={loading}
+          className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
         >
           {selectedProducto ? 'Actualizar' : 'Agregar'}
         </button>
         {selectedProducto && (
           <>
             <button
-              onClick={limpiarFormulario}
+              onClick={() => {
+                setNombre('');
+                setPrecio('');
+                setSelectedProducto(null);
+              }}
+              disabled={loading}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
             >
               Cancelar
             </button>
             <button
               onClick={() => eliminarProducto(selectedProducto.value)}
+              disabled={loading}
               className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
               Eliminar

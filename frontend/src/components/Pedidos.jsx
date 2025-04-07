@@ -11,6 +11,7 @@ export default function Pedidos() {
   const [errores, setErrores] = useState({});
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroProducto, setFiltroProducto] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -71,7 +72,9 @@ export default function Pedidos() {
   };
 
   const enviarPedido = async () => {
-    if (!validarFormulario()) return;
+    if (!validarFormulario() || loading) return;
+
+    setLoading(true);
 
     const payload = {
       cliente_id: parseInt(clienteId),
@@ -98,7 +101,6 @@ export default function Pedidos() {
         setProductosPedido([]);
         setObservaciones('');
         setErrores({});
-        setTimeout(() => setMensaje(''), 3000);
       } else {
         const err = await res.text();
         setMensaje(`❌ Error al enviar el pedido: ${err}`);
@@ -106,6 +108,9 @@ export default function Pedidos() {
     } catch (err) {
       console.error('Error de red al enviar pedido:', err);
       setMensaje('❌ Error de red al enviar el pedido');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMensaje(''), 3000);
     }
   };
 
@@ -123,7 +128,6 @@ export default function Pedidos() {
 
       {mensaje && <p className="mb-4 text-green-600">{mensaje}</p>}
 
-      {/* Filtros en tiempo real */}
       <div className="flex gap-4 mb-2">
         <input
           type="text"
@@ -213,9 +217,10 @@ export default function Pedidos() {
 
       <button
         onClick={enviarPedido}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        disabled={loading}
+        className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
       >
-        Enviar Pedido
+        {loading ? 'Enviando...' : 'Enviar Pedido'}
       </button>
     </div>
   );

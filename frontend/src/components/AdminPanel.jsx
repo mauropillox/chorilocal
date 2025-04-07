@@ -8,6 +8,8 @@ export default function AdminPanel() {
   const [mostrarPasswordReset, setMostrarPasswordReset] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [errorForm, setErrorForm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingUsuarios, setLoadingUsuarios] = useState({});
 
   useEffect(() => {
     cargarUsuarios();
@@ -32,32 +34,43 @@ export default function AdminPanel() {
     }
   };
 
+  const marcarCargando = (username, estado) => {
+    setLoadingUsuarios(prev => ({ ...prev, [username]: estado }));
+  };
+
   const activarUsuario = async (username) => {
-    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/activar`, {
-      method: "PUT",
-    });
+    if (loadingUsuarios[username]) return;
+    marcarCargando(username, true);
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/activar`, { method: "PUT" });
+    marcarCargando(username, false);
     if (res.ok) cargarUsuarios();
     else alert("Error al activar usuario");
   };
 
   const suspenderUsuario = async (username) => {
-    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/suspender`, {
-      method: "PUT",
-    });
+    if (loadingUsuarios[username]) return;
+    marcarCargando(username, true);
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/suspender`, { method: "PUT" });
+    marcarCargando(username, false);
     if (res.ok) cargarUsuarios();
     else alert("Error al suspender usuario");
   };
 
   const eliminarUsuario = async (username) => {
     if (!confirm(`¿Seguro que querés eliminar al usuario ${username}?`)) return;
+    if (loadingUsuarios[username]) return;
+    marcarCargando(username, true);
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}`, {
       method: "DELETE",
     });
+    marcarCargando(username, false);
     if (res.ok) cargarUsuarios();
     else alert("Error al eliminar usuario");
   };
 
   const actualizarRol = async (username) => {
+    if (loadingUsuarios[username]) return;
+    marcarCargando(username, true);
     const nuevoRol = rolesEdit[username];
     const formData = new FormData();
     formData.append("rol", nuevoRol);
@@ -67,6 +80,7 @@ export default function AdminPanel() {
       body: formData,
     });
 
+    marcarCargando(username, false);
     if (res.ok) {
       setMensaje(`✅ Rol actualizado para ${username}`);
       cargarUsuarios();
@@ -81,23 +95,23 @@ export default function AdminPanel() {
   };
 
   const resetearPassword = async (username) => {
+    if (loadingUsuarios[username]) return;
     const nueva = resetPasswords[username];
     if (!nueva || nueva.length < 4) {
       alert("Ingresá una contraseña válida.");
       return;
     }
 
+    marcarCargando(username, true);
     const formData = new FormData();
     formData.append("new_password", nueva);
 
     const res = await fetchConToken(
       `${import.meta.env.VITE_API_URL}/usuarios/${username}/reset_password`,
-      {
-        method: "PUT",
-        body: formData,
-      }
+      { method: "PUT", body: formData }
     );
 
+    marcarCargando(username, false);
     if (res.ok) {
       setMensaje(`✅ Contraseña reseteada para ${username}`);
       setResetPasswords((prev) => ({ ...prev, [username]: "" }));
@@ -113,26 +127,31 @@ export default function AdminPanel() {
     const password = form.password.value.trim();
     const rol = form.rol.value;
     const activo = form.activo.value;
-
+  
     setMensaje("");
     setErrorForm("");
-
+  
     if (!username || !password) {
       setErrorForm("Todos los campos son obligatorios.");
       return;
     }
-
+  
+    if (usuarios.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      setErrorForm(`❌ El usuario "${username}" ya existe.`);
+      return;
+    }
+  
     const data = new FormData();
     data.append("username", username);
     data.append("password", password);
     data.append("rol", rol);
     data.append("activo", activo);
-
+  
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios`, {
       method: "POST",
       body: data,
     });
-
+  
     if (res.ok) {
       setMensaje("✅ Usuario creado con éxito");
       form.reset();
@@ -141,10 +160,10 @@ export default function AdminPanel() {
       const text = await res.text();
       setErrorForm(`❌ Error al crear usuario: ${text}`);
     }
-
+  
     setTimeout(() => setMensaje(""), 4000);
   };
-
+  
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">Panel de Administración</h2>
@@ -164,9 +183,10 @@ export default function AdminPanel() {
           </select>
           <button
             type="submit"
+            disabled={loading}
             className="col-span-1 sm:col-span-4 bg-blue-600 text-white rounded py-1 hover:bg-blue-700"
           >
-            Crear usuario
+            {loading ? "Creando..." : "Crear usuario"}
           </button>
         </form>
         {errorForm && <p className="text-red-600 mt-2">{errorForm}</p>}
@@ -200,10 +220,7 @@ export default function AdminPanel() {
                 <select
                   value={rolesEdit[u.username] || u.rol}
                   onChange={(e) =>
-                    setRolesEdit((prev) => ({
-                      ...prev,
-                      [u.username]: e.target.value,
-                    }))
+                    setRolesEdit((prev) => ({ ...prev, [u.username]: e.target.value }))
                   }
                   className="border p-1 rounded"
                 >
@@ -211,6 +228,7 @@ export default function AdminPanel() {
                   <option value="usuario">usuario</option>
                 </select>
                 <button
+                  disabled={loadingUsuarios[u.username]}
                   onClick={() => actualizarRol(u.username)}
                   className="bg-green-600 text-white px-2 py-1 rounded ml-2 hover:bg-green-700"
                 >
@@ -224,10 +242,7 @@ export default function AdminPanel() {
                     placeholder="Nueva contraseña"
                     value={resetPasswords[u.username] || ""}
                     onChange={(e) =>
-                      setResetPasswords((prev) => ({
-                        ...prev,
-                        [u.username]: e.target.value,
-                      }))
+                      setResetPasswords((prev) => ({ ...prev, [u.username]: e.target.value }))
                     }
                     className="border rounded px-2 py-1 text-sm"
                   />
@@ -243,6 +258,7 @@ export default function AdminPanel() {
                     Sugerir
                   </button>
                   <button
+                    disabled={loadingUsuarios[u.username]}
                     onClick={() => resetearPassword(u.username)}
                     className="bg-purple-600 text-white px-2 rounded hover:bg-purple-700"
                   >
@@ -261,6 +277,7 @@ export default function AdminPanel() {
               <td className="border px-4 py-2">
                 {u.activo ? (
                   <button
+                    disabled={loadingUsuarios[u.username]}
                     onClick={() => suspenderUsuario(u.username)}
                     className="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 mr-2"
                   >
@@ -268,6 +285,7 @@ export default function AdminPanel() {
                   </button>
                 ) : (
                   <button
+                    disabled={loadingUsuarios[u.username]}
                     onClick={() => activarUsuario(u.username)}
                     className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 mr-2"
                   >
@@ -275,6 +293,7 @@ export default function AdminPanel() {
                   </button>
                 )}
                 <button
+                  disabled={loadingUsuarios[u.username]}
                   onClick={() => eliminarUsuario(u.username)}
                   className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                 >

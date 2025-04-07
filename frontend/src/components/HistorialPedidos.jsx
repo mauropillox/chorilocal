@@ -8,17 +8,20 @@ export default function HistorialPedidos() {
   const [cargando, setCargando] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [seleccionados, setSeleccionados] = useState([]);
+  const [loadingAccion, setLoadingAccion] = useState(false);
   const pedidosPorPagina = 10;
 
   useEffect(() => {
     cargarPedidos();
-  }, [mostrarGenerados]);
+  }, []);
 
   const cargarPedidos = async () => {
     setCargando(true);
     try {
-      const endpoint = mostrarGenerados ? 'generados' : 'pendientes';
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${endpoint}`);
+      const url = mostrarGenerados
+        ? `${import.meta.env.VITE_API_URL}/pedidos/generados`
+        : `${import.meta.env.VITE_API_URL}/pedidos/pendientes`;
+      const res = await fetchConToken(url);
       if (res.ok) {
         const data = await res.json();
         const ordenados = data.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
@@ -37,6 +40,7 @@ export default function HistorialPedidos() {
   };
 
   const cambiarEstado = async (id, nuevoEstado) => {
+    setLoadingAccion(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
         method: 'PUT',
@@ -44,8 +48,8 @@ export default function HistorialPedidos() {
         body: JSON.stringify({ pdf_generado: nuevoEstado }),
       });
       if (res.ok) {
-        cargarPedidos();
         toast.success(`Estado del pedido #${id} actualizado`);
+        await cargarPedidos();
       } else {
         const error = await res.text();
         console.error('Error al cambiar estado del pedido:', error);
@@ -54,12 +58,14 @@ export default function HistorialPedidos() {
     } catch (err) {
       console.error('Error al cambiar estado:', err);
       toast.error('❌ Error al cambiar estado del pedido');
+    } finally {
+      setLoadingAccion(false);
     }
   };
 
   const eliminarPedido = async (id) => {
     if (!confirm("¿Seguro que querés eliminar este pedido?")) return;
-
+    setLoadingAccion(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${id}`, {
         method: 'DELETE',
@@ -76,6 +82,8 @@ export default function HistorialPedidos() {
     } catch (err) {
       console.error('Error al eliminar el pedido:', err);
       toast.error('❌ Error al eliminar el pedido');
+    } finally {
+      setLoadingAccion(false);
     }
   };
 
@@ -88,6 +96,7 @@ export default function HistorialPedidos() {
   const generarPDF = async () => {
     if (seleccionados.length === 0) return toast.info("Seleccioná al menos un pedido");
 
+    setLoadingAccion(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/pdf`, {
         method: 'POST',
@@ -117,10 +126,12 @@ export default function HistorialPedidos() {
 
       toast.success(`✅ PDF generado: ${filename}`);
       setSeleccionados([]);
-      cargarPedidos();
+      await cargarPedidos();
     } catch (err) {
       console.error(err);
       toast.error("❌ Ocurrió un error al generar el PDF");
+    } finally {
+      setLoadingAccion(false);
     }
   };
 
@@ -133,13 +144,13 @@ export default function HistorialPedidos() {
 
       <div className="flex gap-4 mb-6">
         <button
-          onClick={() => { setMostrarGenerados(false); setPagina(1); }}
+          onClick={() => { setMostrarGenerados(false); setPagina(1); cargarPedidos(); }}
           className={`px-4 py-2 rounded font-medium ${!mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Pendientes
         </button>
         <button
-          onClick={() => { setMostrarGenerados(true); setPagina(1); }}
+          onClick={() => { setMostrarGenerados(true); setPagina(1); cargarPedidos(); }}
           className={`px-4 py-2 rounded font-medium ${mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           Generados
@@ -147,7 +158,11 @@ export default function HistorialPedidos() {
       </div>
 
       {mostrarGenerados && seleccionados.length > 0 && (
-        <button onClick={generarPDF} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <button
+          onClick={generarPDF}
+          disabled={loadingAccion}
+          className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
           📄 Generar PDF de {seleccionados.length} pedido(s)
         </button>
       )}
@@ -175,20 +190,37 @@ export default function HistorialPedidos() {
 
                 <div className="flex gap-2 mt-3 md:mt-0">
                   {mostrarGenerados && (
-                    <input type="checkbox" checked={seleccionados.includes(pedido.id)} onChange={() => toggleSeleccion(pedido.id)} />
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.includes(pedido.id)}
+                      onChange={() => toggleSeleccion(pedido.id)}
+                      disabled={loadingAccion}
+                    />
                   )}
                   {!pedido.pdf_generado && (
-                    <button onClick={() => cambiarEstado(pedido.id, true)} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                    <button
+                      onClick={() => cambiarEstado(pedido.id, true)}
+                      disabled={loadingAccion}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                    >
                       Marcar como generado
                     </button>
                   )}
                   {pedido.pdf_generado && (
-                    <button onClick={() => cambiarEstado(pedido.id, false)} className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">
+                    <button
+                      onClick={() => cambiarEstado(pedido.id, false)}
+                      disabled={loadingAccion}
+                      className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 disabled:opacity-50"
+                    >
                       Marcar como pendiente
                     </button>
                   )}
                   {!pedido.pdf_generado && (
-                    <button onClick={() => eliminarPedido(pedido.id)} className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                    <button
+                      onClick={() => eliminarPedido(pedido.id)}
+                      disabled={loadingAccion}
+                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                    >
                       Eliminar
                     </button>
                   )}

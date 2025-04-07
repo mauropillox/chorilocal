@@ -1,15 +1,16 @@
 # main.py
-from fastapi import FastAPI, HTTPException, Depends, Form, status
+from fastapi import FastAPI, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, field_validator
 from typing import List, Optional
-import os
-import db
-from auth import authenticate_user, create_access_token, decode_token, get_usuario_por_id
-from auth import pwd_context
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import logging
+import os
+import db
+from auth import authenticate_user, create_access_token, decode_token, get_usuario_por_id, pwd_context
+from pdf_utils import generar_pdf_pedidos
 
 load_dotenv()
 
@@ -27,13 +28,14 @@ SECRET_KEY = os.getenv("SECRET_KEY", "clave_de_prueba")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
+# App setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 app = FastAPI()
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # <-- Producción: cambiar por el dominio real
+    allow_origins=["*"],  # Cambiar en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,7 +46,7 @@ db.crear_tablas()
 db.crear_tabla_detalles_pedido()
 db.verificar_tablas_y_columnas()
 
-# ----- Dependencias
+# ----- Dependencias -----
 def get_current_user(token: str = Depends(oauth2_scheme)):
     logger.debug("🔐 Recibí token: %s", token)
     payload = decode_token(token)
@@ -66,7 +68,7 @@ def obtener_usuario_actual_admin(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=403, detail="No autorizado: se requiere rol admin")
     return payload
 
-# ----- Modelos
+# ----- Modelos -----
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -128,7 +130,11 @@ class PedidoInput(BaseModel):
 class EstadoPedido(BaseModel):
     pdf_generado: bool
 
-# ----- Endpoints
+class PedidosParaPDF(BaseModel):
+    pedido_ids: List[int]
+
+# ----- Endpoints -----
+
 @app.post("/register")
 def register(username: str = Form(...), password: str = Form(...), rol: str = Form("usuario")):
     hashed_pw = pwd_context.hash(password)
@@ -172,6 +178,16 @@ def get_productos(user=Depends(get_current_user)):
 @app.post("/productos")
 def add_producto(producto: Producto, user=Depends(get_current_user)):
     return db.add_producto(producto.dict())
+
+@app.put("/productos/{producto_id}")
+def update_producto(producto_id: int, producto: Producto, user=Depends(get_current_user)):
+    producto_data = producto.dict()
+    producto_data["id"] = producto_id
+    return db.add_producto(producto_data)
+
+@app.delete("/productos/{producto_id}")
+def delete_producto(producto_id: int, user=Depends(get_current_user)):
+    return db.delete_producto(producto_id)
 
 @app.get("/pedidos")
 def get_pedidos(usuario: dict = Depends(get_current_user)):
@@ -228,6 +244,20 @@ def cambiar_estado_pedido(pedido_id: int, estado: EstadoPedido, user=Depends(get
 def listar_usuarios(usuario=Depends(obtener_usuario_actual_admin)):
     return db.get_usuarios()
 
+@app.post("/usuarios")
+def crear_usuario_admin(
+    user=Depends(obtener_usuario_actual_admin),
+    username: str = Form(...),
+    password: str = Form(...),
+    rol: str = Form("usuario"),
+    activo: int = Form(0)
+):
+    hashed_pw = pwd_context.hash(password)
+    if db.add_usuario(username, hashed_pw, rol, activo):
+        return {"ok": True}
+    raise HTTPException(status_code=400, detail="Usuario ya existe")
+
+
 @app.put("/usuarios/{username}/activar")
 def activar_usuario_admin(username: str, user=Depends(obtener_usuario_actual_admin)):
     db.activar_usuario(username)
@@ -251,31 +281,8 @@ def reset_password(username: str, new_password: str = Form(...), user=Depends(ob
     hashed_pw = pwd_context.hash(new_password)
     return db.resetear_password(username, hashed_pw)
 
-@app.post("/usuarios")
-def crear_usuario_admin(
-    username: str = Form(...),
-    password: str = Form(...),
-    rol: str = Form("usuario"),
-    activo: int = Form(0),
-    user=Depends(obtener_usuario_actual_admin)
-):
-    hashed_pw = pwd_context.hash(password)
-    if db.add_usuario(username, hashed_pw, rol, activo):
-        return {"ok": True}
-    raise HTTPException(status_code=400, detail="Usuario ya existe")
-
-# PDF
-from fastapi.responses import FileResponse
-from pdf_utils import generar_pdf_pedidos
-
-class PedidosParaPDF(BaseModel):
-    pedido_ids: List[int]
-
 @app.post("/pedidos/pdf")
-def generar_pdf_para_pedidos(
-    datos: PedidosParaPDF,
-    user=Depends(get_current_user)
-):
+def generar_pdf_para_pedidos(datos: PedidosParaPDF, user=Depends(get_current_user)):
     pedidos = db.get_pedidos_por_ids(datos.pedido_ids)
     if not pedidos:
         raise HTTPException(status_code=404, detail="No se encontraron los pedidos")
@@ -308,9 +315,8 @@ def generar_pdf_para_pedidos(
     for pedido_id in datos.pedido_ids:
         db.marcar_pedido_como_descargado(pedido_id)
 
-
     return FileResponse(archivo_pdf, filename=archivo_pdf, media_type="application/pdf")
- 
+
 @app.get("/pedidos/pendientes")
 def get_pedidos_pendientes(user=Depends(get_current_user)):
     return db.get_pedidos_filtrados("pdf_generado = 0 AND pdf_descargado = 0")
