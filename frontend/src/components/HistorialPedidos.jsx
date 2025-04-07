@@ -12,12 +12,13 @@ export default function HistorialPedidos() {
 
   useEffect(() => {
     cargarPedidos();
-  }, []);
+  }, [mostrarGenerados]);
 
   const cargarPedidos = async () => {
     setCargando(true);
     try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos`);
+      const endpoint = mostrarGenerados ? 'generados' : 'pendientes';
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${endpoint}`);
       if (res.ok) {
         const data = await res.json();
         const ordenados = data.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
@@ -123,9 +124,8 @@ export default function HistorialPedidos() {
     }
   };
 
-  const pedidosFiltrados = pedidos.filter(p => Boolean(p.pdf_generado) === mostrarGenerados);
-  const totalPaginas = Math.ceil(pedidosFiltrados.length / pedidosPorPagina);
-  const pedidosPaginados = pedidosFiltrados.slice((pagina - 1) * pedidosPorPagina, pagina * pedidosPorPagina);
+  const totalPaginas = Math.ceil(pedidos.length / pedidosPorPagina);
+  const pedidosPaginados = pedidos.slice((pagina - 1) * pedidosPorPagina, pagina * pedidosPorPagina);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow">

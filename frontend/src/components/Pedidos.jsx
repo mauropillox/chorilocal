@@ -1,4 +1,3 @@
-// Pedidos.jsx
 import { useEffect, useState } from 'react';
 import { fetchConToken } from '../auth';
 
@@ -10,6 +9,8 @@ export default function Pedidos() {
   const [observaciones, setObservaciones] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [errores, setErrores] = useState({});
+  const [filtroCliente, setFiltroCliente] = useState('');
+  const [filtroProducto, setFiltroProducto] = useState('');
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -49,31 +50,20 @@ export default function Pedidos() {
 
   const validarFormulario = () => {
     const nuevosErrores = {};
-    if (!clienteId) {
-      nuevosErrores.cliente = 'Debes seleccionar un cliente.';
-    }
-
-    if (productosPedido.length === 0) {
-      nuevosErrores.productos = 'Debes agregar al menos un producto.';
-    }
+    if (!clienteId) nuevosErrores.cliente = 'Debes seleccionar un cliente.';
+    if (productosPedido.length === 0) nuevosErrores.productos = 'Debes agregar al menos un producto.';
 
     const ids = new Set();
     productosPedido.forEach((prod, i) => {
-      if (!prod.producto_id) {
-        nuevosErrores[`producto_${i}`] = 'Producto requerido.';
-      } else if (ids.has(prod.producto_id)) {
-        nuevosErrores[`producto_${i}`] = 'Producto duplicado.';
-      } else {
-        ids.add(prod.producto_id);
-      }
+      if (!prod.producto_id) nuevosErrores[`producto_${i}`] = 'Producto requerido.';
+      else if (ids.has(prod.producto_id)) nuevosErrores[`producto_${i}`] = 'Producto duplicado.';
+      else ids.add(prod.producto_id);
 
       if (!prod.cantidad || isNaN(prod.cantidad) || prod.cantidad <= 0) {
         nuevosErrores[`cantidad_${i}`] = 'Cantidad inválida.';
       }
 
-      if (!prod.tipo) {
-        nuevosErrores[`tipo_${i}`] = 'Tipo requerido.';
-      }
+      if (!prod.tipo) nuevosErrores[`tipo_${i}`] = 'Tipo requerido.';
     });
 
     setErrores(nuevosErrores);
@@ -104,7 +94,6 @@ export default function Pedidos() {
 
       if (res.ok) {
         setMensaje('✅ Pedido enviado con éxito');
-        // Limpiar formulario
         setClienteId('');
         setProductosPedido([]);
         setObservaciones('');
@@ -120,11 +109,37 @@ export default function Pedidos() {
     }
   };
 
+  const clientesFiltrados = clientes.filter(c =>
+    c.nombre.toLowerCase().includes(filtroCliente.toLowerCase())
+  );
+
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(filtroProducto.toLowerCase())
+  );
+
   return (
     <div className="bg-white p-6 rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-4 text-blue-600">Nuevo Pedido</h2>
 
       {mensaje && <p className="mb-4 text-green-600">{mensaje}</p>}
+
+      {/* Filtros en tiempo real */}
+      <div className="flex gap-4 mb-2">
+        <input
+          type="text"
+          placeholder="🔍 Buscar cliente..."
+          value={filtroCliente}
+          onChange={(e) => setFiltroCliente(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="🔍 Buscar producto..."
+          value={filtroProducto}
+          onChange={(e) => setFiltroProducto(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
       <label className="block font-medium">Cliente</label>
       <select
@@ -133,7 +148,7 @@ export default function Pedidos() {
         onChange={(e) => setClienteId(e.target.value)}
       >
         <option value="">Seleccionar cliente</option>
-        {clientes.map(c => (
+        {clientesFiltrados.map(c => (
           <option key={c.id} value={c.id}>{c.nombre}</option>
         ))}
       </select>
@@ -147,7 +162,7 @@ export default function Pedidos() {
             className="border p-1 rounded"
           >
             <option value="">Producto</option>
-            {productos.map(prod => (
+            {productosFiltrados.map(prod => (
               <option key={prod.id} value={prod.id}>{prod.nombre}</option>
             ))}
           </select>

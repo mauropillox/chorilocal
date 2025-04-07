@@ -256,3 +256,14 @@ def marcar_pedido_como_descargado(pedido_id):
     cursor.execute("UPDATE pedidos SET pdf_descargado = 1 WHERE id = ?", (pedido_id,))
     conn.commit()
     conn.close()
+
+def get_pedidos_filtrados(filtro_sql="", valores=()):
+    conn = conectar()
+    cursor = conn.cursor()
+    query = "SELECT * FROM pedidos"
+    if filtro_sql:
+        query += f" WHERE {filtro_sql}"
+    cursor.execute(query, valores)
+    pedidos = [dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()]
+    conn.close()
+    return pedidos

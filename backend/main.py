@@ -310,3 +310,11 @@ def generar_pdf_para_pedidos(
 
 
     return FileResponse(archivo_pdf, filename=archivo_pdf, media_type="application/pdf")
+ 
+@app.get("/pedidos/pendientes")
+def get_pedidos_pendientes(user=Depends(get_current_user)):
+    return db.get_pedidos_filtrados("pdf_generado = 0 AND pdf_descargado = 0")
+
+@app.get("/pedidos/generados")
+def get_pedidos_generados(user=Depends(get_current_user)):
+    return db.get_pedidos_filtrados("pdf_generado = 1 AND pdf_descargado = 0")
