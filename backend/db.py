@@ -35,6 +35,7 @@ def crear_tablas():
             fecha TEXT,
             observaciones TEXT,
             pdf_generado BOOLEAN DEFAULT 0,
+            pdf_descargado BOOLEAN DEFAULT 0,
             FOREIGN KEY (cliente_id) REFERENCES clientes(id)
         )
     """)
@@ -65,7 +66,14 @@ def crear_tabla_detalles_pedido():
     pass
 
 def verificar_tablas_y_columnas():
-    pass
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(pedidos)")
+    columnas = [col[1] for col in cursor.fetchall()]
+    if "pdf_descargado" not in columnas:
+        cursor.execute("ALTER TABLE pedidos ADD COLUMN pdf_descargado BOOLEAN DEFAULT 0")
+        conn.commit()
+    conn.close()
 
 def add_cliente(cliente):
     conn = conectar()
@@ -107,8 +115,12 @@ def delete_cliente(cliente_id):
 def add_producto(producto):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)",
-                   (producto['nombre'], producto['precio']))
+    if "id" in producto:
+        cursor.execute("UPDATE productos SET nombre = ?, precio = ? WHERE id = ?",
+                       (producto['nombre'], producto['precio'], producto['id']))
+    else:
+        cursor.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)",
+                       (producto['nombre'], producto['precio']))
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -120,6 +132,14 @@ def get_productos():
     rows = cursor.fetchall()
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
+
+def delete_producto(producto_id):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM productos WHERE id = ?", (producto_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 def add_pedido(pedido):
     conn = conectar()

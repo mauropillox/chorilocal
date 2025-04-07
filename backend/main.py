@@ -227,6 +227,15 @@ def add_pedido(pedido: PedidoInput, user=Depends(get_current_user)):
     pedido_dict = pedido.dict(exclude_unset=True)
     if "pdf_generado" not in pedido_dict:
         pedido_dict["pdf_generado"] = False
+
+    # Verificar duplicado en últimos 10 segundos
+    posibles = db.get_pedidos_filtrados(
+        "cliente_id = ? AND fecha >= datetime('now', '-10 seconds')",
+        (pedido_dict["cliente_id"],)
+    )
+    if posibles:
+        raise HTTPException(status_code=409, detail="Ya se envió un pedido similar recientemente.")
+
     return db.add_pedido(pedido_dict)
 
 @app.delete("/pedidos/{pedido_id}")
@@ -256,7 +265,6 @@ def crear_usuario_admin(
     if db.add_usuario(username, hashed_pw, rol, activo):
         return {"ok": True}
     raise HTTPException(status_code=400, detail="Usuario ya existe")
-
 
 @app.put("/usuarios/{username}/activar")
 def activar_usuario_admin(username: str, user=Depends(obtener_usuario_actual_admin)):
