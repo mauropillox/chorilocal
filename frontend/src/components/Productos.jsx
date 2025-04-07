@@ -1,6 +1,8 @@
+// Productos.jsx
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
+import { toast } from 'react-toastify';
 
 export default function Productos() {
   const [productos, setProductos] = useState([]);
@@ -13,17 +15,25 @@ export default function Productos() {
   }, []);
 
   const cargarProductos = async () => {
-    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
-    if (res.ok) {
-      const data = await res.json();
-      setProductos(data);
-    } else {
-      console.error("Error al cargar productos");
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
+      if (res.ok) {
+        const data = await res.json();
+        setProductos(data);
+      } else {
+        toast.error("❌ Error al cargar productos");
+      }
+    } catch (err) {
+      console.error("Error de red:", err);
+      toast.error("❌ Error de red al cargar productos");
     }
   };
 
   const agregarProducto = async () => {
-    if (!nombre || !precio) return alert('Debe ingresar nombre y precio');
+    if (!nombre || !precio) {
+      toast.info("⚠️ Ingresá nombre y precio");
+      return;
+    }
 
     const payload = { nombre, precio: parseFloat(precio) };
     let url = `${import.meta.env.VITE_API_URL}/productos`;
@@ -40,28 +50,34 @@ export default function Productos() {
     });
 
     if (res.ok) {
+      toast.success(selectedProducto ? "✅ Producto actualizado" : "✅ Producto agregado");
       await cargarProductos();
-      setNombre('');
-      setPrecio('');
-      setSelectedProducto(null);
+      limpiarFormulario();
     } else {
-      alert("Error al guardar producto");
+      toast.error("❌ Error al guardar producto");
     }
   };
 
   const eliminarProducto = async (id) => {
-    if (!confirm('¿Estás seguro que querés eliminar este producto?')) return;
+    if (!confirm("¿Estás seguro que querés eliminar este producto?")) return;
 
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, {
       method: 'DELETE',
     });
 
     if (res.ok) {
-      setProductos(productos.filter(p => p.id !== id));
-      setSelectedProducto(null);
+      toast.success("🗑️ Producto eliminado");
+      await cargarProductos();
+      limpiarFormulario();
     } else {
-      alert("Error al eliminar producto");
+      toast.error("❌ Error al eliminar producto");
     }
+  };
+
+  const limpiarFormulario = () => {
+    setNombre('');
+    setPrecio('');
+    setSelectedProducto(null);
   };
 
   const productoOptions = productos.map(p => ({
@@ -78,18 +94,18 @@ export default function Productos() {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
+    <div className="bg-white p-6 rounded-xl shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Gestión de Productos</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Buscar y seleccionar producto:</label>
+        <label className="block text-sm font-medium mb-1">Buscar producto</label>
         <Select
           options={productoOptions}
           value={selectedProducto}
           onChange={cargarProductoParaEditar}
-          isSearchable
-          placeholder="Escribí para buscar..."
           className="w-full"
+          placeholder="Seleccionar producto para editar"
+          isClearable
         />
       </div>
 
@@ -118,11 +134,7 @@ export default function Productos() {
         {selectedProducto && (
           <>
             <button
-              onClick={() => {
-                setNombre('');
-                setPrecio('');
-                setSelectedProducto(null);
-              }}
+              onClick={limpiarFormulario}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
             >
               Cancelar

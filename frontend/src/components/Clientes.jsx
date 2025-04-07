@@ -1,6 +1,8 @@
+// Clientes.jsx
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
+import { toast } from 'react-toastify';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
@@ -19,21 +21,28 @@ export default function Clientes() {
       const data = await res.json();
       setClientes(data);
     } else {
-      console.error("Error al cargar clientes:", res.status);
+      toast.error("❌ Error al cargar clientes");
     }
   };
 
-  const agregarCliente = async () => {
-    if (!nombre) return alert('Debe ingresar un nombre');
+  const limpiarFormulario = () => {
+    setNombre('');
+    setTelefono('');
+    setDireccion('');
+    setSelectedCliente(null);
+  };
+
+  const guardarCliente = async () => {
+    if (!nombre.trim()) {
+      toast.warn("⚠️ Ingresá el nombre del cliente");
+      return;
+    }
 
     const payload = { nombre, telefono, direccion };
-    let url = `${import.meta.env.VITE_API_URL}/clientes`;
-    let method = 'POST';
-
-    if (selectedCliente) {
-      url = `${import.meta.env.VITE_API_URL}/clientes/${selectedCliente.value}`;
-      method = 'PUT';
-    }
+    const method = selectedCliente ? 'PUT' : 'POST';
+    const url = selectedCliente
+      ? `${import.meta.env.VITE_API_URL}/clientes/${selectedCliente.value}`
+      : `${import.meta.env.VITE_API_URL}/clientes`;
 
     const res = await fetchConToken(url, {
       method,
@@ -41,13 +50,11 @@ export default function Clientes() {
     });
 
     if (res.ok) {
+      toast.success(`✅ Cliente ${selectedCliente ? "actualizado" : "agregado"} correctamente`);
       await cargarClientes();
-      setNombre('');
-      setTelefono('');
-      setDireccion('');
-      setSelectedCliente(null);
+      limpiarFormulario();
     } else {
-      alert("Error al guardar cliente");
+      toast.error("❌ Error al guardar cliente");
     }
   };
 
@@ -59,16 +66,17 @@ export default function Clientes() {
     });
 
     if (res.ok) {
+      toast.success("🗑️ Cliente eliminado");
       setClientes(clientes.filter(c => c.id !== id));
-      setSelectedCliente(null);
+      limpiarFormulario();
     } else {
-      alert("Error al eliminar cliente");
+      toast.error("❌ Error al eliminar cliente");
     }
   };
 
   const clienteOptions = clientes.map(c => ({
     value: c.id,
-    label: `${c.nombre} (${c.telefono || 'Sin teléfono'} / ${c.direccion || 'Sin dirección'})`,
+    label: `${c.nombre} (${c.telefono || 'Sin tel.'}, ${c.direccion || 'Sin dirección'})`,
     nombre: c.nombre,
     telefono: c.telefono,
     direccion: c.direccion
@@ -82,18 +90,18 @@ export default function Clientes() {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Gestión de Clientes</h2>
+    <div className="bg-white p-6 rounded-xl shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Gestión de Clientes</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Buscar y seleccionar cliente:</label>
+        <label className="block text-sm font-medium mb-1">Seleccionar cliente para editar:</label>
         <Select
           options={clienteOptions}
           value={selectedCliente}
           onChange={cargarClienteParaEditar}
-          isSearchable
-          placeholder="Escribí para buscar..."
           className="w-full"
+          placeholder="Seleccionar cliente"
+          isClearable
         />
       </div>
 
@@ -120,7 +128,7 @@ export default function Clientes() {
           className="border p-2 rounded w-full sm:w-auto"
         />
         <button
-          onClick={agregarCliente}
+          onClick={guardarCliente}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           {selectedCliente ? 'Actualizar' : 'Agregar'}
@@ -128,12 +136,7 @@ export default function Clientes() {
         {selectedCliente && (
           <>
             <button
-              onClick={() => {
-                setNombre('');
-                setTelefono('');
-                setDireccion('');
-                setSelectedCliente(null);
-              }}
+              onClick={limpiarFormulario}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
             >
               Cancelar
