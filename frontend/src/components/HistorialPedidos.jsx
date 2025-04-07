@@ -72,8 +72,8 @@ export default function HistorialPedidos() {
       });
 
       if (res.ok) {
+        setPedidos((prev) => prev.filter(p => p.id !== id));
         toast.success(`Pedido #${id} eliminado`);
-        await cargarPedidos();
       } else {
         const error = await res.text();
         console.error('Error al eliminar pedido:', error);
