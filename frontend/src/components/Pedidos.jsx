@@ -1,184 +1,179 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
 import { toast } from 'react-toastify';
 
-export default function Pedidos() {
-  const [clientes, setClientes] = useState([]);
+export default function Productos() {
   const [productos, setProductos] = useState([]);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-  const [productosPedido, setProductosPedido] = useState([]);
-  const [observaciones, setObservaciones] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [selectedProducto, setSelectedProducto] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [resClientes, resProductos] = await Promise.all([
-          fetchConToken(`${import.meta.env.VITE_API_URL}/clientes`),
-          fetchConToken(`${import.meta.env.VITE_API_URL}/productos`)
-        ]);
-
-        if (resClientes.ok && resProductos.ok) {
-          const dataClientes = await resClientes.json();
-          const dataProductos = await resProductos.json();
-          setClientes(dataClientes);
-          setProductos(dataProductos);
-        }
-      } catch (err) {
-        toast.error('Error al cargar datos');
-        console.error(err);
-      }
-    };
-
-    cargarDatos();
+    cargarProductos();
   }, []);
 
-  const agregarProducto = () => {
-    setProductosPedido([...productosPedido, { producto: null, cantidad: 1, tipo: 'unidad' }]);
-  };
-
-  const eliminarProducto = (index) => {
-    const copia = [...productosPedido];
-    copia.splice(index, 1);
-    setProductosPedido(copia);
-  };
-
-  const actualizarProducto = (index, campo, valor) => {
-    const copia = [...productosPedido];
-    if (campo === 'producto') {
-      copia[index].producto = valor;
-    } else {
-      copia[index][campo] = valor;
-    }
-    setProductosPedido(copia);
-  };
-
-  const enviarPedido = async () => {
-    if (!clienteSeleccionado || productosPedido.length === 0) {
-      toast.error('Debes seleccionar un cliente y al menos un producto');
-      return;
-    }
-
-    const payload = {
-      cliente_id: clienteSeleccionado.value,
-      observaciones,
-      productos: productosPedido.map(p => ({
-        producto_id: p.producto.value,
-        cantidad: parseFloat(p.cantidad),
-        tipo: p.tipo
-      })),
-      pdf_generado: false,
-      fecha: new Date().toISOString()
-    };
-
+  const cargarProductos = async () => {
     setLoading(true);
     try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
       if (res.ok) {
-        toast.success('✅ Pedido enviado con éxito');
-        setClienteSeleccionado(null);
-        setProductosPedido([]);
-        setObservaciones('');
+        const data = await res.json();
+        setProductos(data);
       } else {
-        const err = await res.text();
-        toast.error(`❌ Error: ${err}`);
+        toast.error("❌ Error al cargar productos");
       }
     } catch (err) {
-      toast.error('❌ Error de red');
+      console.error("Error al cargar productos:", err);
+      toast.error("❌ Error al cargar productos");
     } finally {
       setLoading(false);
     }
   };
 
-  const clienteOptions = clientes.map(c => ({
-    value: c.id,
-    label: c.nombre
-  }));
+  const agregarProducto = async () => {
+    if (!nombre || !precio) {
+      toast.error('❌ Debe ingresar nombre y precio');
+      return;
+    }
 
-  const productoOptions = productos.map(p => ({
-    value: p.id,
-    label: `${p.nombre} ($${p.precio})`
-  }));
+    const payload = { nombre, precio: parseFloat(precio) };
+    let url = `${import.meta.env.VITE_API_URL}/productos`;
+    let method = 'POST';
+
+    if (selectedProducto) {
+      url = `${import.meta.env.VITE_API_URL}/productos/${selectedProducto.value}`;
+      method = 'PUT';
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetchConToken(url, {
+        method,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        await cargarProductos();
+        setNombre('');
+        setPrecio('');
+        setSelectedProducto(null);
+        toast.success("✅ Producto guardado correctamente");
+      } else {
+        toast.error("❌ Error al guardar producto");
+      }
+    } catch (err) {
+      console.error("Error al guardar producto:", err);
+      toast.error("❌ Error al guardar producto");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const eliminarProducto = async (id) => {
+    if (!confirm('¿Estás seguro que querés eliminar este producto?')) return;
+
+    setLoading(true);
+    try {
+      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        await cargarProductos();
+        setSelectedProducto(null);
+        toast.success("✅ Producto eliminado correctamente");
+      } else {
+        toast.error("❌ Error al eliminar producto");
+      }
+    } catch (err) {
+      console.error("Error al eliminar producto:", err);
+      toast.error("❌ Error al eliminar producto");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const productoOptions = useMemo(() => {
+    return productos.map(p => ({
+      value: p.id,
+      label: `${p.nombre} ($${p.precio})`,
+      nombre: p.nombre,
+      precio: p.precio
+    }));
+  }, [productos]);
+
+  const cargarProductoParaEditar = (producto) => {
+    setSelectedProducto(producto);
+    setNombre(producto.nombre);
+    setPrecio(producto.precio);
+  };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Nuevo Pedido</h2>
+    <div>
+      <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
 
       <div className="mb-4">
-        <label className="block font-medium">Cliente</label>
+        <label className="block text-sm font-medium mb-1">Seleccionar producto:</label>
         <Select
-          options={clienteOptions}
-          value={clienteSeleccionado}
-          onChange={setClienteSeleccionado}
+          options={productoOptions}
+          value={selectedProducto}
+          onChange={cargarProductoParaEditar}
           isDisabled={loading}
-          placeholder="Seleccionar cliente"
+          className="w-full"
+          placeholder="Seleccionar producto"
         />
       </div>
 
-      {productosPedido.map((p, i) => (
-        <div key={i} className="flex flex-col sm:flex-row gap-2 mb-2 items-center">
-          <Select
-            options={productoOptions}
-            value={p.producto}
-            onChange={(val) => actualizarProducto(i, 'producto', val)}
-            placeholder="Producto"
-            className="flex-1"
-          />
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={p.cantidad}
-            onChange={(e) => actualizarProducto(i, 'cantidad', e.target.value)}
-            className="w-24 border p-1 rounded"
-            placeholder="Cantidad"
-          />
-          <select
-            value={p.tipo}
-            onChange={(e) => actualizarProducto(i, 'tipo', e.target.value)}
-            className="border p-1 rounded"
-          >
-            <option value="unidad">Unidad</option>
-            <option value="caja">Caja</option>
-          </select>
-          <button
-            onClick={() => eliminarProducto(i)}
-            className="bg-red-600 text-white px-2 py-1 rounded"
-          >
-            X
-          </button>
-        </div>
-      ))}
-
-      <button
-        onClick={agregarProducto}
-        disabled={loading}
-        className="bg-gray-200 px-4 py-1 rounded mb-4"
-      >
-        Agregar Producto
-      </button>
-
-      <label className="block font-medium">Observaciones</label>
-      <textarea
-        value={observaciones}
-        onChange={(e) => setObservaciones(e.target.value)}
-        className="w-full border p-2 rounded mb-4"
-        placeholder="Observaciones del pedido"
-      />
-
-      <button
-        onClick={enviarPedido}
-        disabled={loading}
-        className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-      >
-        {loading ? 'Enviando...' : 'Enviar Pedido'}
-      </button>
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          className="border p-2 rounded w-full sm:w-auto"
+          disabled={loading}
+        />
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Precio"
+          value={precio}
+          onChange={(e) => setPrecio(e.target.value)}
+          className="border p-2 rounded w-full sm:w-auto"
+          disabled={loading}
+        />
+        <button
+          onClick={agregarProducto}
+          disabled={loading}
+          className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+        >
+          {selectedProducto ? 'Actualizar' : 'Agregar'}
+        </button>
+        {selectedProducto && (
+          <>
+            <button
+              onClick={() => {
+                setNombre('');
+                setPrecio('');
+                setSelectedProducto(null);
+              }}
+              disabled={loading}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => eliminarProducto(selectedProducto.value)}
+              disabled={loading}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
