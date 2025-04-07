@@ -249,3 +249,10 @@ def resetear_password(username, new_password):
 def get_pedidos_por_ids(pedido_ids):
     todos = get_pedidos()
     return [p for p in todos if p["id"] in pedido_ids]
+
+def marcar_pedido_como_descargado(pedido_id):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE pedidos SET pdf_descargado = 1 WHERE id = ?", (pedido_id,))
+    conn.commit()
+    conn.close()

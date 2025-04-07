@@ -306,6 +306,7 @@ def generar_pdf_para_pedidos(
     archivo_pdf = generar_pdf_pedidos(pedidos)
 
     for pedido_id in datos.pedido_ids:
-        db.cambiar_estado_pedido(pedido_id, False)
+        db.marcar_pedido_como_descargado(pedido_id)
+
 
     return FileResponse(archivo_pdf, filename=archivo_pdf, media_type="application/pdf")
