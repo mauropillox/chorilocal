@@ -6,13 +6,10 @@ import { toast } from 'react-toastify';
 export default function Pedidos() {
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [clienteId, setClienteId] = useState('');
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [productosPedido, setProductosPedido] = useState([]);
   const [observaciones, setObservaciones] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [errores, setErrores] = useState({});
   const [loading, setLoading] = useState(false);
-  const [selectedCliente, setSelectedCliente] = useState(null);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -29,7 +26,8 @@ export default function Pedidos() {
           setProductos(dataProductos);
         }
       } catch (err) {
-        console.error('Error al cargar datos:', err);
+        toast.error('Error al cargar datos');
+        console.error(err);
       }
     };
 
@@ -37,56 +35,36 @@ export default function Pedidos() {
   }, []);
 
   const agregarProducto = () => {
-    setProductosPedido([...productosPedido, { producto_id: '', cantidad: 1, tipo: 'unidad', productoObj: null }]);
+    setProductosPedido([...productosPedido, { producto: null, cantidad: 1, tipo: 'unidad' }]);
   };
 
   const eliminarProducto = (index) => {
-    setProductosPedido(productosPedido.filter((_, i) => i !== index));
+    const copia = [...productosPedido];
+    copia.splice(index, 1);
+    setProductosPedido(copia);
   };
 
   const actualizarProducto = (index, campo, valor) => {
     const copia = [...productosPedido];
-    if (campo === 'producto_id') {
-      copia[index].producto_id = valor.value;
-      copia[index].productoObj = valor;
+    if (campo === 'producto') {
+      copia[index].producto = valor;
     } else {
       copia[index][campo] = valor;
     }
     setProductosPedido(copia);
   };
 
-  const validarFormulario = () => {
-    const nuevosErrores = {};
-    if (!clienteId) nuevosErrores.cliente = 'Debes seleccionar un cliente.';
-    if (productosPedido.length === 0) nuevosErrores.productos = 'Debes agregar al menos un producto.';
-
-    const ids = new Set();
-    productosPedido.forEach((prod, i) => {
-      if (!prod.producto_id) nuevosErrores[`producto_${i}`] = 'Producto requerido.';
-      else if (ids.has(prod.producto_id)) nuevosErrores[`producto_${i}`] = 'Producto duplicado.';
-      else ids.add(prod.producto_id);
-
-      if (!prod.cantidad || isNaN(prod.cantidad) || prod.cantidad <= 0) {
-        nuevosErrores[`cantidad_${i}`] = 'Cantidad inválida.';
-      }
-
-      if (!prod.tipo) nuevosErrores[`tipo_${i}`] = 'Tipo requerido.';
-    });
-
-    setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
-  };
-
   const enviarPedido = async () => {
-    if (!validarFormulario() || loading) return;
-
-    setLoading(true);
+    if (!clienteSeleccionado || productosPedido.length === 0) {
+      toast.error('Debes seleccionar un cliente y al menos un producto');
+      return;
+    }
 
     const payload = {
-      cliente_id: parseInt(clienteId),
+      cliente_id: clienteSeleccionado.value,
       observaciones,
       productos: productosPedido.map(p => ({
-        producto_id: parseInt(p.producto_id),
+        producto_id: p.producto.value,
         cantidad: parseFloat(p.cantidad),
         tipo: p.tipo
       })),
@@ -94,6 +72,7 @@ export default function Pedidos() {
       fecha: new Date().toISOString()
     };
 
+    setLoading(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos`, {
         method: 'POST',
@@ -102,22 +81,18 @@ export default function Pedidos() {
       });
 
       if (res.ok) {
-        setMensaje('✅ Pedido enviado con éxito');
-        setClienteId('');
+        toast.success('✅ Pedido enviado con éxito');
+        setClienteSeleccionado(null);
         setProductosPedido([]);
         setObservaciones('');
-        setErrores({});
-        setSelectedCliente(null);
       } else {
         const err = await res.text();
-        setMensaje(`❌ Error al enviar el pedido: ${err}`);
+        toast.error(`❌ Error: ${err}`);
       }
     } catch (err) {
-      console.error('Error de red al enviar pedido:', err);
-      setMensaje('❌ Error de red al enviar el pedido');
+      toast.error('❌ Error de red');
     } finally {
       setLoading(false);
-      setTimeout(() => setMensaje(''), 3000);
     }
   };
 
@@ -128,36 +103,32 @@ export default function Pedidos() {
 
   const productoOptions = productos.map(p => ({
     value: p.id,
-    label: p.nombre
+    label: `${p.nombre} ($${p.precio})`
   }));
 
   return (
     <div className="bg-white p-6 rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-4 text-blue-600">Nuevo Pedido</h2>
 
-      {mensaje && <p className="mb-4 text-green-600">{mensaje}</p>}
-
-      <label className="block font-medium mb-1">Cliente</label>
-      <Select
-        options={clienteOptions}
-        value={selectedCliente}
-        onChange={(option) => {
-          setSelectedCliente(option);
-          setClienteId(option?.value || '');
-        }}
-        placeholder="Seleccionar cliente..."
-        className="mb-2"
-      />
-      {errores.cliente && <p className="text-red-600 text-sm mb-2">{errores.cliente}</p>}
+      <div className="mb-4">
+        <label className="block font-medium">Cliente</label>
+        <Select
+          options={clienteOptions}
+          value={clienteSeleccionado}
+          onChange={setClienteSeleccionado}
+          isDisabled={loading}
+          placeholder="Seleccionar cliente"
+        />
+      </div>
 
       {productosPedido.map((p, i) => (
-        <div key={i} className="flex flex-col sm:flex-row items-center gap-2 mb-2">
+        <div key={i} className="flex flex-col sm:flex-row gap-2 mb-2 items-center">
           <Select
             options={productoOptions}
-            value={p.productoObj}
-            onChange={(val) => actualizarProducto(i, 'producto_id', val)}
+            value={p.producto}
+            onChange={(val) => actualizarProducto(i, 'producto', val)}
             placeholder="Producto"
-            className="w-full sm:w-64"
+            className="flex-1"
           />
           <input
             type="number"
@@ -178,21 +149,16 @@ export default function Pedidos() {
           </select>
           <button
             onClick={() => eliminarProducto(i)}
-            className="bg-red-600 text-white px-2 rounded"
+            className="bg-red-600 text-white px-2 py-1 rounded"
           >
             X
           </button>
-          <div className="flex flex-col text-xs text-red-600">
-            {errores[`producto_${i}`] && <span>{errores[`producto_${i}`]}</span>}
-            {errores[`cantidad_${i}`] && <span>{errores[`cantidad_${i}`]}</span>}
-            {errores[`tipo_${i}`] && <span>{errores[`tipo_${i}`]}</span>}
-          </div>
         </div>
       ))}
-      {errores.productos && <p className="text-red-600 text-sm mb-2">{errores.productos}</p>}
 
       <button
         onClick={agregarProducto}
+        disabled={loading}
         className="bg-gray-200 px-4 py-1 rounded mb-4"
       >
         Agregar Producto
@@ -203,12 +169,13 @@ export default function Pedidos() {
         value={observaciones}
         onChange={(e) => setObservaciones(e.target.value)}
         className="w-full border p-2 rounded mb-4"
+        placeholder="Observaciones del pedido"
       />
 
       <button
         onClick={enviarPedido}
         disabled={loading}
-        className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+        className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
       >
         {loading ? 'Enviando...' : 'Enviar Pedido'}
       </button>

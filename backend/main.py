@@ -150,7 +150,8 @@ def delete_cliente(cliente_id: int, user=Depends(get_current_user)):
 
 @app.get("/productos")
 def get_productos(user=Depends(get_current_user)):
-    return db.get_productos()
+    productos = db.get_productos()
+    return sorted(productos, key=lambda x: x['nombre'].lower())
 
 @app.post("/productos")
 def add_producto(producto: Producto, user=Depends(get_current_user)):
