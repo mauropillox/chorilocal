@@ -153,9 +153,10 @@ def login(username: str = Form(...), password: str = Form(...)):
     db.update_last_login(username)
     return {"access_token": token, "token_type": "bearer"}
 
-@app.get("/clientes")
-def get_clientes(user=Depends(get_current_user)):
-    return db.get_clientes()
+@app.get("/productos")
+def get_productos(user=Depends(get_current_user)):
+    productos = db.get_productos()
+    return sorted(productos, key=lambda x: x['nombre'].lower())
 
 @app.post("/clientes")
 def add_cliente(cliente: Cliente, user=Depends(get_current_user)):
@@ -240,7 +241,8 @@ def generar_pdf_para_pedidos(datos: PedidosParaPDF, user=Depends(get_current_use
 
 @app.get("/usuarios")
 def listar_usuarios(usuario=Depends(obtener_usuario_actual_admin)):
-    return db.get_usuarios()
+    usuarios = db.get_usuarios()
+    return sorted(usuarios, key=lambda u: u["username"].lower())
 
 @app.post("/usuarios")
 def crear_usuario_admin(
