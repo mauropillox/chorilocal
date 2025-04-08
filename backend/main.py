@@ -162,6 +162,12 @@ def get_productos(user=Depends(get_current_user)):
 def add_cliente(cliente: Cliente, user=Depends(get_current_user)):
     return db.add_cliente(cliente.dict())
 
+@app.get("/clientes")
+def get_clientes(user=Depends(get_current_user)):
+    clientes = db.get_clientes()
+    return sorted(clientes, key=lambda x: x['nombre'].lower())
+
+
 @app.put("/clientes/{cliente_id}")
 def update_cliente(cliente_id: int, cliente: Cliente, user=Depends(get_current_user)):
     return db.update_cliente(cliente_id, cliente.dict())
