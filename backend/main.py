@@ -111,6 +111,27 @@ class EstadoPedido(BaseModel):
 class PedidosParaPDF(BaseModel):
     pedido_ids: List[int]
 
+# Función común
+def enriquecer_pedidos(pedidos):
+    clientes = db.get_clientes()
+    for pedido in pedidos:
+        cliente = next((c for c in clientes if c["id"] == pedido["cliente_id"]), None)
+        pedido["cliente_nombre"] = cliente["nombre"] if cliente else "Desconocido"
+
+        productos = []
+        conn = db.conectar()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.nombre, dp.cantidad, dp.tipo
+            FROM detalles_pedido dp
+            JOIN productos p ON p.id = dp.producto_id
+            WHERE dp.pedido_id = ?
+        """, (pedido["id"],))
+        productos = [{"nombre": row[0], "cantidad": row[1], "tipo": row[2]} for row in cursor.fetchall()]
+        conn.close()
+        pedido["productos"] = productos
+    return pedidos
+
 # Endpoints
 @app.post("/register")
 def register(username: str = Form(...), password: str = Form(...), rol: str = Form("usuario")):
@@ -170,29 +191,21 @@ def delete_producto(producto_id: int, user=Depends(get_current_user)):
 @app.get("/pedidos")
 def get_pedidos(usuario: dict = Depends(get_current_user)):
     pedidos = db.get_pedidos()
-    clientes = db.get_clientes()
+    return enriquecer_pedidos(pedidos)
 
-    for pedido in pedidos:
-        cliente = next((c for c in clientes if c["id"] == pedido["cliente_id"]), None)
-        pedido["cliente_nombre"] = cliente["nombre"] if cliente else "Desconocido"
+@app.get("/pedidos/pendientes")
+def get_pedidos_pendientes(user=Depends(get_current_user)):
+    pedidos = db.get_pedidos_filtrados(
+        "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+    )
+    return enriquecer_pedidos(pedidos)
 
-        if "pdf_generado" not in pedido:
-            pedido["pdf_generado"] = False
-
-        productos = []
-        conn = db.conectar()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT p.nombre, dp.cantidad, dp.tipo
-            FROM detalles_pedido dp
-            JOIN productos p ON p.id = dp.producto_id
-            WHERE dp.pedido_id = ?
-        """, (pedido["id"],))
-        productos = [{"nombre": row[0], "cantidad": row[1], "tipo": row[2]} for row in cursor.fetchall()]
-        conn.close()
-        pedido["productos"] = productos
-
-    return pedidos
+@app.get("/pedidos/generados")
+def get_pedidos_generados(user=Depends(get_current_user)):
+    pedidos = db.get_pedidos_filtrados(
+        "pdf_generado = 1 AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+    )
+    return enriquecer_pedidos(pedidos)
 
 @app.post("/pedidos")
 def add_pedido(pedido: PedidoInput, user=Depends(get_current_user)):
@@ -211,39 +224,12 @@ def cambiar_estado_pedido(pedido_id: int, estado: EstadoPedido, user=Depends(get
         return {"status": "ok", "mensaje": "Estado actualizado correctamente"}
     raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
-@app.get("/pedidos/pendientes")
-def get_pedidos_pendientes(user=Depends(get_current_user)):
-    return db.get_pedidos_filtrados(
-        "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
-    )
-
-@app.get("/pedidos/generados")
-def get_pedidos_generados(user=Depends(get_current_user)):
-    return db.get_pedidos_filtrados(
-        "pdf_generado = 1 AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
-    )
-
 @app.post("/pedidos/pdf")
 def generar_pdf_para_pedidos(datos: PedidosParaPDF, user=Depends(get_current_user)):
     pedidos = db.get_pedidos_por_ids(datos.pedido_ids)
     if not pedidos:
         raise HTTPException(status_code=404, detail="No se encontraron los pedidos")
-
-    clientes = db.get_clientes()
-    for pedido in pedidos:
-        cliente = next((c for c in clientes if c["id"] == pedido["cliente_id"]), None)
-        pedido["cliente_nombre"] = cliente["nombre"] if cliente else "Desconocido"
-
-        conn = db.conectar()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT p.nombre, dp.cantidad, dp.tipo
-            FROM detalles_pedido dp
-            JOIN productos p ON p.id = dp.producto_id
-            WHERE dp.pedido_id = ?
-        """, (pedido["id"],))
-        pedido["productos"] = [{"nombre": row[0], "cantidad": row[1], "tipo": row[2]} for row in cursor.fetchall()]
-        conn.close()
+    pedidos = enriquecer_pedidos(pedidos)
 
     archivo_pdf = generar_pdf_pedidos(pedidos)
 
