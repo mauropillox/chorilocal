@@ -5,7 +5,6 @@ import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 
 export default function HistorialPedidos() {
-  // ────── state ──────
   const [pedidos, setPedidos] = useState([]);
   const [mostrarGenerados, setMostrarGenerados] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -16,17 +15,17 @@ export default function HistorialPedidos() {
   const [loadingAccion, setLoadingAccion] = useState(false);
   const pedidosPorPagina = 10;
 
-  // ────── efectos ──────
   useEffect(() => {
     cargarPerfil();
     cargarPedidos();
   }, [mostrarGenerados]);
 
-  const cargarPerfil = async () => {
-    const r = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/me`);
-    if (r.ok) {
-      const d = await r.json();
-      setPerfil({ username: d.username, rol: d.rol });
+  const cargarPerfil = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
+      setPerfil({ username: stored.username || '', rol: stored.rol || '' });
+    } catch {
+      setPerfil({ username: '', rol: '' });
     }
   };
 
@@ -38,7 +37,6 @@ export default function HistorialPedidos() {
       if (r.ok) {
         const d = await r.json();
         setPedidos(d.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
-        // lista única de usuarios (para el filtro admin)
         const u = [...new Set(d.map(p => p.creado_por).filter(Boolean))];
         setUsuarios(u);
       } else toast.error('Error al cargar pedidos');
@@ -49,14 +47,12 @@ export default function HistorialPedidos() {
     }
   };
 
-  // ────── filtros ──────
   const pedidosFiltrados = pedidos.filter(p => {
     if (perfil.rol !== 'admin') return p.creado_por === perfil.username;
     if (usuarioSel) return p.creado_por === usuarioSel;
     return true;
   });
 
-  // ────── acciones ──────
   const marcarGenerado = async id => {
     setLoadingAccion(true);
     const r = await fetchConToken(`/pedidos/${id}/estado`, {
@@ -64,7 +60,12 @@ export default function HistorialPedidos() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pdf_generado: true })
     });
-    r.ok ? toast.success(`Pedido #${id} marcado como generado`) : toast.error('Error');
+    r.ok
+      ? toast.success(`✅ Pedido #${id} marcado como generado`, {
+          icon: '✅',
+          className: 'animate-bounce'
+        })
+      : toast.error('Error al marcar como generado');
     await cargarPedidos();
     setLoadingAccion(false);
   };
@@ -78,7 +79,6 @@ export default function HistorialPedidos() {
     setLoadingAccion(false);
   };
 
-  // ────── exportar ──────
   const exportarExcel = () => {
     if (pedidosFiltrados.length === 0) return toast.info('Sin datos');
     const rows = pedidosFiltrados.flatMap(p =>
@@ -99,16 +99,16 @@ export default function HistorialPedidos() {
     saveAs(blob, `pedidos_${mostrarGenerados ? 'generados' : 'pendientes'}.xlsx`);
   };
 
-  // ────── paginación ─────
   const totalPags = Math.ceil(pedidosFiltrados.length / pedidosPorPagina);
-  const paginaDatos = pedidosFiltrados.slice((pagina - 1) * pedidosPorPagina, pagina * pedidosPorPagina);
+  const paginaDatos = pedidosFiltrados.slice(
+    (pagina - 1) * pedidosPorPagina,
+    pagina * pedidosPorPagina
+  );
 
-  // ────── UI ─────
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold text-blue-600 mb-4">Historial de Pedidos</h2>
 
-      {/* Filtros */}
       <div className="flex flex-wrap gap-2 items-center mb-4">
         <button onClick={() => setMostrarGenerados(false)}
           className={`px-4 py-1 rounded ${!mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Pendientes</button>
@@ -119,18 +119,17 @@ export default function HistorialPedidos() {
           <select value={usuarioSel} onChange={e => setUsuarioSel(e.target.value)} className="border p-1 rounded">
             <option value="">Todos los usuarios</option>
             {usuarios.map(u => (
-              <option key={u} value={u}>{u === perfil.username ? '🧍 Mis pedidos' : u}</option>
+              <option key={u} value={u}>{u === perfil.username ? '🧍 Mis pedidos' : u}</option>
             ))}
           </select>
         )}
 
         <button onClick={exportarExcel}
           className="ml-auto bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded flex items-center">
-          📊 Exportar Excel
+          📊 Exportar Excel
         </button>
       </div>
 
-      {/* Lista */}
       {cargando ? <p>Cargando…</p> : paginaDatos.length === 0 ? <p>No hay pedidos.</p> : (
         <>
           {paginaDatos.map(p => (
@@ -142,7 +141,7 @@ export default function HistorialPedidos() {
               {p.observaciones && <p>Obs.: {p.observaciones}</p>}
               <ul className="list-disc pl-6 mt-2 text-sm">
                 {p.productos.map((pr, i) => (
-                  <li key={i}>{pr.nombre} - {pr.cantidad} {pr.tipo}</li>
+                  <li key={i}>{pr.nombre} - {pr.cantidad} {pr.tipo}</li>
                 ))}
               </ul>
 
@@ -157,7 +156,6 @@ export default function HistorialPedidos() {
             </div>
           ))}
 
-          {/* Paginación */}
           <div className="flex justify-center gap-2">
             <button disabled={pagina === 1} onClick={() => setPagina(pagina - 1)}
               className="px-3 py-1 bg-gray-200 rounded">Anterior</button>
