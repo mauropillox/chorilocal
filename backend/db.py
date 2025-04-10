@@ -145,20 +145,29 @@ def delete_producto(producto_id):
     conn.close()
     return {"ok": True}
 
+from datetime import datetime, timezone, timedelta
+tz_uy = timezone(timedelta(hours=-3))  # UTC-3 para Uruguay/Argentina
+
 def add_pedido(pedido):
     conn = conectar()
     cursor = conn.cursor()
+
+    # Obtener hora local y formatearla
+    fecha_local = datetime.now(tz_uy).isoformat()
+
     cursor.execute("""
         INSERT INTO pedidos (cliente_id, fecha, observaciones, pdf_generado, usuario_id)
         VALUES (?, ?, ?, ?, ?)
     """, (
         pedido['cliente_id'],
-        pedido.get('fecha', datetime.now().isoformat()),
+        fecha_local,
         pedido.get('observaciones', ''),
         pedido['pdf_generado'],
-        pedido['usuario_id']
+        pedido.get('usuario_id') if pedido.get('usuario_id') is not None else None
     ))
+
     pedido_id = cursor.lastrowid
+
     for producto in pedido['productos']:
         cursor.execute("""
             INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo)
@@ -169,10 +178,10 @@ def add_pedido(pedido):
             producto['cantidad'],
             producto['tipo']
         ))
+
     conn.commit()
     conn.close()
     return {"ok": True, "pedido_id": pedido_id}
-
 def get_pedidos(usuario_id=None):
     conn = conectar()
     cursor = conn.cursor()
