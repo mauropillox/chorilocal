@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
@@ -15,7 +14,6 @@ from pdf_utils import generar_pdf_pedidos
 
 load_dotenv()
 
-# Logging config
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -23,7 +21,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Ensure DB is present in /data
 origen = "/app/ventas.db"
 destino = os.getenv("DB_PATH", "/data/ventas.db")
 if not os.path.exists(destino):
@@ -31,11 +28,9 @@ if not os.path.exists(destino):
     shutil.copy(origen, destino)
 logger.info(f"📂 Usando base de datos: {destino}")
 
-# App setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,12 +39,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Init DB
 db.crear_tablas()
 db.crear_tabla_detalles_pedido()
 db.verificar_tablas_y_columnas()
 
-# Dependencias
+# --------------------- DEPENDENCIAS ---------------------
 def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     if payload is None:
@@ -66,7 +60,7 @@ def obtener_usuario_actual_admin(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=403, detail="No autorizado: se requiere rol admin")
     return payload
 
-# Modelos
+# --------------------- MODELOS ---------------------
 class Cliente(BaseModel):
     id: Optional[int] = None
     nombre: str
@@ -95,7 +89,6 @@ class ProductoConCantidad(BaseModel):
             raise ValueError("La cantidad debe ser un múltiplo de 0.5")
         return v
 
-
 class PedidoProductoInput(ProductoConCantidad):
     pass
 
@@ -112,7 +105,7 @@ class EstadoPedido(BaseModel):
 class PedidosParaPDF(BaseModel):
     pedido_ids: List[int]
 
-# Función común
+# --------------------- FUNCIONES ---------------------
 def enriquecer_pedidos(pedidos):
     clientes = db.get_clientes()
     for pedido in pedidos:
@@ -133,7 +126,7 @@ def enriquecer_pedidos(pedidos):
         pedido["productos"] = productos
     return pedidos
 
-# Endpoints
+# --------------------- ENDPOINTS ---------------------
 @app.post("/register")
 def register(username: str = Form(...), password: str = Form(...), rol: str = Form("usuario")):
     hashed_pw = pwd_context.hash(password)
@@ -154,20 +147,13 @@ def login(username: str = Form(...), password: str = Form(...)):
     db.update_last_login(username)
     return {"access_token": token, "token_type": "bearer"}
 
-@app.get("/productos")
-def get_productos(user=Depends(get_current_user)):
-    productos = db.get_productos()
-    return sorted(productos, key=lambda x: x['nombre'].lower())
+@app.get("/clientes")
+def get_clientes(user=Depends(get_current_user)):
+    return db.get_clientes()
 
 @app.post("/clientes")
 def add_cliente(cliente: Cliente, user=Depends(get_current_user)):
     return db.add_cliente(cliente.dict())
-
-@app.get("/clientes")
-def get_clientes(user=Depends(get_current_user)):
-    clientes = db.get_clientes()
-    return sorted(clientes, key=lambda x: x['nombre'].lower())
-
 
 @app.put("/clientes/{cliente_id}")
 def update_cliente(cliente_id: int, cliente: Cliente, user=Depends(get_current_user)):
@@ -198,26 +184,42 @@ def delete_producto(producto_id: int, user=Depends(get_current_user)):
 
 @app.get("/pedidos")
 def get_pedidos(usuario: dict = Depends(get_current_user)):
-    pedidos = db.get_pedidos()
+    if usuario["rol"] == "admin":
+        pedidos = db.get_pedidos()
+    else:
+        pedidos = db.get_pedidos(usuario_id=usuario["id"])
     return enriquecer_pedidos(pedidos)
 
 @app.get("/pedidos/pendientes")
-def get_pedidos_pendientes(user=Depends(get_current_user)):
-    pedidos = db.get_pedidos_filtrados(
-        "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
-    )
+def get_pedidos_pendientes(usuario: dict = Depends(get_current_user)):
+    if usuario["rol"] == "admin":
+        pedidos = db.get_pedidos_filtrados(
+            "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+        )
+    else:
+        pedidos = db.get_pedidos_filtrados(
+            "(pdf_generado IS NULL OR pdf_generado = 0) AND (pdf_descargado IS NULL OR pdf_descargado = 0)",
+            user_id=usuario["id"]
+        )
     return enriquecer_pedidos(pedidos)
 
 @app.get("/pedidos/generados")
-def get_pedidos_generados(user=Depends(get_current_user)):
-    pedidos = db.get_pedidos_filtrados(
-        "pdf_generado = 1 AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
-    )
+def get_pedidos_generados(usuario: dict = Depends(get_current_user)):
+    if usuario["rol"] == "admin":
+        pedidos = db.get_pedidos_filtrados(
+            "pdf_generado = 1 AND (pdf_descargado IS NULL OR pdf_descargado = 0)"
+        )
+    else:
+        pedidos = db.get_pedidos_filtrados(
+            "pdf_generado = 1 AND (pdf_descargado IS NULL OR pdf_descargado = 0)",
+            user_id=usuario["id"]
+        )
     return enriquecer_pedidos(pedidos)
 
 @app.post("/pedidos")
-def add_pedido(pedido: PedidoInput, user=Depends(get_current_user)):
+def add_pedido(pedido: PedidoInput, usuario: dict = Depends(get_current_user)):
     pedido_dict = pedido.dict(exclude_unset=True)
+    pedido_dict["usuario_id"] = usuario["id"]
     if "pdf_generado" not in pedido_dict:
         pedido_dict["pdf_generado"] = False
     return db.add_pedido(pedido_dict)

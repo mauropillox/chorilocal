@@ -1,4 +1,3 @@
-# db.py
 import sqlite3
 from datetime import datetime
 from dotenv import load_dotenv
@@ -7,7 +6,7 @@ import os
 load_dotenv()
 DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 
-print(f"📂 Usando base de datos en: {DB_PATH}")  # Debug: saber qué DB usa
+print(f"📂 Usando base de datos en: {DB_PATH}")
 
 def conectar():
     return sqlite3.connect(DB_PATH)
@@ -38,6 +37,7 @@ def crear_tablas():
             observaciones TEXT,
             pdf_generado BOOLEAN DEFAULT 0,
             pdf_descargado BOOLEAN DEFAULT 0,
+            usuario_id INTEGER,
             FOREIGN KEY (cliente_id) REFERENCES clientes(id)
         )
     """)
@@ -74,7 +74,9 @@ def verificar_tablas_y_columnas():
     columnas = [col[1] for col in cursor.fetchall()]
     if "pdf_descargado" not in columnas:
         cursor.execute("ALTER TABLE pedidos ADD COLUMN pdf_descargado BOOLEAN DEFAULT 0")
-        conn.commit()
+    if "usuario_id" not in columnas:
+        cursor.execute("ALTER TABLE pedidos ADD COLUMN usuario_id INTEGER DEFAULT NULL")
+    conn.commit()
     conn.close()
 
 def add_cliente(cliente):
@@ -146,23 +148,58 @@ def delete_producto(producto_id):
 def add_pedido(pedido):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO pedidos (cliente_id, fecha, observaciones, pdf_generado) VALUES (?, ?, ?, ?)",
-                   (pedido['cliente_id'], pedido.get('fecha', datetime.now().isoformat()), pedido.get('observaciones', ''), pedido['pdf_generado']))
+    cursor.execute("""
+        INSERT INTO pedidos (cliente_id, fecha, observaciones, pdf_generado, usuario_id)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        pedido['cliente_id'],
+        pedido.get('fecha', datetime.now().isoformat()),
+        pedido.get('observaciones', ''),
+        pedido['pdf_generado'],
+        pedido['usuario_id']
+    ))
     pedido_id = cursor.lastrowid
     for producto in pedido['productos']:
-        cursor.execute("INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
-                       (pedido_id, producto['producto_id'], producto['cantidad'], producto['tipo']))
+        cursor.execute("""
+            INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo)
+            VALUES (?, ?, ?, ?)
+        """, (
+            pedido_id,
+            producto['producto_id'],
+            producto['cantidad'],
+            producto['tipo']
+        ))
     conn.commit()
     conn.close()
     return {"ok": True, "pedido_id": pedido_id}
 
-def get_pedidos():
+def get_pedidos(usuario_id=None):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM pedidos")
+    if usuario_id:
+        cursor.execute("SELECT * FROM pedidos WHERE usuario_id = ?", (usuario_id,))
+    else:
+        cursor.execute("SELECT * FROM pedidos")
     rows = cursor.fetchall()
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
+
+def get_pedidos_filtrados(filtro_sql="", valores=(), user_id=None):
+    conn = conectar()
+    cursor = conn.cursor()
+    query = "SELECT * FROM pedidos"
+    conditions = []
+    if filtro_sql:
+        conditions.append(filtro_sql)
+    if user_id:
+        conditions.append("usuario_id = ?")
+        valores = (*valores, user_id)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    cursor.execute(query, valores)
+    pedidos = [dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()]
+    conn.close()
+    return pedidos
 
 def delete_pedido(pedido_id):
     conn = conectar()
@@ -181,6 +218,17 @@ def cambiar_estado_pedido(pedido_id, pdf_generado):
     actualizado = cursor.rowcount > 0
     conn.close()
     return actualizado
+
+def get_pedidos_por_ids(pedido_ids):
+    todos = get_pedidos()
+    return [p for p in todos if p["id"] in pedido_ids]
+
+def marcar_pedido_como_descargado(pedido_id):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE pedidos SET pdf_descargado = 1 WHERE id = ?", (pedido_id,))
+    conn.commit()
+    conn.close()
 
 def add_usuario(username, password_hash, rol, activo):
     conn = conectar()
@@ -267,25 +315,3 @@ def resetear_password(username, new_password):
     conn.commit()
     conn.close()
     return {"ok": True}
-
-def get_pedidos_por_ids(pedido_ids):
-    todos = get_pedidos()
-    return [p for p in todos if p["id"] in pedido_ids]
-
-def marcar_pedido_como_descargado(pedido_id):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE pedidos SET pdf_descargado = 1 WHERE id = ?", (pedido_id,))
-    conn.commit()
-    conn.close()
-
-def get_pedidos_filtrados(filtro_sql="", valores=()):
-    conn = conectar()
-    cursor = conn.cursor()
-    query = "SELECT * FROM pedidos"
-    if filtro_sql:
-        query += f" WHERE {filtro_sql}"
-    cursor.execute(query, valores)
-    pedidos = [dict(zip([c[0] for c in cursor.description], row)) for row in cursor.fetchall()]
-    conn.close()
-    return pedidos
