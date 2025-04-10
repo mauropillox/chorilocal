@@ -47,11 +47,11 @@ export default function Pedidos() {
   };
 
   const agregarProducto = () => {
-    setProductosSeleccionados([...productosSeleccionados, {
-      producto: null,
-      cantidad: '',
-      tipo: 'unidad'
-    }]);
+    setProductosSeleccionados(prev => [
+      ...prev,
+      { producto: null, cantidad: '', tipo: 'unidad' }
+    ]);
+    toast.success("Producto agregado al pedido");
   };
 
   const actualizarProducto = (index, campo, valor) => {
@@ -71,7 +71,7 @@ export default function Pedidos() {
     if (productosSeleccionados.length === 0) return toast.error("Agregá al menos un producto");
 
     const productosValidos = productosSeleccionados.every(p =>
-      p.producto && p.cantidad > 0 && (p.tipo === 'unidad' || p.tipo === 'caja')
+      p.producto && p.cantidad > 0 && ["unidad", "caja", "kilo", "gancho"].includes(p.tipo)
     );
     if (!productosValidos) return toast.error("Revisá los productos: deben tener todos los campos válidos");
 
@@ -94,7 +94,7 @@ export default function Pedidos() {
       });
 
       if (res.ok) {
-        toast.success("Pedido enviado con éxito");
+        toast.success("✅ Pedido enviado con éxito");
         setClienteSeleccionado(null);
         setProductosSeleccionados([]);
         setObservaciones('');
@@ -174,6 +174,8 @@ export default function Pedidos() {
             >
               <option value="unidad">Unidad</option>
               <option value="caja">Caja</option>
+              <option value="kilo">Kilo</option>
+              <option value="gancho">Gancho</option>
             </select>
             <button
               onClick={() => eliminarProducto(index)}
