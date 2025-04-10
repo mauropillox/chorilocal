@@ -6,10 +6,8 @@ import re
 import os
 
 def generar_pdf_pedidos(pedidos):
-    # Crear carpeta 'pdfs/' si no existe
     os.makedirs("pdfs", exist_ok=True)
 
-    # Nombre del archivo
     if len(pedidos) == 1:
         pedido = pedidos[0]
         cliente = pedido.get("cliente_nombre", "desconocido")
@@ -27,14 +25,12 @@ def generar_pdf_pedidos(pedidos):
 
     ruta_archivo = os.path.join("pdfs", nombre_archivo)
 
-    # Crear PDF
     pdf = canvas.Canvas(ruta_archivo, pagesize=letter)
     width, height = letter
     margen = 50
     y = height - margen
 
     for pedido in pedidos:
-        # Encabezado
         pdf.setFont("Helvetica-Bold", 12)
         fecha_str = pedido.get("fecha", "")
         try:
@@ -47,28 +43,24 @@ def generar_pdf_pedidos(pedidos):
         pdf.drawString(margen, y, encabezado)
         y -= 20
 
-        # Observaciones
         observaciones = pedido.get("observaciones", "").strip()
         if observaciones:
             pdf.setFont("Helvetica-Oblique", 10)
             pdf.drawString(margen + 20, y, f"📝 Observaciones: {observaciones}")
-            y -= 15
+            y -= 17
 
-        # Productos
         pdf.setFont("Helvetica", 10)
         for prod in pedido.get("productos", []):
             texto = f"• {prod['nombre']} — {prod['cantidad']} {prod['tipo']}"
             pdf.drawString(margen + 30, y, texto)
-            y -= 13
+            y -= 17  # ← más espacio entre productos
 
-        # Línea separadora
         y -= 10
         pdf.setStrokeColor(colors.grey)
         pdf.setLineWidth(0.5)
         pdf.line(margen, y, width - margen, y)
-        y -= 20
+        y -= 25  # ← más espacio antes del siguiente pedido
 
-        # Salto de página si no hay espacio
         if y < 100:
             pdf.showPage()
             y = height - margen
