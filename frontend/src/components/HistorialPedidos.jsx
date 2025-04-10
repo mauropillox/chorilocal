@@ -1,221 +1,146 @@
-import { useEffect, useState } from "react";
-import { fetchConToken } from "../helpers/fetch";
-import { saveAs } from "file-saver";
-import * as XLSX from "xlsx";
+import { useEffect, useState } from 'react';
+import { fetchConToken } from '../auth';
+import { toast } from 'react-toastify';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 
-const HistorialPedidos = () => {
+export default function HistorialPedidos() {
   const [pedidos, setPedidos] = useState([]);
-  const [filtro, setFiltro] = useState("pendientes");
-  const [usuarios, setUsuarios] = useState([]);
-  const [usuarioFiltro, setUsuarioFiltro] = useState("todos");
+  const [mostrarGenerados, setMostrarGenerados] = useState(false);
+  const [cargando, setCargando] = useState(false);
   const [pagina, setPagina] = useState(1);
-  const porPagina = 10;
-  const token = localStorage.getItem("token");
-  const usuario = JSON.parse(localStorage.getItem("usuario"));
-  const esAdmin = usuario?.rol === "admin";
+  const [usuarios, setUsuarios] = useState([]);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
+  const [userRole, setUserRole] = useState('');
+  const [username, setUsername] = useState('');
+  const [seleccionados, setSeleccionados] = useState([]);
+  const [loadingAccion, setLoadingAccion] = useState(false);
+  const pedidosPorPagina = 10;
 
   useEffect(() => {
     cargarPedidos();
-    if (esAdmin) cargarUsuarios();
-  }, [filtro]);
+    obtenerPerfil();
+  }, [mostrarGenerados]);
+
+  const obtenerPerfil = async () => {
+    const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/me`);
+    if (res.ok) {
+      const data = await res.json();
+      setUserRole(data.rol);
+      setUsername(data.username);
+    }
+  };
 
   const cargarPedidos = async () => {
-    const tipo = filtro === "pendientes" ? "pendientes" : "generados";
-    const res = await fetchConToken(`/pedidos/${tipo}`);
-    const data = await res.json();
-    setPedidos(data);
-  };
-
-  const cargarUsuarios = async () => {
-    const res = await fetchConToken("/usuarios");
-    const data = await res.json();
-    setUsuarios(data.filter((u) => u.username !== "admin"));
-  };
-
-  const marcarGenerado = async (id) => {
-    await fetchConToken(`/pedidos/${id}/pdf`, { method: "PUT" });
-    cargarPedidos();
-  };
-
-  const eliminarPedido = async (id) => {
-    if (confirm("¿Eliminar este pedido?")) {
-      await fetchConToken(`/pedidos/${id}`, { method: "DELETE" });
-      cargarPedidos();
+    setCargando(true);
+    try {
+      const url = mostrarGenerados
+        ? `${import.meta.env.VITE_API_URL}/pedidos/generados`
+        : `${import.meta.env.VITE_API_URL}/pedidos/pendientes`;
+      const res = await fetchConToken(url);
+      if (res.ok) {
+        const data = await res.json();
+        const ordenados = data.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+        setPedidos(ordenados);
+        const unicos = [...new Set(data.map(p => p.creado_por || ''))];
+        setUsuarios(unicos.filter(u => u));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al cargar pedidos');
     }
+    setCargando(false);
   };
+
+  const pedidosFiltrados = pedidos.filter(p =>
+    userRole !== 'admin'
+      ? p.creado_por === username
+      : usuarioSeleccionado
+      ? p.creado_por === usuarioSeleccionado
+      : true
+  );
+
+  const totalPaginas = Math.ceil(pedidosFiltrados.length / pedidosPorPagina);
+  const pedidosPagina = pedidosFiltrados.slice((pagina - 1) * pedidosPorPagina, pagina * pedidosPorPagina);
+
+  const totalUnidades = pedidosFiltrados.reduce((acc, p) => acc + p.productos.reduce((s, prod) => s + parseFloat(prod.cantidad || 0), 0), 0);
+  const totalProductos = pedidosFiltrados.reduce((acc, p) => acc + p.productos.length, 0);
 
   const exportarExcel = () => {
-    const pedidosFiltrados = pedidosFiltradosPorUsuario();
-    const data = pedidosFiltrados.flatMap((pedido) =>
-      pedido.productos.map((prod) => ({
-        Pedido: `#${pedido.id}`,
-        Cliente: pedido.cliente?.nombre || "—",
-        Fecha: pedido.fecha,
-        Observaciones: pedido.observaciones,
-        Producto: prod.nombre,
-        Cantidad: prod.cantidad,
-        Tipo: prod.tipo,
-        Usuario: pedido.usuario_username || "—",
-      }))
-    );
+    const datos = pedidosFiltrados.map(p => ({
+      ID: p.id,
+      Cliente: p.cliente?.nombre || '',
+      Teléfono: p.cliente?.telefono || '',
+      Fecha: p.fecha,
+      Observaciones: p.observaciones,
+      Productos: p.productos.map(pr => `${pr.nombre} - ${pr.cantidad} ${pr.tipo}`).join('; ')
+    }));
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
+    const ws = XLSX.utils.json_to_sheet(datos);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+    const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], {
+      type: 'application/octet-stream',
     });
-    const blob = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
-    saveAs(blob, `historial_pedidos_${filtro}.xlsx`);
+    saveAs(blob, `pedidos_${mostrarGenerados ? 'generados' : 'pendientes'}.xlsx`);
   };
-
-  const pedidosFiltradosPorUsuario = () => {
-    if (!esAdmin || usuarioFiltro === "mios") {
-      return pedidos.filter((p) => p.usuario_id === usuario.id);
-    }
-    if (usuarioFiltro !== "todos") {
-      return pedidos.filter((p) => p.usuario_id === parseInt(usuarioFiltro));
-    }
-    return pedidos;
-  };
-
-  const paginados = pedidosFiltradosPorUsuario().slice(
-    (pagina - 1) * porPagina,
-    pagina * porPagina
-  );
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold text-blue-600 mb-4">
-        Historial de Pedidos
-      </h2>
-      <div className="flex flex-wrap gap-2 items-center mb-4">
-        <button
-          className={`px-4 py-1 rounded ${
-            filtro === "pendientes" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
-          onClick={() => setFiltro("pendientes")}
-        >
-          Pendientes
-        </button>
-        <button
-          className={`px-4 py-1 rounded ${
-            filtro === "generados" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
-          onClick={() => setFiltro("generados")}
-        >
-          Generados
-        </button>
-
-        {esAdmin && (
+      <h2 className="text-xl font-bold text-blue-600 mb-4">Historial de Pedidos</h2>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <button className={`px-4 py-1 rounded ${!mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`} onClick={() => setMostrarGenerados(false)}>Pendientes</button>
+        <button className={`px-4 py-1 rounded ${mostrarGenerados ? 'bg-blue-600 text-white' : 'bg-gray-200'}`} onClick={() => setMostrarGenerados(true)}>Generados</button>
+        {userRole === 'admin' && (
           <select
-            className="ml-2 border px-2 py-1 rounded"
-            value={usuarioFiltro}
-            onChange={(e) => {
-              setUsuarioFiltro(e.target.value);
-              setPagina(1);
-            }}
+            value={usuarioSeleccionado}
+            onChange={e => setUsuarioSeleccionado(e.target.value)}
+            className="border p-1 rounded"
           >
-            <option value="todos">Todos los usuarios</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.username}
+            <option value="">Todos los usuarios</option>
+            {usuarios.map(u => (
+              <option key={u} value={u}>
+                {u === username ? '🧍 Mis pedidos' : u}
               </option>
             ))}
-            <option value="mios">Solo míos</option>
           </select>
         )}
-
-        <button
-          className="ml-auto px-4 py-1 bg-green-500 text-white rounded flex items-center gap-1"
-          onClick={exportarExcel}
-        >
+        <button onClick={exportarExcel} className="ml-auto bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded flex items-center">
           📊 Exportar Excel
         </button>
       </div>
 
-      {paginados.map((pedido) => {
-        const totalUnidades = pedido.productos.reduce(
-          (acc, p) => acc + parseFloat(p.cantidad || 0),
-          0
-        );
-        return (
-          <div
-            key={pedido.id}
-            className="border rounded p-4 mb-4 bg-white shadow"
-          >
-            <p className="font-bold">Pedido #{pedido.id}</p>
-            {esAdmin && (
-              <p className="text-sm text-purple-700 mb-1">
-                Creado por: {pedido.usuario_username || "—"}
-              </p>
-            )}
-            <p>
-              <span className="font-semibold">Cliente:</span>{" "}
-              {pedido.cliente?.nombre || "—"}
-            </p>
-            <p>
-              <span className="font-semibold">Fecha:</span> {pedido.fecha}
-            </p>
-            <p>
-              <span className="font-semibold">Observaciones:</span>{" "}
-              {pedido.observaciones || "—"}
-            </p>
-            <p className="text-sm text-blue-600 mt-1">
-              Total productos: {pedido.productos.length} | Total unidades:{" "}
-              {totalUnidades}
-            </p>
-            <ul className="list-disc list-inside text-sm mt-2">
-              {pedido.productos.map((prod, i) => (
-                <li key={i}>
-                  {prod.nombre} - {prod.cantidad} {prod.tipo}
-                </li>
-              ))}
-            </ul>
-            {filtro === "pendientes" && (
-              <div className="flex gap-2 mt-4">
-                <button
-                  className="bg-green-500 text-white px-2 py-1 rounded"
-                  onClick={() => marcarGenerado(pedido.id)}
-                >
-                  Marcar como generado
-                </button>
-                <button
-                  className="bg-red-500 text-white px-2 py-1 rounded"
-                  onClick={() => eliminarPedido(pedido.id)}
-                >
-                  Eliminar
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {cargando ? (
+        <p>Cargando pedidos...</p>
+      ) : pedidosFiltrados.length === 0 ? (
+        <p>No hay pedidos para mostrar.</p>
+      ) : (
+        <>
+          {pedidosPagina.map(pedido => (
+            <div key={pedido.id} className="bg-white shadow rounded p-4 mb-4">
+              <p className="font-semibold">Pedido #{pedido.id}</p>
+              {userRole === 'admin' && (
+                <p className="text-sm text-purple-500">Creado por: {pedido.creado_por || '—'}</p>
+              )}
+              <p>Cliente: {pedido.cliente?.nombre}</p>
+              <p>Fecha: {new Date(pedido.fecha).toLocaleString()}</p>
+              <p>Observaciones: {pedido.observaciones}</p>
+              <p className="text-sm text-blue-600">Total productos: {pedido.productos.length} | Total unidades: {pedido.productos.reduce((sum, p) => sum + parseFloat(p.cantidad || 0), 0)}</p>
+              <ul className="list-disc pl-6 mt-2">
+                {pedido.productos.map((prod, i) => (
+                  <li key={i}>{prod.nombre} - {prod.cantidad} {prod.tipo}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
 
-      <div className="flex justify-center mt-4 gap-2">
-        <button
-          disabled={pagina === 1}
-          className="px-2 py-1 bg-gray-200 rounded"
-          onClick={() => setPagina((p) => p - 1)}
-        >
-          Anterior
-        </button>
-        <span className="px-2 py-1 bg-blue-100 rounded">{pagina}</span>
-        <button
-          disabled={
-            pagina * porPagina >= pedidosFiltradosPorUsuario().length
-          }
-          className="px-2 py-1 bg-gray-200 rounded"
-          onClick={() => setPagina((p) => p + 1)}
-        >
-          Siguiente
-        </button>
-      </div>
+          <div className="flex items-center gap-2">
+            <button disabled={pagina === 1} onClick={() => setPagina(pagina - 1)} className="px-3 py-1 rounded bg-gray-200">Anterior</button>
+            <span>{pagina}</span>
+            <button disabled={pagina === totalPaginas} onClick={() => setPagina(pagina + 1)} className="px-3 py-1 rounded bg-gray-200">Siguiente</button>
+          </div>
+        </>
+      )}
     </div>
   );
-};
-
-export default HistorialPedidos;
+}
