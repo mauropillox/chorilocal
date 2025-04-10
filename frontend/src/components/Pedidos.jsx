@@ -62,7 +62,7 @@ export default function Pedidos() {
       productos: items.map(i => ({
         producto_id: i.producto_id,
         cantidad: i.cantidad,
-        tipo: i.tipo
+        tipo: i.tipo.toLowerCase()  // 🔥 CORREGIDO: pasar a minúscula
       })),
       pdf_generado: 0,
       usuario_id: usuario.id || null
@@ -93,7 +93,6 @@ export default function Pedidos() {
     <div className="p-4">
       <h2 className="text-xl font-bold text-blue-600 mb-4">Nuevo Pedido</h2>
 
-      {/* Cliente */}
       <div className="mb-3">
         <label className="block mb-1 font-medium">Cliente:</label>
         <Select
@@ -107,7 +106,6 @@ export default function Pedidos() {
         />
       </div>
 
-      {/* Observaciones */}
       <div className="mb-3">
         <label className="block mb-1 font-medium">Observaciones:</label>
         <textarea
@@ -117,7 +115,6 @@ export default function Pedidos() {
         />
       </div>
 
-      {/* Productos */}
       <div className="mb-4">
         <label className="block mb-1 font-medium">Productos:</label>
         <div className="flex gap-2">
@@ -138,7 +135,6 @@ export default function Pedidos() {
         </div>
       </div>
 
-      {/* Lista de items */}
       {items.map((item, idx) => (
         <div key={idx} className="flex items-center gap-2 mb-2">
           <span className="w-1/3">{item.nombre}</span>

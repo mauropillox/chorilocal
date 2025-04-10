@@ -202,7 +202,8 @@ export default function HistorialPedidos() {
           Generados
         </button>
 
-        {perfil.rol === 'admin' && (
+        {/* Filtrar por usuario si hay varios y si es admin */}
+        {(perfil.rol === 'admin' && usuarios.length > 0) && (
           <select
             value={usuarioSel}
             onChange={e => setUsuarioSel(e.target.value)}
@@ -247,12 +248,10 @@ export default function HistorialPedidos() {
             <div key={p.id} className="bg-white shadow rounded p-4 mb-4">
               <p className="font-semibold">Pedido #{p.id}</p>
 
-              {/* Solo admin ve al creador */}
-              {perfil.rol === 'admin' && (
-                <p className="text-sm text-purple-600">
-                  Creado por: {p.creadoPor}
-                </p>
-              )}
+              {/* Todos ven al creador */}
+              <p className="text-sm text-purple-600">
+                Creado por: {p.creadoPor}
+              </p>
 
               <p>Cliente: {p.cliente_nombre}</p>
               <p>Fecha: {new Date(p.fecha).toLocaleString()}</p>
