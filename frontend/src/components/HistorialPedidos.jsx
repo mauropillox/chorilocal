@@ -15,6 +15,17 @@ export default function HistorialPedidos() {
   const [loadingAccion, setLoadingAccion] = useState(false);
   const porPagina = 10;
 
+  const decodificarToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return {};
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return { username: payload.username || '', rol: payload.rol || '' };
+    } catch {
+      return {};
+    }
+  };
+
   useEffect(() => {
     cargarPerfil();
     cargarPedidos();
@@ -23,10 +34,10 @@ export default function HistorialPedidos() {
   const cargarPerfil = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
-      setPerfil({ username: stored.username || '', rol: stored.rol || '' });
-    } catch {
-      setPerfil({ username: '', rol: '' });
-    }
+      if (stored.username) return setPerfil(stored);
+    } catch {}
+    const dec = decodificarToken();
+    if (dec.username) setPerfil(dec);
   };
 
   const cargarPedidos = async () => {
@@ -36,7 +47,6 @@ export default function HistorialPedidos() {
       const r = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos/${tipo}`);
       if (!r.ok) throw new Error();
       const data = await r.json();
-      // Aseguramos un alias uniforme "creadoPor"
       const normalizados = data.map(p => ({ ...p, creadoPor: p.usuario_username || '—' }));
       setPedidos(normalizados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
       setUsuarios([...new Set(normalizados.map(p => p.creadoPor).filter(u => u !== '—'))]);
@@ -47,14 +57,14 @@ export default function HistorialPedidos() {
     }
   };
 
-  /* ---------------- filtros ---------------- */
   const pedidosFiltrados = pedidos.filter(p => {
-    if (perfil.rol !== 'admin') return p.creadoPor === perfil.username;
-    if (usuarioSel) return p.creadoPor === usuarioSel;
-    return true;
+    if (perfil.rol === 'admin') {
+      return usuarioSel ? p.creadoPor === usuarioSel : true;
+    }
+    if (!perfil.username) return true;
+    return p.creadoPor === perfil.username;
   });
 
-  /* ---------------- acciones ---------------- */
   const marcarGenerado = async id => {
     setLoadingAccion(true);
     const r = await fetchConToken(`/pedidos/${id}/estado`, {
@@ -62,8 +72,9 @@ export default function HistorialPedidos() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pdf_generado: true })
     });
-    r.ok ? toast.success(`✅ Pedido #${id} marcado como generado`, { icon: '✅', className: 'animate-bounce' })
-         : toast.error('Error al marcar');
+    r.ok
+      ? toast.success(`✅ Pedido #${id} marcado como generado`, { icon: '✅', className: 'animate-bounce' })
+      : toast.error('Error al marcar');
     await cargarPedidos();
     setLoadingAccion(false);
   };
@@ -77,7 +88,6 @@ export default function HistorialPedidos() {
     setLoadingAccion(false);
   };
 
-  /* ---------------- exportar ---------------- */
   const exportarExcel = () => {
     if (pedidosFiltrados.length === 0) return toast.info('Sin datos');
     const rows = pedidosFiltrados.flatMap(p => p.productos.map(pr => ({
@@ -95,11 +105,9 @@ export default function HistorialPedidos() {
     saveAs(new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })]), `pedidos_${mostrarGenerados ? 'generados' : 'pendientes'}.xlsx`);
   };
 
-  /* ---------------- paginación ---------------- */
   const totalPags = Math.ceil(pedidosFiltrados.length / porPagina);
   const pageData = pedidosFiltrados.slice((pagina - 1) * porPagina, pagina * porPagina);
 
-  /* ---------------- UI ---------------- */
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold text-blue-600 mb-4">Historial de Pedidos</h2>
