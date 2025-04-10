@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Form
+from os.path import basename
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, field_validator
@@ -256,8 +257,11 @@ def generar_pdf_para_pedidos(datos: PedidosParaPDF, user=Depends(get_current_use
     for pedido_id in datos.pedido_ids:
         db.marcar_pedido_como_descargado(pedido_id)
 
-    return FileResponse(archivo_pdf, filename=archivo_pdf, media_type="application/pdf")
-
+    return FileResponse(
+        archivo_pdf,
+        filename=basename(archivo_pdf),  # ← nombre con fecha/hora
+        media_type="application/pdf"
+    )
 @app.get("/usuarios")
 def listar_usuarios(usuario=Depends(obtener_usuario_actual_admin)):
     usuarios = db.get_usuarios()
