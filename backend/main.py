@@ -80,9 +80,10 @@ class ProductoConCantidad(BaseModel):
 
     @field_validator("tipo")
     def validar_tipo(cls, v):
-        if v not in ["unidad", "caja", "kilo", "gancho"]:
-            raise ValueError("El tipo debe ser 'unidad', 'caja', 'kilo' o 'gancho'")
+        if v not in ["unidad", "caja", "kilo", "gancho", "tira"]:
+            raise ValueError("El tipo debe ser 'unidad', 'caja', 'kilo', 'gancho' o 'tira'")
         return v
+
 
     @field_validator("cantidad")
     def validar_cantidad_valores_validos(cls, v):

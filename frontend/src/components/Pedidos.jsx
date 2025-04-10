@@ -176,6 +176,7 @@ export default function Pedidos() {
               <option value="caja">Caja</option>
               <option value="kilo">Kilo</option>
               <option value="gancho">Gancho</option>
+              <option value="tira">Tira</option>
             </select>
             <button
               onClick={() => eliminarProducto(index)}
