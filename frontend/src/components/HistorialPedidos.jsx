@@ -5,15 +5,15 @@ import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 
 export default function HistorialPedidos() {
-  /* ───────────── state ───────────── */
-  const [pedidos, setPedidos]           = useState([]);
-  const [mostrarGenerados, setMostrar]  = useState(false);
-  const [cargando, setCargando]         = useState(false);
-  const [pagina, setPagina]             = useState(1);
-  const [usuarios, setUsuarios]         = useState([]);
-  const [usuarioSel, setUsuarioSel]     = useState('');
-  const [perfil, setPerfil]             = useState({ username: '', rol: '' });
-  const [loadingAccion, setLoading]     = useState(false);
+  /* ───────────── state ───────────── */
+  const [pedidos, setPedidos]       = useState([]);
+  const [mostrarGenerados, setMostrar] = useState(false);
+  const [cargando, setCargando]     = useState(false);
+  const [pagina, setPagina]         = useState(1);
+  const [usuarios, setUsuarios]     = useState([]);
+  const [usuarioSel, setUsuarioSel] = useState('');
+  const [perfil, setPerfil]         = useState({ username: '', rol: '' });
+  const [loadingAccion, setLoading] = useState(false);
   const POR_PAGINA = 10;
 
   /* ───────────── helpers ───────────── */
