@@ -1,204 +1,172 @@
 import { useEffect, useState } from 'react';
-import Select from 'react-select';
 import { fetchConToken } from '../auth';
+import Select from 'react-select';
 import { toast } from 'react-toastify';
 
 export default function Pedidos() {
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-  const [productosSeleccionados, setProductosSeleccionados] = useState([]);
+  const [seleccionado, setSeleccionado] = useState(null);
+  const [cliente, setCliente] = useState(null);
   const [observaciones, setObservaciones] = useState('');
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const unidades = ['unidad', 'kilo', 'caja', 'bolsa', 'paquete', 'gancho', 'Tira'];
+
   useEffect(() => {
-    cargarClientes();
-    cargarProductos();
+    const cargar = async () => {
+      const [cRes, pRes] = await Promise.all([
+        fetchConToken(`${import.meta.env.VITE_API_URL}/clientes`),
+        fetchConToken(`${import.meta.env.VITE_API_URL}/productos`)
+      ]);
+      const [cData, pData] = await Promise.all([cRes.json(), pRes.json()]);
+      setClientes(cData);
+      setProductos(pData);
+    };
+    cargar();
   }, []);
 
-  const cargarClientes = async () => {
-    try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/clientes`);
-      if (res.ok) {
-        const data = await res.json();
-        setClientes(data);
-      } else {
-        toast.error("Error al cargar clientes");
-      }
-    } catch (err) {
-      toast.error("Error de red al cargar clientes");
-      console.error(err);
-    }
-  };
-
-  const cargarProductos = async () => {
-    try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
-      if (res.ok) {
-        const data = await res.json();
-        setProductos(data);
-      } else {
-        toast.error("Error al cargar productos");
-      }
-    } catch (err) {
-      toast.error("Error de red al cargar productos");
-      console.error(err);
-    }
-  };
-
   const agregarProducto = () => {
-    setProductosSeleccionados(prev => [
-      ...prev,
-      { producto: null, cantidad: '', tipo: 'unidad' }
-    ]);
-    toast.success("Producto agregado al pedido");
+    if (!seleccionado) return;
+    setItems([...items, {
+      producto_id: seleccionado.id,
+      nombre: seleccionado.nombre,
+      cantidad: 1,
+      tipo: 'unidad'
+    }]);
+    setSeleccionado(null);
   };
 
-  const actualizarProducto = (index, campo, valor) => {
-    const actualizados = [...productosSeleccionados];
-    actualizados[index][campo] = valor;
-    setProductosSeleccionados(actualizados);
+  const eliminarItem = idx => {
+    setItems(items.filter((_, i) => i !== idx));
   };
 
-  const eliminarProducto = (index) => {
-    const actualizados = [...productosSeleccionados];
-    actualizados.splice(index, 1);
-    setProductosSeleccionados(actualizados);
+  const actualizarItem = (idx, campo, valor) => {
+    const nuevos = [...items];
+    nuevos[idx][campo] = campo === 'cantidad' ? parseFloat(valor) : valor;
+    setItems(nuevos);
   };
 
   const enviarPedido = async () => {
-    if (!clienteSeleccionado) return toast.error("Seleccioná un cliente");
-    if (productosSeleccionados.length === 0) return toast.error("Agregá al menos un producto");
+    if (!cliente || items.length === 0) {
+      toast.warning('Seleccioná cliente y productos');
+      return;
+    }
 
-    const productosValidos = productosSeleccionados.every(p =>
-      p.producto && p.cantidad > 0 && ["unidad", "caja", "kilo", "gancho"].includes(p.tipo)
-    );
-    if (!productosValidos) return toast.error("Revisá los productos: deben tener todos los campos válidos");
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
 
-    const payload = {
-      cliente_id: clienteSeleccionado.value,
+    const body = {
+      cliente_id: cliente.id,
       observaciones,
-      productos: productosSeleccionados.map(p => ({
-        producto_id: p.producto.value,
-        cantidad: parseFloat(p.cantidad),
-        tipo: p.tipo
-      }))
+      productos: items.map(i => ({
+        producto_id: i.producto_id,
+        cantidad: i.cantidad,
+        tipo: i.tipo
+      })),
+      pdf_generado: 0,
+      usuario_id: usuario.id || null
     };
 
     setLoading(true);
-    try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/pedidos`, {
+    const r = await fetchConToken(
+      `${import.meta.env.VITE_API_URL}/pedidos`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        toast.success("✅ Pedido enviado con éxito");
-        setClienteSeleccionado(null);
-        setProductosSeleccionados([]);
-        setObservaciones('');
-      } else {
-        const error = await res.text();
-        console.error(error);
-        toast.error("Error al enviar el pedido");
+        body: JSON.stringify(body)
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error de red al enviar pedido");
-    } finally {
-      setLoading(false);
+    );
+    setLoading(false);
+
+    if (r.ok) {
+      toast.success('Pedido enviado');
+      setCliente(null);
+      setItems([]);
+      setObservaciones('');
+    } else {
+      toast.error('Error al enviar');
     }
   };
 
-  const clienteOptions = clientes.map(c => ({
-    value: c.id,
-    label: `${c.nombre} (Tel: ${c.telefono || 'Sin teléfono'}, Dir: ${c.direccion || 'Sin dirección'})`
-  }));
-
-  const productoOptions = productos.map(p => ({
-    value: p.id,
-    label: `${p.nombre} ($${p.precio})`
-  }));
-
   return (
-    <div className="bg-white p-6 rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-blue-600">Nuevo Pedido</h2>
+    <div className="p-4">
+      <h2 className="text-xl font-bold text-blue-600 mb-4">Nuevo Pedido</h2>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Cliente:</label>
+      {/* Cliente */}
+      <div className="mb-3">
+        <label className="block mb-1 font-medium">Cliente:</label>
         <Select
-          options={clienteOptions}
-          value={clienteSeleccionado}
-          onChange={setClienteSeleccionado}
-          isDisabled={loading}
-          className="w-full"
-          placeholder="Seleccionar cliente"
+          value={cliente ? { label: cliente.nombre, value: cliente.id } : null}
+          onChange={opt => {
+            const cli = clientes.find(c => c.id === opt.value);
+            setCliente(cli);
+          }}
+          options={clientes.map(c => ({ label: `${c.nombre} (Tel: ${c.telefono}, Dir: ${c.direccion})`, value: c.id }))}
+          placeholder="Seleccionar cliente..."
         />
       </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Observaciones:</label>
+      {/* Observaciones */}
+      <div className="mb-3">
+        <label className="block mb-1 font-medium">Observaciones:</label>
         <textarea
           value={observaciones}
-          onChange={(e) => setObservaciones(e.target.value)}
-          rows={3}
-          className="border p-2 rounded w-full"
-          disabled={loading}
+          onChange={e => setObservaciones(e.target.value)}
+          className="w-full border p-2 rounded"
         />
       </div>
 
+      {/* Productos */}
       <div className="mb-4">
-        <h3 className="font-medium mb-2">Productos:</h3>
-        {productosSeleccionados.map((p, index) => (
-          <div key={index} className="flex flex-col sm:flex-row gap-2 mb-2 items-center">
-            <Select
-              options={productoOptions}
-              value={p.producto}
-              onChange={(valor) => actualizarProducto(index, 'producto', valor)}
-              placeholder="Producto"
-              className="flex-1"
-            />
-            <input
-              type="number"
-              step="0.5"
-              placeholder="Cantidad"
-              value={p.cantidad}
-              onChange={(e) => actualizarProducto(index, 'cantidad', e.target.value)}
-              className="border p-2 rounded w-24"
-            />
-            <select
-              value={p.tipo}
-              onChange={(e) => actualizarProducto(index, 'tipo', e.target.value)}
-              className="border p-2 rounded"
-            >
-              <option value="unidad">Unidad</option>
-              <option value="caja">Caja</option>
-              <option value="kilo">Kilo</option>
-              <option value="gancho">Gancho</option>
-              <option value="tira">Tira</option>
-            </select>
-            <button
-              onClick={() => eliminarProducto(index)}
-              className="text-red-600 hover:underline text-sm"
-            >
-              Eliminar
-            </button>
-          </div>
-        ))}
-
-        <button
-          onClick={agregarProducto}
-          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          + Agregar producto
-        </button>
+        <label className="block mb-1 font-medium">Productos:</label>
+        <div className="flex gap-2">
+          <Select
+            className="w-full"
+            value={seleccionado ? { label: `${seleccionado.nombre}`, value: seleccionado.id } : null}
+            onChange={opt => {
+              const prod = productos.find(p => p.id === opt.value);
+              setSeleccionado(prod);
+            }}
+            options={productos.map(p => ({
+              label: `${p.nombre} ($${p.precio})`,
+              value: p.id
+            }))}
+            placeholder="Seleccionar producto..."
+          />
+          <button onClick={agregarProducto} className="bg-blue-600 text-white px-4 rounded">+ Agregar producto</button>
+        </div>
       </div>
+
+      {/* Lista de items */}
+      {items.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-2 mb-2">
+          <span className="w-1/3">{item.nombre}</span>
+          <input
+            type="number"
+            value={item.cantidad}
+            min="0"
+            step="0.01"
+            className="border p-1 w-20"
+            onChange={e => actualizarItem(idx, 'cantidad', e.target.value)}
+          />
+          <select
+            value={item.tipo}
+            onChange={e => actualizarItem(idx, 'tipo', e.target.value)}
+            className="border p-1"
+          >
+            {unidades.map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          <button onClick={() => eliminarItem(idx)} className="text-red-600 text-sm">Eliminar</button>
+        </div>
+      ))}
 
       <button
         onClick={enviarPedido}
         disabled={loading}
-        className={`w-full py-2 rounded text-white font-semibold ${loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+        className="mt-4 bg-green-600 text-white px-6 py-2 rounded"
       >
         Enviar Pedido
       </button>
