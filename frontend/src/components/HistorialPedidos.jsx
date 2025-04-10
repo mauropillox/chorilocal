@@ -14,6 +14,7 @@ export default function HistorialPedidos() {
   const [usuarioSel, setUsuarioSel] = useState('');
   const [perfil, setPerfil]         = useState({ username: '', rol: '' });
   const [loadingAccion, setLoading] = useState(false);
+  const [seleccionados, setSeleccionados] = useState([]);   // ← NEW
   const POR_PAGINA = 10;
 
   /* ───────────── helpers ───────────── */
@@ -30,6 +31,7 @@ export default function HistorialPedidos() {
   useEffect(() => {
     cargarPerfil();
     cargarPedidos();
+    setSeleccionados([]);        // ← limpia selección al cambiar pestaña
   }, [mostrarGenerados]);
 
   const cargarPerfil = () => {
@@ -92,7 +94,37 @@ export default function HistorialPedidos() {
     setLoading(false);
   };
 
-  /* ───────────── exportar ───────────── */
+  /* ---------- generar PDF (pestaña Generados) ---------- */
+  const toggleSeleccion = id =>
+    setSeleccionados(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+
+  const generarPDF = async () => {
+    if (seleccionados.length === 0) return;
+    setLoading(true);
+    try {
+      const r = await fetchConToken(
+        `${import.meta.env.VITE_API_URL}/pedidos/pdf`,
+        {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify({ pedido_ids: seleccionados })
+        }
+      );
+      if (!r.ok) throw new Error();
+      const dispo = r.headers.get('Content-Disposition') || '';
+      const nombre = (dispo.match(/filename="?([^"]+)"?/) || [,'pedidos.pdf'])[1];
+      const blob = await r.blob();
+      saveAs(blob, nombre);
+      toast.success('📄 PDF generado');
+      setSeleccionados([]);
+      await cargarPedidos();
+    } catch { toast.error('Error al generar PDF'); }
+    setLoading(false);
+  };
+
+  /* ───────────── exportar Excel ───────────── */
   const exportarExcel = () => {
     if (pedidosFiltrados.length === 0) return toast.info('Sin datos');
     const rows = pedidosFiltrados.flatMap(p =>
@@ -143,6 +175,17 @@ export default function HistorialPedidos() {
         </button>
       </div>
 
+      {/* Botón PDF (solo Generados) */}
+      {mostrarGenerados && seleccionados.length > 0 && (
+        <button
+          onClick={generarPDF}
+          disabled={loadingAccion}
+          className="mb-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded"
+        >
+          📄 Generar PDF de {seleccionados.length} pedido(s)
+        </button>
+      )}
+
       {/* Listado */}
       {cargando ? (
         <p>Cargando…</p>
@@ -164,7 +207,8 @@ export default function HistorialPedidos() {
                 ))}
               </ul>
 
-              {!mostrarGenerados && (
+              {!mostrarGenerados ? (
+                /* Acciones en pestaña Pendientes */
                 <div className="flex gap-2 mt-3">
                   <button disabled={loadingAccion} onClick={() => marcarGenerado(p.id)} className="bg-green-600 text-white px-2 py-1 rounded text-sm">
                     Marcar generado
@@ -172,6 +216,18 @@ export default function HistorialPedidos() {
                   <button disabled={loadingAccion} onClick={() => eliminarPedido(p.id)} className="bg-red-600 text-white px-2 py-1 rounded text-sm">
                     Eliminar
                   </button>
+                </div>
+              ) : (
+                /* Checkbox en pestaña Generados */
+                <div className="mt-3">
+                  <label className="text-sm flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.includes(p.id)}
+                      onChange={() => toggleSeleccion(p.id)}
+                    />
+                    Seleccionar
+                  </label>
                 </div>
               )}
             </div>
