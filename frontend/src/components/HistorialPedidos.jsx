@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { fetchConToken } from '../auth';
 import { toast } from 'react-toastify';
+import { useAuth } from './AuthContext';
 
 export default function HistorialPedidos() {
+  const { user } = useAuth();
+
   const [pedidos, setPedidos] = useState([]);
   const [mostrarGenerados, setMostrarGenerados] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -178,6 +181,9 @@ export default function HistorialPedidos() {
               <li key={pedido.id} className="border p-4 rounded shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50">
                 <div>
                   <p className="font-semibold">Pedido #{pedido.id}</p>
+                  {user?.rol === "admin" && (
+                    <p className="text-sm text-purple-600">Creado por: {pedido.usuario_username}</p>
+                  )}
                   <p className="text-sm text-gray-600">Cliente: {pedido.cliente_nombre || 'Sin nombre'}</p>
                   {pedido.fecha && <p className="text-sm text-gray-500">Fecha: {new Date(pedido.fecha).toLocaleString()}</p>}
                   {pedido.observaciones && <p className="text-sm text-gray-500">Observaciones: {pedido.observaciones}</p>}

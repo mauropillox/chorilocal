@@ -1,19 +1,27 @@
 # Usa una imagen ligera de Python 3.11
 FROM python:3.11-slim
 
+# Variables de entorno opcionales
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 # Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia e instala dependencias
-COPY requirements.txt .
+# Copia primero requirements y lo instala (mejor para caché)
+COPY requirements.txt ./
 
 RUN apt-get update && \
     apt-get install -y gcc libffi-dev libsqlite3-dev && \
     pip install --no-cache-dir -r requirements.txt && \
-    apt-get remove -y gcc && apt-get autoremove -y && apt-get clean
+    apt-get remove -y gcc && apt-get autoremove -y && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copia el resto del backend (incluido backup.py)
+# Copia el resto del backend
 COPY . .
 
-# Comando por defecto para ejecutar el respaldo
+# Verifica que backup.py exista
+RUN test -f backup.py
+
+# Ejecuta el respaldo
 CMD ["python", "backup.py"]

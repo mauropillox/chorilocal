@@ -107,24 +107,34 @@ class PedidosParaPDF(BaseModel):
 
 # --------------------- FUNCIONES ---------------------
 def enriquecer_pedidos(pedidos):
+    """Añade cliente_nombre, productos y usuario_username a cada pedido."""
     clientes = db.get_clientes()
+    usuarios  = {u["id"]: u["username"] for u in db.get_usuarios()}
+
     for pedido in pedidos:
+        # Cliente
         cliente = next((c for c in clientes if c["id"] == pedido["cliente_id"]), None)
         pedido["cliente_nombre"] = cliente["nombre"] if cliente else "Desconocido"
 
-        productos = []
+        # Usuario que creó el pedido
+        pedido["usuario_username"] = usuarios.get(pedido.get("usuario_id"), "—")
+
+        # Productos
         conn = db.conectar()
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur  = conn.cursor()
+        cur.execute("""
             SELECT p.nombre, dp.cantidad, dp.tipo
             FROM detalles_pedido dp
             JOIN productos p ON p.id = dp.producto_id
             WHERE dp.pedido_id = ?
         """, (pedido["id"],))
-        productos = [{"nombre": row[0], "cantidad": row[1], "tipo": row[2]} for row in cursor.fetchall()]
+        pedido["productos"] = [
+            {"nombre": n, "cantidad": c, "tipo": t} for n, c, t in cur.fetchall()
+        ]
         conn.close()
-        pedido["productos"] = productos
+
     return pedidos
+
 
 # --------------------- ENDPOINTS ---------------------
 @app.post("/register")
