@@ -117,8 +117,7 @@ export default function Pedidos() {
             className="w-full"
             value={seleccionado ? { label: seleccionado.nombre, value: seleccionado.id } : null}
             onChange={opt => setSeleccionado(productos.find(p => p.id === opt.value))}
-            options={productos.map(p => ({ label: p.nombre, value: p.id }))}   {/* 👈 sin precio */}
-            placeholder="Seleccionar producto..."
+            options={productos.map(p => ({ label: p.nombre, value: p.id }))}  
           />
           <button onClick={agregarProducto} className="bg-blue-600 text-white px-4 rounded">
             + Agregar producto
