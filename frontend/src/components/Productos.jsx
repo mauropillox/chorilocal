@@ -1,14 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Select from 'react-select';
 import { fetchConToken } from '../auth';
 
 export default function Productos() {
   const [productos, setProductos] = useState([]);
-  const [nombre,    setNombre]    = useState('');
+  const [nombre, setNombre] = useState('');
   const [selectedProducto, setSelectedProducto] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  /* ───────── cargar ───────── */
+  /* ─── Cargar productos ─── */
   useEffect(() => { cargarProductos(); }, []);
 
   const cargarProductos = async () => {
@@ -17,92 +17,81 @@ export default function Productos() {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos`);
       if (res.ok) setProductos(await res.json());
       else alert('Error al cargar productos');
-    } catch (err) {
-      console.error('Error al cargar productos:', err);
-    } finally { setLoading(false); }
+    } catch (e) { console.error(e); }
+    finally     { setLoading(false); }
   };
 
-  /* ───────── alta / edición ───────── */
+  /* ─── Alta / edición ─── */
   const guardarProducto = async () => {
-    if (!nombre.trim()) return alert('Debes ingresar un nombre');
+    if (!nombre.trim()) return alert('Ingresa un nombre');
 
-    const payload = { nombre };
-
-    let url    = `${import.meta.env.VITE_API_URL}/productos`;
-    let method = 'POST';
-    if (selectedProducto) {
-      url    = `${import.meta.env.VITE_API_URL}/productos/${selectedProducto.value}`;
-      method = 'PUT';
-    }
+    const url    = selectedProducto
+      ? `${import.meta.env.VITE_API_URL}/productos/${selectedProducto.value}`
+      : `${import.meta.env.VITE_API_URL}/productos`;
+    const method = selectedProducto ? 'PUT' : 'POST';
 
     setLoading(true);
     try {
-      const res = await fetchConToken(url, { method, body: JSON.stringify(payload) });
+      const res = await fetchConToken(url, {
+        method,
+        body: JSON.stringify({ nombre })
+      });
       if (res.ok) {
         await cargarProductos();
         setNombre('');
         setSelectedProducto(null);
       } else alert('Error al guardar producto');
-    } catch (err) {
-      console.error('Error al guardar producto:', err);
-    } finally { setLoading(false); }
+    } catch (e) { console.error(e); }
+    finally     { setLoading(false); }
   };
 
-  /* ───────── eliminar ───────── */
-  const eliminarProducto = async (id) => {
-    if (!confirm('¿Estás seguro que quieres eliminar este producto?')) return;
+  /* ─── Eliminar ─── */
+  const eliminarProducto = async () => {
+    if (!selectedProducto) return;
+    if (!confirm('¿Eliminar producto?')) return;
+
     setLoading(true);
     try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        await cargarProductos();
-        setSelectedProducto(null);
-      } else alert('Error al eliminar producto');
-    } catch (err) {
-      console.error('Error al eliminar producto:', err);
-    } finally { setLoading(false); }
+      await fetchConToken(
+        `${import.meta.env.VITE_API_URL}/productos/${selectedProducto.value}`,
+        { method: 'DELETE' }
+      );
+      await cargarProductos();
+      setNombre('');
+      setSelectedProducto(null);
+    } catch (e) { console.error(e); }
+    finally     { setLoading(false); }
   };
 
-  /* ───────── opciones Select ───────── */
+  /* ─── Options del select ─── */
   const productoOptions = useMemo(() =>
-    productos.map(p => ({
-      value : p.id,
-      label : p.nombre,   // 👈 solo nombre
-      nombre: p.nombre
-    })), [productos]);
+    productos.map(p => ({ value: p.id, label: p.nombre })), [productos]);
 
-  const cargarProductoParaEditar = (producto) => {
-    setSelectedProducto(producto);
-    setNombre(producto.nombre);
-  };
-
-  /* ───────── UI ───────── */
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
+      <h2 className="text-xl font-semibold mb-4">Gestión de Productos</h2>
 
-      {/* Selector de producto existente */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Seleccionar producto:</label>
-        <Select
-          options={productoOptions}
-          value={selectedProducto}
-          onChange={cargarProductoParaEditar}
-          isDisabled={loading}
-          className="w-full"
-          placeholder="Seleccionar producto"
-        />
-      </div>
+      <label className="block text-sm mb-1">Seleccionar producto:</label>
+      <Select
+        options={productoOptions}
+        value={selectedProducto}
+        onChange={opt => {
+          setSelectedProducto(opt);
+          const prod = productos.find(p => p.id === opt?.value);
+          setNombre(prod?.nombre ?? '');
+        }}
+        isDisabled={loading}
+        className="mb-4"
+        placeholder="Seleccionar producto"
+      />
 
-      {/* Formulario de alta / edición */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
-          type="text"
+          className="border p-2 rounded w-full sm:w-auto"
           placeholder="Nombre"
           value={nombre}
-          onChange={e => setNombre(e.target.value)}
-          className="border p-2 rounded w-full sm:w-auto"
           disabled={loading}
+          onChange={e => setNombre(e.target.value)}
         />
 
         <button
@@ -125,7 +114,7 @@ export default function Productos() {
               Cancelar
             </button>
             <button
-              onClick={() => eliminarProducto(selectedProducto.value)}
+              onClick={eliminarProducto}
               disabled={loading}
               className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
