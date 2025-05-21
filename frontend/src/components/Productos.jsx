@@ -4,8 +4,7 @@ import { fetchConToken } from '../auth';
 
 export default function Productos() {
   const [productos, setProductos] = useState([]);
-  const [nombre, setNombre]       = useState('');
-  const [precio, setPrecio]       = useState(0);          // 🔹 oculto; se usa para editar
+  const [nombre,    setNombre]    = useState('');
   const [selectedProducto, setSelectedProducto] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,14 +23,10 @@ export default function Productos() {
   };
 
   /* ───────── alta / edición ───────── */
-  const agregarProducto = async () => {
-    if (!nombre) return alert('Debe ingresar un nombre');
+  const guardarProducto = async () => {
+    if (!nombre.trim()) return alert('Debes ingresar un nombre');
 
-    const payload = {
-      nombre,
-      // precio = 0 para nuevos; se mantiene sin cambios en edición
-      precio: selectedProducto ? precio : 0
-    };
+    const payload = { nombre };
 
     let url    = `${import.meta.env.VITE_API_URL}/productos`;
     let method = 'POST';
@@ -42,14 +37,10 @@ export default function Productos() {
 
     setLoading(true);
     try {
-      const res = await fetchConToken(url, {
-        method,
-        body: JSON.stringify(payload)
-      });
+      const res = await fetchConToken(url, { method, body: JSON.stringify(payload) });
       if (res.ok) {
         await cargarProductos();
         setNombre('');
-        setPrecio(0);
         setSelectedProducto(null);
       } else alert('Error al guardar producto');
     } catch (err) {
@@ -59,7 +50,7 @@ export default function Productos() {
 
   /* ───────── eliminar ───────── */
   const eliminarProducto = async (id) => {
-    if (!confirm('¿Estás seguro que querés eliminar este producto?')) return;
+    if (!confirm('¿Estás seguro que quieres eliminar este producto?')) return;
     setLoading(true);
     try {
       const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/productos/${id}`, { method: 'DELETE' });
@@ -72,19 +63,17 @@ export default function Productos() {
     } finally { setLoading(false); }
   };
 
-  /* ───────── opciones del Select ───────── */
+  /* ───────── opciones Select ───────── */
   const productoOptions = useMemo(() =>
     productos.map(p => ({
       value : p.id,
-      label : p.nombre,            // 👈 se quita el precio
-      nombre: p.nombre,
-      precio: p.precio
+      label : p.nombre,   // 👈 solo nombre
+      nombre: p.nombre
     })), [productos]);
 
   const cargarProductoParaEditar = (producto) => {
     setSelectedProducto(producto);
     setNombre(producto.nombre);
-    setPrecio(producto.precio);
   };
 
   /* ───────── UI ───────── */
@@ -92,6 +81,7 @@ export default function Productos() {
     <div>
       <h2 className="text-xl font-bold mb-4">Gestión de Productos</h2>
 
+      {/* Selector de producto existente */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1">Seleccionar producto:</label>
         <Select
@@ -104,31 +94,31 @@ export default function Productos() {
         />
       </div>
 
+      {/* Formulario de alta / edición */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           placeholder="Nombre"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={e => setNombre(e.target.value)}
           className="border p-2 rounded w-full sm:w-auto"
           disabled={loading}
         />
-        {/* 🔸 Se ocultó el campo Precio */}
+
         <button
-          onClick={agregarProducto}
+          onClick={guardarProducto}
           disabled={loading}
-          className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+          className={`px-4 py-2 rounded text-white ${
+            loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
           {selectedProducto ? 'Actualizar' : 'Agregar'}
         </button>
+
         {selectedProducto && (
           <>
             <button
-              onClick={() => {
-                setNombre('');
-                setPrecio(0);
-                setSelectedProducto(null);
-              }}
+              onClick={() => { setNombre(''); setSelectedProducto(null); }}
               disabled={loading}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
             >

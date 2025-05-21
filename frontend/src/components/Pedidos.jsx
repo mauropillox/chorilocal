@@ -4,13 +4,13 @@ import Select from 'react-select';
 import { toast } from 'react-toastify';
 
 export default function Pedidos() {
-  const [clientes,   setClientes]   = useState([]);
-  const [productos,  setProductos]  = useState([]);
+  const [clientes, setClientes]   = useState([]);
+  const [productos, setProductos] = useState([]);
   const [seleccionado, setSeleccionado] = useState(null);
-  const [cliente,    setCliente]    = useState(null);
+  const [cliente, setCliente]     = useState(null);
   const [observaciones, setObservaciones] = useState('');
-  const [items,      setItems]      = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [items, setItems]         = useState([]);
+  const [loading, setLoading]     = useState(false);
 
   const unidades = ['unidad', 'kilo', 'caja', 'bolsa', 'paquete', 'gancho', 'Tira'];
 
@@ -33,14 +33,14 @@ export default function Pedidos() {
     if (!seleccionado) return;
     setItems([...items, {
       producto_id: seleccionado.id,
-      nombre      : seleccionado.nombre,
-      cantidad    : 1,
-      tipo        : 'unidad'
+      nombre     : seleccionado.nombre,
+      cantidad   : 1,
+      tipo       : 'unidad'
     }]);
     setSeleccionado(null);
   };
 
-  const eliminarItem = idx => setItems(items.filter((_, i) => i !== idx));
+  const eliminarItem   = idx => setItems(items.filter((_, i) => i !== idx));
   const actualizarItem = (idx, campo, valor) => {
     const nuevos = [...items];
     nuevos[idx][campo] = campo === 'cantidad' ? parseFloat(valor) : valor;
@@ -49,20 +49,22 @@ export default function Pedidos() {
 
   /* ───────── enviar ───────── */
   const enviarPedido = async () => {
-    if (!cliente || items.length === 0)
-      return toast.warning('Seleccioná cliente y productos');
+    if (!cliente || items.length === 0) {
+      toast.warning('Seleccioná cliente y productos');
+      return;
+    }
 
     const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
     const body = {
-      cliente_id   : cliente.id,
+      cliente_id  : cliente.id,
       observaciones,
-      productos    : items.map(i => ({
+      productos   : items.map(i => ({
         producto_id: i.producto_id,
         cantidad   : i.cantidad,
         tipo       : i.tipo.toLowerCase()
       })),
-      pdf_generado : 0,
-      usuario_id   : usuario.id || null
+      pdf_generado: 0,
+      usuario_id  : usuario.id || null
     };
 
     setLoading(true);
@@ -117,10 +119,15 @@ export default function Pedidos() {
             className="w-full"
             value={seleccionado ? { label: seleccionado.nombre, value: seleccionado.id } : null}
             onChange={opt => setSeleccionado(productos.find(p => p.id === opt.value))}
-            options={productos.map(p => ({ label: p.nombre, value: p.id }))}  
+            options={productos.map(p => ({ label: p.nombre, value: p.id }))}  /* solo nombre */
+            placeholder="Seleccionar producto..."
           />
-          <button onClick={agregarProducto} className="bg-blue-600 text-white px-4 rounded">
-            + Agregar producto
+          <button
+            onClick={agregarProducto}
+            className="bg-blue-600 text-white px-4 rounded disabled:opacity-50"
+            disabled={loading}
+          >
+            + Agregar
           </button>
         </div>
       </div>
@@ -131,22 +138,23 @@ export default function Pedidos() {
           <span className="w-1/3">{item.nombre}</span>
           <input
             type="number"
-            value={item.cantidad}
             min="0"
             step="0.01"
-            className="border p-1 w-20"
+            value={item.cantidad}
             onChange={e => actualizarItem(idx, 'cantidad', e.target.value)}
+            className="border p-1 w-20"
           />
           <select
             value={item.tipo}
             onChange={e => actualizarItem(idx, 'tipo', e.target.value)}
             className="border p-1"
           >
-            {unidades.map(u => (
-              <option key={u} value={u}>{u}</option>
-            ))}
+            {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </select>
-          <button onClick={() => eliminarItem(idx)} className="text-red-600 text-sm">
+          <button
+            onClick={() => eliminarItem(idx)}
+            className="text-red-600 text-sm"
+          >
             Eliminar
           </button>
         </div>
@@ -155,7 +163,7 @@ export default function Pedidos() {
       <button
         onClick={enviarPedido}
         disabled={loading}
-        className="mt-4 bg-green-600 text-white px-6 py-2 rounded"
+        className="mt-4 bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
       >
         Enviar Pedido
       </button>
