@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
+from typing import Optional
 import logging
 import os
 import shutil
@@ -94,6 +95,11 @@ class ProductoConCantidad(BaseModel):
 class PedidoProductoInput(ProductoConCantidad):
     pass
 
+
+class ProductoIn(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    precio: Optional[float] = None      # ← ahora opcional
+
 class PedidoInput(BaseModel):
     cliente_id: int
     observaciones: Optional[str] = None
@@ -181,7 +187,7 @@ def get_productos(user=Depends(get_current_user)):
     return sorted(productos, key=lambda x: x['nombre'].lower())
 
 @app.post("/productos")
-def add_producto(producto: Producto, user=Depends(get_current_user)):
+def add_producto(producto: ProductoIn):
     return db.add_producto(producto.dict(exclude_none=True))
 
 @app.put("/productos/{producto_id}")

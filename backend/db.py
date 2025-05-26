@@ -116,18 +116,18 @@ def delete_cliente(cliente_id):
     conn.close()
     return {"ok": True}
 
-def add_producto(producto):
-    conn = conectar()
-    cursor = conn.cursor()
-    if producto.get("id") is not None:
-        cursor.execute("UPDATE productos SET nombre = ?, precio = ? WHERE id = ?",
-                       (producto['nombre'], producto['precio'], producto['id']))
-    else:
-        cursor.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)",
-                       (producto['nombre'], producto['precio']))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
+
+def add_producto(self, producto: dict):
+    # Si no viene 'precio', asumimos 0
+    precio = producto.get('precio', 0)
+
+    self.cursor.execute(
+        "INSERT INTO productos (nombre, precio) VALUES (?, ?)",
+        (producto['nombre'], precio)
+    )
+    self.conn.commit()
+    return self.cursor.lastrowid
+
 
 def get_productos():
     conn = conectar()
