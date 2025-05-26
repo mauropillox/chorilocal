@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import os
 
@@ -8,28 +8,40 @@ DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 
 print(f"📂 Usando base de datos en: {DB_PATH}")
 
+# -------------------------------------------------------------------
+# Conexión
+# -------------------------------------------------------------------
 def conectar():
     return sqlite3.connect(DB_PATH)
 
+# -------------------------------------------------------------------
+# Estructura de tablas
+# -------------------------------------------------------------------
 def crear_tablas():
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("""
+
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS clientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
             telefono TEXT DEFAULT '',
             direccion TEXT DEFAULT ''
         )
-    """)
-    cursor.execute("""
+    """
+    )
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS productos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
             precio REAL DEFAULT 0.0
         )
-    """)
-    cursor.execute("""
+    """
+    )
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS pedidos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cliente_id INTEGER,
@@ -40,8 +52,10 @@ def crear_tablas():
             usuario_id INTEGER,
             FOREIGN KEY (cliente_id) REFERENCES clientes(id)
         )
-    """)
-    cursor.execute("""
+    """
+    )
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS detalles_pedido (
             pedido_id INTEGER,
             producto_id INTEGER,
@@ -50,8 +64,10 @@ def crear_tablas():
             FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
             FOREIGN KEY (producto_id) REFERENCES productos(id)
         )
-    """)
-    cursor.execute("""
+    """
+    )
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
@@ -60,12 +76,17 @@ def crear_tablas():
             activo INTEGER DEFAULT 1,
             last_login TEXT
         )
-    """)
+    """
+    )
+
     conn.commit()
     conn.close()
 
+
 def crear_tabla_detalles_pedido():
+    """Mantenido por compatibilidad (ya se crea arriba)"""
     pass
+
 
 def verificar_tablas_y_columnas():
     conn = conectar()
@@ -79,14 +100,20 @@ def verificar_tablas_y_columnas():
     conn.commit()
     conn.close()
 
+# -------------------------------------------------------------------
+# CRUD Clientes
+# -------------------------------------------------------------------
 def add_cliente(cliente):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO clientes (nombre, telefono, direccion) VALUES (?, ?, ?)",
-                   (cliente['nombre'], cliente['telefono'], cliente['direccion']))
+    cursor.execute(
+        "INSERT INTO clientes (nombre, telefono, direccion) VALUES (?, ?, ?)",
+        (cliente["nombre"], cliente["telefono"], cliente["direccion"]),
+    )
     conn.commit()
     conn.close()
     return {"ok": True}
+
 
 def get_clientes():
     conn = conectar()
@@ -96,17 +123,22 @@ def get_clientes():
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
 
+
 def update_cliente(cliente_id, cliente):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE clientes
         SET nombre = ?, telefono = ?, direccion = ?
         WHERE id = ?
-    """, (cliente['nombre'], cliente['telefono'], cliente['direccion'], cliente_id))
+    """,
+        (cliente["nombre"], cliente["telefono"], cliente["direccion"], cliente_id),
+    )
     conn.commit()
     conn.close()
     return {"ok": True}
+
 
 def delete_cliente(cliente_id):
     conn = conectar()
@@ -116,17 +148,37 @@ def delete_cliente(cliente_id):
     conn.close()
     return {"ok": True}
 
+# -------------------------------------------------------------------
+# CRUD Productos
+# -------------------------------------------------------------------
+def add_producto(producto: dict):
+    """Inserta un producto; si no se envía precio, usa 0"""
+    conn = conectar()
+    cursor = conn.cursor()
 
-def add_producto(self, producto: dict):
-    # Si no viene 'precio', asumimos 0
-    precio = producto.get('precio', 0)
-
-    self.cursor.execute(
+    precio = producto.get("precio", 0)
+    cursor.execute(
         "INSERT INTO productos (nombre, precio) VALUES (?, ?)",
-        (producto['nombre'], precio)
+        (producto["nombre"], precio),
     )
-    self.conn.commit()
-    return self.cursor.lastrowid
+    conn.commit()
+    producto_id = cursor.lastrowid
+    conn.close()
+    return {"ok": True, "producto_id": producto_id}
+
+
+def update_producto(producto_id, producto: dict):
+    """Actualiza nombre y/o precio de un producto"""
+    conn = conectar()
+    cursor = conn.cursor()
+    precio = producto.get("precio", 0)
+    cursor.execute(
+        "UPDATE productos SET nombre = ?, precio = ? WHERE id = ?",
+        (producto["nombre"], precio, producto_id),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 def get_productos():
@@ -137,6 +189,7 @@ def get_productos():
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
 
+
 def delete_producto(producto_id):
     conn = conectar()
     cursor = conn.cursor()
@@ -145,43 +198,53 @@ def delete_producto(producto_id):
     conn.close()
     return {"ok": True}
 
-from datetime import datetime, timezone, timedelta
+# -------------------------------------------------------------------
+# CRUD Pedidos
+# -------------------------------------------------------------------
 tz_uy = timezone(timedelta(hours=-3))  # UTC-3 para Uruguay/Argentina
+
 
 def add_pedido(pedido):
     conn = conectar()
     cursor = conn.cursor()
 
-    # Obtener hora local y formatearla
     fecha_local = datetime.now(tz_uy).isoformat()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO pedidos (cliente_id, fecha, observaciones, pdf_generado, usuario_id)
         VALUES (?, ?, ?, ?, ?)
-    """, (
-        pedido['cliente_id'],
-        fecha_local,
-        pedido.get('observaciones', ''),
-        pedido['pdf_generado'],
-        pedido.get('usuario_id') if pedido.get('usuario_id') is not None else None
-    ))
+    """,
+        (
+            pedido["cliente_id"],
+            fecha_local,
+            pedido.get("observaciones", ""),
+            pedido["pdf_generado"],
+            pedido.get("usuario_id") if pedido.get("usuario_id") is not None else None,
+        ),
+    )
 
     pedido_id = cursor.lastrowid
 
-    for producto in pedido['productos']:
-        cursor.execute("""
+    for producto in pedido["productos"]:
+        cursor.execute(
+            """
             INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo)
             VALUES (?, ?, ?, ?)
-        """, (
-            pedido_id,
-            producto['producto_id'],
-            producto['cantidad'],
-            producto['tipo']
-        ))
+        """,
+            (
+                pedido_id,
+                producto["producto_id"],
+                producto["cantidad"],
+                producto["tipo"],
+            ),
+        )
 
     conn.commit()
     conn.close()
     return {"ok": True, "pedido_id": pedido_id}
+
+
 def get_pedidos(usuario_id=None):
     conn = conectar()
     cursor = conn.cursor()
@@ -192,6 +255,7 @@ def get_pedidos(usuario_id=None):
     rows = cursor.fetchall()
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
+
 
 def get_pedidos_filtrados(filtro_sql="", valores=(), user_id=None):
     conn = conectar()
@@ -210,6 +274,7 @@ def get_pedidos_filtrados(filtro_sql="", valores=(), user_id=None):
     conn.close()
     return pedidos
 
+
 def delete_pedido(pedido_id):
     conn = conectar()
     cursor = conn.cursor()
@@ -218,6 +283,7 @@ def delete_pedido(pedido_id):
     conn.commit()
     conn.close()
     return {"ok": True}
+
 
 def cambiar_estado_pedido(pedido_id, pdf_generado):
     conn = conectar()
@@ -228,9 +294,11 @@ def cambiar_estado_pedido(pedido_id, pdf_generado):
     conn.close()
     return actualizado
 
+
 def get_pedidos_por_ids(pedido_ids):
     todos = get_pedidos()
     return [p for p in todos if p["id"] in pedido_ids]
+
 
 def marcar_pedido_como_descargado(pedido_id):
     conn = conectar()
@@ -239,18 +307,24 @@ def marcar_pedido_como_descargado(pedido_id):
     conn.commit()
     conn.close()
 
+# -------------------------------------------------------------------
+# CRUD Usuarios
+# -------------------------------------------------------------------
 def add_usuario(username, password_hash, rol, activo):
     conn = conectar()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO usuarios (username, password_hash, rol, activo) VALUES (?, ?, ?, ?)",
-                       (username, password_hash, rol, activo))
+        cursor.execute(
+            "INSERT INTO usuarios (username, password_hash, rol, activo) VALUES (?, ?, ?, ?)",
+            (username, password_hash, rol, activo),
+        )
         conn.commit()
         return True
     except sqlite3.IntegrityError:
         return False
     finally:
         conn.close()
+
 
 def get_usuario(username):
     conn = conectar()
@@ -262,6 +336,7 @@ def get_usuario(username):
         return dict(zip([c[0] for c in cursor.description], row))
     return None
 
+
 def get_usuario_por_id(user_id):
     conn = conectar()
     cursor = conn.cursor()
@@ -272,12 +347,14 @@ def get_usuario_por_id(user_id):
         return dict(zip([c[0] for c in cursor.description], row))
     return None
 
+
 def update_last_login(username):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("UPDATE usuarios SET last_login = ? WHERE username = ?", (datetime.now().isoformat(), username))
     conn.commit()
     conn.close()
+
 
 def get_usuarios():
     conn = conectar()
@@ -287,6 +364,7 @@ def get_usuarios():
     conn.close()
     return [dict(zip([c[0] for c in cursor.description], row)) for row in rows]
 
+
 def activar_usuario(username):
     conn = conectar()
     cursor = conn.cursor()
@@ -294,12 +372,14 @@ def activar_usuario(username):
     conn.commit()
     conn.close()
 
+
 def suspender_usuario(username):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("UPDATE usuarios SET activo = 0 WHERE username = ?", (username,))
     conn.commit()
     conn.close()
+
 
 def eliminar_usuario(username):
     conn = conectar()
@@ -309,6 +389,7 @@ def eliminar_usuario(username):
     conn.close()
     return {"ok": True}
 
+
 def actualizar_rol(username, rol):
     conn = conectar()
     cursor = conn.cursor()
@@ -316,6 +397,7 @@ def actualizar_rol(username, rol):
     conn.commit()
     conn.close()
     return {"ok": True}
+
 
 def resetear_password(username, new_password):
     conn = conectar()
