@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 ENV NODE_ENV=production
+ENV VITE_API_URL=/api
 RUN npm run build -- --mode production
 
 # Stage 2: Serve React app with Nginx
