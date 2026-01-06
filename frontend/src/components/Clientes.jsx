@@ -13,6 +13,7 @@ export default function Clientes() {
   const [direccion, setDireccion] = useState('');
   const [zona, setZona] = useState('');
   const [selectedCliente, setSelectedCliente] = useState(null);
+  const [editingClienteId, setEditingClienteId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set()); // Multi-select
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -107,26 +108,44 @@ export default function Clientes() {
   const agregarCliente = async () => {
     if (!nombre) return toastWarn("Debe ingresar el nombre del cliente");
     setCreating(true);
-    const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, telefono, direccion, zona })
-    });
-    if (res.ok) {
-      setPage(1);
-      await cargarClientes();
-      setNombre(''); setTelefono(''); setDireccion(''); setZona('');
-      toastSuccess('Cliente creado correctamente');
-    } else {
-      try {
-        const err = await res.json();
-        const msg = (err && (err.detail?.detail || err.detail || err.message)) || 'Error al crear cliente';
-        toastError(msg);
-      } catch (_) {
-        toastError('Error al crear cliente');
+    try {
+      if (editingClienteId) {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/${editingClienteId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, telefono, direccion, zona })
+        });
+        if (res.ok) {
+          await cargarClientes();
+          toastSuccess('Cliente actualizado correctamente');
+          setEditingClienteId(null);
+          setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toastError(err.detail || 'Error al actualizar cliente');
+        }
+      } else {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, telefono, direccion, zona })
+        });
+        if (res.ok) {
+          setPage(1);
+          await cargarClientes();
+          setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+          toastSuccess('Cliente creado correctamente');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const msg = (err && (err.detail?.detail || err.detail || err.message)) || 'Error al crear cliente';
+          toastError(msg);
+        }
       }
+    } catch (e) {
+      toastError('Error de conexión');
+    } finally {
+      setCreating(false);
     }
-    setCreating(false);
   };
 
   const confirmarEliminar = () => {
@@ -207,6 +226,18 @@ export default function Clientes() {
     setConfirmBulkOpen(false);
   };
 
+  const startEditCliente = (id) => {
+    const cli = clientes.find(c => c.id === id);
+    if (!cli) return;
+    setNombre(cli.nombre || '');
+    setTelefono(cli.telefono || '');
+    setDireccion(cli.direccion || '');
+    setZona(cli.zona || '');
+    setEditingClienteId(id);
+    setShowCreateForm(true);
+    setTimeout(() => nombreInputRef.current?.focus(), 80);
+  };
+
   const exportarCSV = async () => {
     const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/export/csv`);
     if (res.ok) {
@@ -233,7 +264,9 @@ export default function Clientes() {
       <div className="two-column-layout">
         {/* LEFT: Formulario */}
         <div className="panel">
-          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>➕ Agregar Cliente</h3>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+            {editingClienteId ? '✏️ Editar Cliente' : '➕ Agregar Cliente'}
+          </h3>
 
           <div className="form-group">
             <label>Nombre *</label>
@@ -268,9 +301,17 @@ export default function Clientes() {
               onChange={e => setZona(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && agregarCliente()} />
           </div>
-          <button onClick={agregarCliente} disabled={creating} className="btn-success w-full">
-            {creating ? '⏳ Creando...' : '➕ Agregar Cliente'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={agregarCliente} disabled={creating} className="btn-success" style={{ flex: 1 }}>
+              {creating ? (editingClienteId ? '⏳ Guardando...' : '⏳ Creando...') : (editingClienteId ? '💾 Guardar cambios' : '➕ Agregar Cliente')}
+            </button>
+            {editingClienteId && (
+              <button onClick={() => {
+                setEditingClienteId(null);
+                setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+              }} className="btn-ghost" style={{ minWidth: '110px' }}>✕ Cancelar</button>
+            )}
+          </div>
         </div>
 
         {/* RIGHT: Select y detalle */}
@@ -309,16 +350,30 @@ export default function Clientes() {
                 />
                 Seleccionar todos
               </label>
-              {selectedIds.size > 0 && (
-                <button
-                  onClick={() => setConfirmBulkOpen(true)}
-                  disabled={deleting}
-                  className="btn-danger text-sm"
-                  style={{ padding: '4px 12px' }}
-                >
-                  🗑️ Eliminar ({selectedIds.size})
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {selectedIds.size === 1 && (
+                  <button
+                    onClick={() => {
+                      const id = [...selectedIds][0];
+                      startEditCliente(id);
+                    }}
+                    className="btn-secondary text-sm"
+                    style={{ padding: '6px 10px' }}
+                  >
+                    ✏️ Editar
+                  </button>
+                )}
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setConfirmBulkOpen(true)}
+                    disabled={deleting}
+                    className="btn-danger text-sm"
+                    style={{ padding: '4px 12px' }}
+                  >
+                    🗑️ Eliminar ({selectedIds.size})
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -405,9 +460,14 @@ export default function Clientes() {
                 <div>📍 <strong>Dirección:</strong> {clienteDetalle.direccion || 'No registrada'}</div>
                 <div>🗺️ <strong>Zona:</strong> {clienteDetalle.zona || 'No registrada'}</div>
               </div>
-              <button onClick={confirmarEliminar} className="btn-danger mt-3">
-                🗑️ Eliminar Cliente
-              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button onClick={() => startEditCliente(clienteDetalle.id)} className="btn-secondary">
+                  ✏️ Editar Cliente
+                </button>
+                <button onClick={confirmarEliminar} className="btn-danger">
+                  🗑️ Eliminar Cliente
+                </button>
+              </div>
             </div>
           )}
 

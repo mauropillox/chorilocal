@@ -854,9 +854,9 @@ export default function Productos() {
 
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Listado</h3>
-                {selectedIds.length > 0 && (
+                {selectedIds.size > 0 && (
                   <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded px-3 py-1.5">
-                    <span className="text-sm font-medium" style={{ color: 'var(--color-danger, #ef4444)' }}>{selectedIds.length} seleccionados</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-danger, #ef4444)' }}>{selectedIds.size} seleccionados</span>
                     <button
                       className="btn-danger btn-sm"
                       onClick={() => setConfirmBulkDelete(true)}
@@ -866,7 +866,7 @@ export default function Productos() {
                     </button>
                     <button
                       className="btn-ghost btn-sm"
-                      onClick={() => setSelectedIds([])}
+                      onClick={() => setSelectedIds(new Set())}
                       style={{ fontSize: '0.95rem', padding: '4px 10px' }}
                     >
                       ✕ Limpiar
@@ -934,8 +934,8 @@ export default function Productos() {
                     <input
                       type="checkbox"
                       className="custom-checkbox"
-                      checked={selectedIds.length === productosFiltrados.length && productosFiltrados.length > 0}
-                      onChange={toggleSelectAll}
+                      checked={selectedIds.size === productosFiltrados.length && productosFiltrados.length > 0}
+                        onChange={toggleSelectAllVisible}
                       aria-label="Seleccionar todos los productos"
                     />
                     <span className="text-xs text-muted">Seleccionar todos</span>
@@ -949,7 +949,7 @@ export default function Productos() {
                           <input
                             type="checkbox"
                             className="custom-checkbox mt-2"
-                            checked={selectedIds.includes(p.id)}
+                            checked={selectedIds.has(p.id)}
                             onChange={() => toggleSelection(p.id)}
                             aria-label={`Seleccionar producto ${p?.nombre || ''}`}
                           />
