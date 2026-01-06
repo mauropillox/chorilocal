@@ -30,16 +30,16 @@ export default function HistorialPedidos() {
   const [recentProductos, setRecentProductos] = useState([]);
   const [filtroAntiguos, setFiltroAntiguos] = useState(false); // Filtrar pedidos +24h
   const [filtroPedidoId, setFiltroPedidoId] = useState(null); // Filtrar por ID específico
-  
+
   // Función para restaurar pedido eliminado (undo)
   const restaurarPedido = async () => {
     if (!undoDelete?.pedido) return;
     const pedido = undoDelete.pedido;
-    
+
     // Clear the timeout
     if (undoDelete.timeout) clearTimeout(undoDelete.timeout);
     setUndoDelete(null);
-    
+
     try {
       // Recrear el pedido en el backend
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos`, {
@@ -55,7 +55,7 @@ export default function HistorialPedidos() {
           notas: pedido.notas || ''
         })
       });
-      
+
       if (res.ok) {
         await cargarDatos();
         toastSuccess('Pedido restaurado correctamente');
@@ -68,7 +68,7 @@ export default function HistorialPedidos() {
       toastError('Error de conexión al restaurar pedido');
     }
   };
-  
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(() => {
@@ -96,7 +96,7 @@ export default function HistorialPedidos() {
   useEffect(() => {
     const antiguosParam = searchParams.get('antiguos');
     const pedidoIdParam = searchParams.get('pedidoId');
-    
+
     if (antiguosParam === '1') {
       setFiltroAntiguos(true);
       setActiveTab('pendientes');
@@ -111,14 +111,14 @@ export default function HistorialPedidos() {
 
   // Ordenar pedidos: más nuevos primero (ID descendente)
   const pedidosOrdenados = [...pedidos].sort((a, b) => b.id - a.id);
-  
+
   // Filtrado por estado
   const pendientes = pedidosOrdenados.filter(p => !p.pdf_generado);
   const generados = pedidosOrdenados.filter(p => p.pdf_generado);
-  
+
   // Datos según tab activo
   const datosActuales = activeTab === 'pendientes' ? pendientes : generados;
-  
+
   // Filtrado de búsqueda
   const coincideTexto = (p) => {
     const q = busquedaTexto.trim().toLowerCase();
@@ -145,13 +145,13 @@ export default function HistorialPedidos() {
   };
 
   const datosFiltrados = datosActuales.filter(p => coincideTexto(p) && esAntiguo(p) && coincideId(p));
-  
+
   // Paginación
   const totalPages = Math.ceil(datosFiltrados.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const datosPaginados = datosFiltrados.slice(startIndex, endIndex);
-  
+
   // Reset a página 1 cuando cambia tab o búsqueda
   useEffect(() => {
     setCurrentPage(1);
@@ -183,7 +183,7 @@ export default function HistorialPedidos() {
         authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
         authFetchJson(`${import.meta.env.VITE_API_URL}/productos`)
       ]);
-      
+
       if (pedRes.res.ok) setPedidos(Array.isArray(pedRes.data) ? pedRes.data : []);
       // Handle paginated response from clientes
       if (cliRes.res.ok) {
@@ -202,7 +202,7 @@ export default function HistorialPedidos() {
     if (filtroFechaDesde) params.push(`desde=${filtroFechaDesde}`);
     if (filtroFechaHasta) params.push(`hasta=${filtroFechaHasta}`);
     if (params.length) url += '?' + params.join('&');
-    
+
     const res = await authFetch(url);
     if (res.ok) {
       const blob = await res.blob();
@@ -219,7 +219,7 @@ export default function HistorialPedidos() {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/cliente?cliente_id=${clienteId}`, {
         method: 'PUT'
       });
-      
+
       if (res.ok) {
         await cargarDatos();
         setAssigningClient(null);
@@ -239,7 +239,7 @@ export default function HistorialPedidos() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notas: notasTemp })
       });
-      
+
       if (res.ok) {
         await cargarDatos();
         setEditandoNotas(null);
@@ -256,31 +256,31 @@ export default function HistorialPedidos() {
   const eliminarPedido = async (pedidoId) => {
     setConfirmDelete(null);
     setEliminando(pedidoId);
-    
+
     // Guardar copia del pedido para poder restaurarlo
     const pedidoToDelete = pedidos.find(p => p.id === pedidoId);
-    
+
     try {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}`, {
         method: 'DELETE'
       });
-      
+
       if (res.ok) {
         await cargarDatos();
         setSelectedIds(prev => prev.filter(id => id !== pedidoId));
-        
+
         // Configurar undo con timeout de 10 segundos
         if (pedidoToDelete) {
           // Limpiar timeout anterior si existe
           if (undoDelete?.timeout) clearTimeout(undoDelete.timeout);
-          
+
           const timeout = setTimeout(() => {
             setUndoDelete(null);
           }, 10000);
-          
+
           setUndoDelete({ pedido: pedidoToDelete, timeout });
         }
-        
+
         toastSuccess('Pedido eliminado. Puedes restaurarlo en los próximos 10 segundos.');
       } else {
         toastError('Error al eliminar pedido');
@@ -348,7 +348,7 @@ export default function HistorialPedidos() {
   };
 
   const toggleSelection = (id) => {
-    setSelectedIds(prev => 
+    setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
@@ -362,14 +362,14 @@ export default function HistorialPedidos() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pedido_ids: selectedIds })
       });
-      
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toastError(err.detail || 'Error al generar PDF');
         setGenerando(false);
         return;
       }
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -382,7 +382,7 @@ export default function HistorialPedidos() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      
+
       setSelectedIds([]);
       await cargarDatos(); // Reload to show updated status
       toastSuccess('PDF generado correctamente');
@@ -414,15 +414,15 @@ export default function HistorialPedidos() {
         </h2>
         <button onClick={exportarCSV} className="btn-secondary">📥 Exportar CSV</button>
       </div>
-      
+
       {/* Banner de filtros activos desde Dashboard */}
       {(filtroAntiguos || filtroPedidoId) && (
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg" 
-             style={{ backgroundColor: 'var(--color-warning-bg, #fef3cd)', border: '1px solid var(--color-warning, #ffc107)' }}>
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg"
+          style={{ backgroundColor: 'var(--color-warning-bg, #fef3cd)', border: '1px solid var(--color-warning, #ffc107)' }}>
           <span style={{ color: 'var(--color-text)' }}>
             🔍 Filtro activo: {filtroAntiguos && '⏰ Pedidos pendientes +24h'}{filtroPedidoId && `📋 Pedido #${filtroPedidoId}`}
           </span>
-          <button 
+          <button
             onClick={limpiarFiltrosEspeciales}
             className="btn-ghost"
             style={{ marginLeft: 'auto', padding: '4px 12px', minHeight: 'auto' }}
@@ -431,27 +431,27 @@ export default function HistorialPedidos() {
           </button>
         </div>
       )}
-      
+
       {/* Filters - responsive grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
         <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="Desde"/>
+          className="text-sm p-2 border rounded w-full" placeholder="Desde" />
         <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="Hasta"/>
+          className="text-sm p-2 border rounded w-full" placeholder="Hasta" />
         <input type="text" value={busquedaTexto} onChange={e => setBusquedaTexto(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="🔍 Buscar cliente/producto..."/>
+          className="text-sm p-2 border rounded w-full" placeholder="🔍 Buscar cliente/producto..." />
       </div>
 
       {/* Tabs para Pendientes y Generados */}
       <div className="flex gap-0 mb-4" style={{ borderRadius: '6px', overflow: 'hidden' }}>
-        <button 
+        <button
           onClick={() => setActiveTab('pendientes')}
           className={activeTab === 'pendientes' ? 'btn-warning' : 'btn-ghost'}
           style={{ flex: 1, borderRadius: '6px 0 0 6px', margin: 0, minHeight: 'auto', padding: '10px' }}
         >
           ⏳ Pendientes ({pendientes.length})
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('generados')}
           className={activeTab === 'generados' ? 'btn-success' : 'btn-ghost'}
           style={{ flex: 1, borderRadius: '0 6px 6px 0', margin: 0, minHeight: 'auto', padding: '10px' }}
@@ -471,19 +471,19 @@ export default function HistorialPedidos() {
           <div className="action-bar">
             <span className="badge badge-warning">⏳ Pendientes: {pendientes.length}</span>
             <span className="badge badge-success">✅ Generados: {generados.length}</span>
-            
+
             <div className="flex-1" />
-            
+
             {activeTab === 'pendientes' && datosFiltrados.length > 0 && (
               <>
-                <button 
+                <button
                   onClick={() => setSelectedIds(datosPaginados.map(p => p.id))}
                   className="btn-ghost"
                   style={{ minHeight: '36px', padding: '6px 12px' }}
                 >
                   ✓ Seleccionar página
                 </button>
-                <button 
+                <button
                   onClick={() => setSelectedIds([])}
                   disabled={selectedIds.length === 0}
                   className="btn-ghost"
@@ -493,16 +493,16 @@ export default function HistorialPedidos() {
                 </button>
               </>
             )}
-            
-            <button 
+
+            <button
               onClick={previewStockChanges}
               disabled={selectedIds.length === 0}
               className="btn-secondary"
             >
               🔍 Preview Stock ({selectedIds.length})
             </button>
-            <button 
-              onClick={generarPDFs} 
+            <button
+              onClick={generarPDFs}
               disabled={selectedIds.length === 0 || generando || activeTab !== 'pendientes'}
               className="btn-success"
             >
@@ -528,7 +528,7 @@ export default function HistorialPedidos() {
                   </span>
                   <div className="flex items-center gap-1">
                     <label className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</label>
-                    <select 
+                    <select
                       value={itemsPerPage}
                       onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                       className="px-2 py-1 text-sm rounded border"
@@ -570,10 +570,10 @@ export default function HistorialPedidos() {
                 {datosPaginados.map(p => {
                   const cliente = clientes.find(c => c.id === p.cliente_id);
                   const sinCliente = !cliente;
-                  
+
                   return (
-                    <div 
-                      key={p?.id} 
+                    <div
+                      key={p?.id}
                       className="card-item"
                       style={{
                         ...(sinCliente ? { border: '2px solid var(--color-warning)', background: 'var(--color-bg-warning-subtle)' } : {}),
@@ -603,7 +603,7 @@ export default function HistorialPedidos() {
                               </span>
                             )}
                           </div>
-                          
+
                           {sinCliente ? (
                             assigningClient === p.id ? (
                               <div className="highlight-warning mt-2">
@@ -618,7 +618,7 @@ export default function HistorialPedidos() {
                                       isSearchable
                                     />
                                   </div>
-                                  <button 
+                                  <button
                                     onClick={() => setAssigningClient(null)}
                                     className="btn-secondary"
                                     style={{ minHeight: '36px', padding: '0 12px' }}
@@ -641,21 +641,21 @@ export default function HistorialPedidos() {
                               <strong>Cliente:</strong> {cliente?.nombre || 'Desconocido'}
                             </div>
                           )}
-                          
+
                           <div className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
                             <strong>Fecha:</strong> {p.fecha_creacion ? p.fecha_creacion : new Date(p?.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             {' • '}
                             <strong>Productos:</strong> {p?.productos?.length || 0}
                           </div>
-                          
+
                           {/* Alerta de pedido antiguo (> 24 horas pendiente) - muestra fecha/hora exacta */}
                           {!p.pdf_generado && p.fecha_creacion && (() => {
                             const fechaCreacion = p.fecha_creacion;
                             const horasTranscurridas = (Date.now() - new Date(p.fecha).getTime()) / (1000 * 60 * 60);
                             if (horasTranscurridas > 24) {
                               return (
-                                <div className="text-xs mt-2 p-2 rounded flex items-center gap-2" style={{ 
-                                  background: '#fef2f2', 
+                                <div className="text-xs mt-2 p-2 rounded flex items-center gap-2" style={{
+                                  background: '#fef2f2',
                                   border: '1px solid #fecaca',
                                   color: '#dc2626'
                                 }}>
@@ -665,10 +665,10 @@ export default function HistorialPedidos() {
                             }
                             return null;
                           })()}
-                          
+
                           {/* Información de tracking */}
-                          <div className="text-xs mt-2 p-2 rounded" style={{ 
-                            background: 'var(--color-bg-tertiary)', 
+                          <div className="text-xs mt-2 p-2 rounded" style={{
+                            background: 'var(--color-bg-tertiary)',
                             border: '1px solid var(--color-border)',
                             color: 'var(--color-text-secondary)'
                           }}>
@@ -685,7 +685,7 @@ export default function HistorialPedidos() {
                               {p.dispositivo && (
                                 <div>📱 <strong>Desde:</strong> {p.dispositivo === 'mobile' ? '📱 Móvil' : p.dispositivo === 'tablet' ? '📱 Tablet' : '💻 Web'}</div>
                               )}
-                              
+
                               {/* Notas - Editable */}
                               {editandoNotas === p.id ? (
                                 <div className="mt-2 flex gap-2">
@@ -709,7 +709,7 @@ export default function HistorialPedidos() {
                                   ) : (
                                     <span style={{ opacity: 0.5 }}>📝 Sin notas</span>
                                   )}
-                                  <button 
+                                  <button
                                     onClick={() => { setEditandoNotas(p.id); setNotasTemp(p.notas || ''); }}
                                     className="text-xs px-2 py-1"
                                     style={{ background: 'rgba(0,0,0,0.1)', border: 'none', borderRadius: '4px', cursor: 'pointer', minHeight: 'auto' }}
@@ -723,15 +723,15 @@ export default function HistorialPedidos() {
 
                           {/* Lista compacta de productos */}
                           {p?.productos && p.productos.length > 0 && (
-                            <div className="mt-2 p-2 rounded" style={{ 
-                              background: 'var(--color-border-light)', 
+                            <div className="mt-2 p-2 rounded" style={{
+                              background: 'var(--color-border-light)',
                               border: '1px solid var(--color-border)',
                               maxHeight: '80px',
                               overflowY: 'auto'
                             }}>
                               <div className="space-y-1">
                                 {p.productos.map((item, idx) => (
-                                  <div key={idx} className="text-xs" style={{ 
+                                  <div key={idx} className="text-xs" style={{
                                     color: 'var(--color-text-secondary)',
                                     wordWrap: 'break-word',
                                     lineHeight: '1.4'
@@ -788,7 +788,7 @@ export default function HistorialPedidos() {
                               ✏️ Editar productos
                             </button>
                           )}
-                          
+
                           <button
                             onClick={() => setConfirmDelete(p.id)}
                             disabled={eliminando === p.id}
@@ -810,7 +810,7 @@ export default function HistorialPedidos() {
                   <span className="text-sm">Mostrando {startIndex + 1} - {Math.min(endIndex, datosFiltrados.length)} de {datosFiltrados.length}</span>
                   <div className="flex items-center gap-1">
                     <label className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</label>
-                    <select 
+                    <select
                       value={itemsPerPage}
                       onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                       className="px-2 py-1 text-sm rounded border"
@@ -833,7 +833,7 @@ export default function HistorialPedidos() {
                   >
                     ← Anterior
                   </button>
-                  <select 
+                  <select
                     value={currentPage}
                     onChange={(e) => setCurrentPage(Number(e.target.value))}
                     className="px-2 py-1 border rounded text-sm"
@@ -886,7 +886,7 @@ export default function HistorialPedidos() {
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               Se procesarán {stockPreview.pedidos_count} pedidos
             </p>
-            
+
             {stockPreview.warnings.length > 0 && (
               <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-400 rounded">
                 <div className="font-semibold text-orange-700 mb-2">⚠️ Advertencias de Stock:</div>
@@ -895,7 +895,7 @@ export default function HistorialPedidos() {
                 ))}
               </div>
             )}
-            
+
             <div className="max-h-64 overflow-y-auto custom-scrollbar mb-4">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-gray-100">
@@ -920,7 +920,7 @@ export default function HistorialPedidos() {
                 </tbody>
               </table>
             </div>
-            
+
             <div className="flex gap-2 justify-end">
               <button onClick={() => setStockPreview(null)} className="btn-secondary">Cancelar</button>
               <button onClick={() => { setStockPreview(null); generarPDFs(); }} className="btn-primary">
