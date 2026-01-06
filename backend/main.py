@@ -383,15 +383,22 @@ def _health_check_impl():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
 def health_check():
-    """Health check endpoint for monitoring (primary)"""
+    """Health check endpoint for monitoring (supports GET and HEAD)"""
     return _health_check_impl()
 
-@app.get("/healthz")
+
+@app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
 def health_check_k8s():
     """Health check endpoint for Kubernetes/Render compatibility (alias)"""
     return _health_check_impl()
+
+
+# Root endpoint (optional): return basic service info to avoid noisy 404s on /
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+def root():
+    return {"status": "ok", "service": "Chorizaurio API", "version": API_VERSION}
 
 # === Autenticación ===
 def validate_password_strength(password: str) -> tuple[bool, str]:
