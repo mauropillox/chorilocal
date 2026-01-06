@@ -24,6 +24,16 @@ import time
 import urllib.request
 import re
 
+# Load Render Secret File (.env) if it exists
+SECRET_FILE_PATH = "/etc/secrets/.env"
+if os.path.exists(SECRET_FILE_PATH):
+    with open(SECRET_FILE_PATH) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                os.environ.setdefault(key.strip(), value.strip())
+
 # API Version
 API_VERSION = "1.0.0"
 
