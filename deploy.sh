@@ -22,6 +22,11 @@ cd "$REPO_DIR"
 # 0. Commit and push local changes
 log "0. Committing and pushing local changes..."
 git add .
+# Ensure sensitive or large local files are NOT staged for auto-commit
+# Unstage common sensitive files if accidentally added: .env, frontend/.env and any DB in data/
+git reset --quiet -- .env frontend/.env || true
+git reset --quiet -- data || true
+git reset --quiet -- "data/ventas.db" || true
 git commit -m "Auto-commit by deploy.sh on $(date +%Y-%m-%d_%H-%M-%S)" || log "   ⚠️ Nothing to commit"
 git push || { log "   ❌ git push failed"; exit 1; }
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
