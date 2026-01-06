@@ -6,7 +6,8 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 ENV NODE_ENV=production
-ENV VITE_API_URL=/api
+# Use backend URL directly (Render services are separate)
+ENV VITE_API_URL=https://chorilocal-backend.onrender.com
 RUN npm run build -- --mode production
 
 # Stage 2: Serve React app with Nginx
