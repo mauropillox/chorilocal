@@ -592,7 +592,11 @@ export default function HistorialPedidos() {
                             <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
                               Pedido #{p?.id}
                             </span>
-                            <span className="badge badge-pending">Pendiente</span>
+                            {p.pdf_generado ? (
+                              <span className="badge badge-success">✅ Generado</span>
+                            ) : (
+                              <span className="badge badge-pending">⏳ Pendiente</span>
+                            )}
                             {sinCliente && (
                               <span className="badge badge-danger">
                                 ⚠️ Sin cliente
