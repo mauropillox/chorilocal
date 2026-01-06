@@ -21,7 +21,7 @@ def _now_iso() -> str:
     # ISO in UTC without timezone offset to match stored expires_at format
     # Tests (and some insertions) use naive UTC isoformat(), so compare
     # using UTC naive strings to ensure proper ordering.
-    return datetime.utcnow().isoformat()
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
 def _now_uruguay() -> str:

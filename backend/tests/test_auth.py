@@ -194,10 +194,10 @@ class TestTokenRevocation:
     def test_revoke_token(self, temp_db):
         """revoke_token should add token to blacklist"""
         import db
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         jti = "test-jti-12345"
-        expires = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        expires = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)).isoformat()
         
         # Token should not be revoked initially
         assert db.is_token_revoked(jti) is False
@@ -212,10 +212,10 @@ class TestTokenRevocation:
     def test_duplicate_revoke_ignored(self, temp_db):
         """Revoking same token twice should not error"""
         import db
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         jti = "test-jti-duplicate"
-        expires = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        expires = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)).isoformat()
         
         # First revoke
         db.revoke_token(jti, expires, "testuser")
@@ -227,18 +227,19 @@ class TestTokenRevocation:
     def test_cleanup_expired_tokens(self, temp_db):
         """cleanup_expired_tokens should remove old tokens"""
         import db
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Add an expired token
         jti_expired = "expired-token"
-        expired_time = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        expired_time = (now_utc - timedelta(hours=1)).isoformat()
         
         con = db.conectar()
         cur = con.cursor()
         cur.execute("""
             INSERT INTO revoked_tokens (jti, revoked_at, expires_at, username)
             VALUES (?, ?, ?, ?)
-        """, (jti_expired, datetime.utcnow().isoformat(), expired_time, "test"))
+        """, (jti_expired, now_utc.isoformat(), expired_time, "test"))
         con.commit()
         con.close()
         
@@ -301,7 +302,7 @@ class TestAtomicUserCheck:
         """Should return None when token is revoked"""
         import db
         from passlib.context import CryptContext
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         
@@ -317,7 +318,7 @@ class TestAtomicUserCheck:
         
         # Revoke the token
         jti = "revoked-jti-test"
-        expires = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        expires = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)).isoformat()
         db.revoke_token(jti, expires, "userrevoked")
         
         # Should return None because token is revoked
