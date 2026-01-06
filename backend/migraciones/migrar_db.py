@@ -1,25 +1,33 @@
+import os
 import sqlite3
 
-DB_PATH = "ventas.db"
+DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 
-def agregar_columna_si_no_existe(cursor, tabla, columna, tipo_def):
-    cursor.execute(f"PRAGMA table_info({tabla})")
-    columnas = [col[1] for col in cursor.fetchall()]
-    if columna not in columnas:
-        print(f"➕ Agregando columna '{columna}' a la tabla '{tabla}'...")
-        cursor.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo_def};")
+def verificar_tablas():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY 1;")
+    tablas = [r[0] for r in cursor.fetchall()]
+    print("DB_PATH:", DB_PATH)
+    print("Tablas:", tablas)
+    conn.close()
+
+
+def migrar_imagen_producto():
+    """Agrega columna imagen_url a productos si no existe (ALTER TABLE)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(productos);")
+    cols = [r[1] for r in cursor.fetchall()]
+    if 'imagen_url' in cols:
+        print('Columna imagen_url ya existe en productos, nada para hacer.')
     else:
-        print(f"✔️ La columna '{columna}' ya existe en '{tabla}'.")
+        print('Agregando columna imagen_url a productos...')
+        cursor.execute("ALTER TABLE productos ADD COLUMN imagen_url TEXT;")
+        conn.commit()
+        print('Columna agregada.')
+    conn.close()
 
-try:
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-
-    agregar_columna_si_no_existe(cur, "pedidos", "pdf_generado", "BOOLEAN DEFAULT FALSE")
-    agregar_columna_si_no_existe(cur, "detalles_pedido", "tipo", "TEXT DEFAULT 'unidad'")
-
-    con.commit()
-    con.close()
-    print("✅ Migración completada con éxito.")
-except sqlite3.OperationalError as e:
-    print(f"❌ Error al migrar: {e}")
+if __name__ == "__main__":
+    verificar_tablas()
+    migrar_imagen_producto()

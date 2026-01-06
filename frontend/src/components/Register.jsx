@@ -48,43 +48,43 @@ export default function Register() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow w-full max-w-md">
-      <h2 className="text-xl font-semibold mb-4 text-center text-blue-600">Registro de Usuario</h2>
-      {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
-      {ok && <p className="text-green-600 text-sm text-center mb-2">Usuario creado. Esperá aprobación.</p>}
+    <div className="auth-card">
+      <h2 className="auth-title">Registro de Usuario</h2>
+      {error && <p className="auth-error">{error}</p>}
+      {ok && <p className="auth-success">Usuario creado. Esperá aprobación del administrador.</p>}
 
-      <form onSubmit={handleRegister} className="flex flex-col gap-3">
+      <form onSubmit={handleRegister}>
         <input
           type="text"
           placeholder="Usuario"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="p-2 border rounded"
           required
+          aria-label="Usuario"
         />
         <input
           type="password"
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="p-2 border rounded"
           required
+          aria-label="Contraseña"
         />
         <input
           type="password"
           placeholder="Confirmar Contraseña"
           value={confirmacion}
           onChange={(e) => setConfirmacion(e.target.value)}
-          className="p-2 border rounded"
           required
+          aria-label="Confirmar Contraseña"
         />
-        <button type="submit" className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+        <button type="submit">
           Registrarse
         </button>
       </form>
 
-      <p className="text-center text-sm text-gray-500 mt-4">
-        ¿Ya tenés cuenta? <a href="/" className="text-blue-600 hover:underline">Iniciá sesión</a>
+      <p>
+        ¿Ya tenés cuenta? <a href="/">Iniciá sesión</a>
       </p>
     </div>
   );

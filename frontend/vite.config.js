@@ -1,38 +1,42 @@
-// vite.config.js (sin Service Worker, con comentarios para futuro)
-
-// import { VitePWA } from 'vite-plugin-pwa'; // 🔒 Desactivado temporalmente
+// vite.config.js - optimized for performance & code-splitting
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [
-    react(),
+  plugins: [react()],
+  
+  build: {
+    // Code-splitting for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-select'],
+          'utils': ['./src/utils.js', './src/auth.js']
+        }
+      }
+    },
+    // Optimize bundle
+    minify: 'terser',
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    assetsInlineLimit: 4096,
+    reportCompressedSize: false
+  },
 
-    // 💤 Plugin PWA desactivado porque causaba problemas de cacheo en producción
-    // VitePWA({
-    //   registerType: 'autoUpdate',
-    //   includeAssets: ['favicon.svg', 'robots.txt'],
-    //   manifest: {
-    //     name: 'Chorizaurio App',
-    //     short_name: 'Chorizaurio',
-    //     start_url: '/',
-    //     display: 'standalone',
-    //     background_color: '#ffffff',
-    //     description: 'Gestión de congelados',
-    //     icons: [
-    //       {
-    //         src: 'pwa-icon-192.png',
-    //         sizes: '192x192',
-    //         type: 'image/png'
-    //       },
-    //       {
-    //         src: 'pwa-icon-512.png',
-    //         sizes: '512x512',
-    //         type: 'image/png'
-    //       }
-    //     ]
-    //   }
-    // })
-  ]
+  // Tree-shaking & resolution
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
+  },
+
+  server: {
+    middlewareMode: false,
+    hmr: {
+      host: 'localhost',
+      port: 5173
+    }
+  }
 });
