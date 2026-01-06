@@ -24,6 +24,13 @@ log "0. Committing and pushing local changes..."
 git add .
 git commit -m "Auto-commit by deploy.sh on $(date +%Y-%m-%d_%H-%M-%S)" || log "   ⚠️ Nothing to commit"
 git push || { log "   ❌ git push failed"; exit 1; }
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  git checkout main
+  git pull origin main
+  git merge "$CURRENT_BRANCH"
+fi
+git push origin main || { log "   ❌ git push to main failed"; exit 1; }
 
 # 1. Git pull (opcional)
 if [[ "${SKIP_PULL:-}" != "1" ]]; then
