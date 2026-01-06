@@ -1,4 +1,5 @@
 import { obtenerToken, borrarToken, guardarToken, decodeToken } from './auth';
+import { queueRequest } from './offline/sync';
 
 // Token refresh: intenta refrescar el token antes de que expire
 let refreshPromise = null;
@@ -113,6 +114,18 @@ async function authFetch(input, init = {}, retryCount = 0) {
   init = { ...init, headers };
 
   try {
+    // If offline and this is a mutating request, queue it locally
+    const method = (init.method || 'GET').toUpperCase();
+    if (typeof navigator !== 'undefined' && !navigator.onLine && method !== 'GET') {
+      try {
+        await queueRequest({ method, url: input, headers, body: init.body ? JSON.parse(init.body) : null });
+      } catch (e) {
+        console.warn('Failed to queue request offline', e);
+      }
+      // Return a synthetic 202 Accepted response indicating queued
+      return new Response(JSON.stringify({ queued: true }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const res = await fetchWithTimeout(input, init);
     
     // Handle rate limiting (429)
@@ -145,6 +158,12 @@ async function authFetch(input, init = {}, retryCount = 0) {
     if (isRetryableError(error) && retryCount < MAX_RETRIES) {
       await delay(RETRY_DELAY * (retryCount + 1));
       return authFetch(input, init, retryCount + 1);
+    }
+    // If network down and mutating request, attempt to queue
+    const method = (init.method || 'GET').toUpperCase();
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) && method !== 'GET') {
+      try { await queueRequest({ method, url: input, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null }); } catch (e) {}
+      return new Response(JSON.stringify({ queued: true }), { status: 202, headers: { 'Content-Type': 'application/json' } });
     }
     throw error;
   }

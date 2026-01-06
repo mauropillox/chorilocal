@@ -28,3 +28,18 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// Register service worker and online handler for queue processing
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').catch(e => console.warn('SW registration failed', e));
+}
+
+import { processQueue } from './offline/sync';
+window.addEventListener('online', () => {
+  try { processQueue(); } catch (e) { console.warn('processQueue failed', e); }
+});
+
+// Try processing any queued items on load
+if (navigator.onLine) {
+  try { processQueue(); } catch (e) {}
+}
