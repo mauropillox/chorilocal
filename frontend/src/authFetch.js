@@ -1,5 +1,6 @@
 import { obtenerToken, borrarToken, guardarToken, decodeToken } from './auth';
 import { queueRequest } from './offline/sync';
+import { toastSuccess, toastWarn, toastError } from './toast';
 
 // Token refresh: intenta refrescar el token antes de que expire
 let refreshPromise = null;
@@ -11,17 +12,17 @@ const RETRY_DELAY = 1000; // 1 segundo
 
 async function refreshToken() {
   if (refreshPromise) return refreshPromise;
-  
+
   refreshPromise = (async () => {
     try {
       const token = obtenerToken();
       if (!token) return null;
-      
+
       const res = await fetchWithTimeout(`${import.meta.env.VITE_API_URL}/refresh`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       }, 10000); // 10s timeout para refresh
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.access_token) {
@@ -37,7 +38,7 @@ async function refreshToken() {
       refreshPromise = null;
     }
   })();
-  
+
   return refreshPromise;
 }
 
@@ -48,17 +49,17 @@ async function fetchWithTimeout(input, init = {}, timeout = FETCH_TIMEOUT) {
   const callerSignal = init.signal;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   // If caller's signal is already aborted, abort immediately
   if (callerSignal?.aborted) {
     clearTimeout(timeoutId);
     throw new DOMException('Aborted', 'AbortError');
   }
-  
+
   // Listen to caller's signal
   const onCallerAbort = () => controller.abort();
   callerSignal?.addEventListener('abort', onCallerAbort);
-  
+
   try {
     const response = await fetch(input, {
       ...init,
@@ -76,10 +77,10 @@ function isRetryableError(error, response) {
   // Errores de red
   if (error?.name === 'TypeError' && error?.message?.includes('network')) return true;
   if (error?.name === 'AbortError') return false; // No retry timeouts
-  
+
   // Errores de servidor (5xx)
   if (response && response.status >= 500) return true;
-  
+
   return false;
 }
 
@@ -102,13 +103,13 @@ function isTokenExpiringSoon(token) {
 
 async function authFetch(input, init = {}, retryCount = 0) {
   let token = obtenerToken();
-  
+
   // Refresh token proactively if expiring soon
   if (token && isTokenExpiringSoon(token)) {
     const newToken = await refreshToken();
     if (newToken) token = newToken;
   }
-  
+
   const headers = init.headers ? { ...init.headers } : {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
   init = { ...init, headers };
@@ -119,38 +120,41 @@ async function authFetch(input, init = {}, retryCount = 0) {
     if (typeof navigator !== 'undefined' && !navigator.onLine && method !== 'GET') {
       try {
         await queueRequest({ method, url: input, headers, body: init.body ? JSON.parse(init.body) : null });
+        try { window.dispatchEvent(new CustomEvent('offline-request-queued', { detail: { method, url: input } })); } catch (e) { }
+        try { toastWarn('Acción encolada — se enviará cuando vuelva la conexión'); } catch (e) { }
       } catch (e) {
         console.warn('Failed to queue request offline', e);
+        try { toastError('No se pudo encolar la acción'); } catch (e) { }
       }
       // Return a synthetic 202 Accepted response indicating queued
       return new Response(JSON.stringify({ queued: true }), { status: 202, headers: { 'Content-Type': 'application/json' } });
     }
 
     const res = await fetchWithTimeout(input, init);
-    
+
     // Handle rate limiting (429)
     if (res.status === 429) {
       const retryAfter = parseInt(res.headers.get('Retry-After') || '60', 10);
       console.warn(`Rate limited. Retry after ${retryAfter}s`);
       // Dispatch event for UI to show user-friendly message
       try {
-        window.dispatchEvent(new CustomEvent('rate-limited', { 
-          detail: { retryAfter, url: input } 
+        window.dispatchEvent(new CustomEvent('rate-limited', {
+          detail: { retryAfter, url: input }
         }));
-      } catch (e) {}
+      } catch (e) { }
       return res; // Return the 429 response for caller to handle
     }
-    
+
     // Retry en errores 5xx
     if (res.status >= 500 && retryCount < MAX_RETRIES) {
       await delay(RETRY_DELAY * (retryCount + 1));
       return authFetch(input, init, retryCount + 1);
     }
-    
+
     if (res.status === 401) {
-      try { borrarToken(); } catch (e) {}
+      try { borrarToken(); } catch (e) { }
       // notify the app/other tabs
-      try { window.dispatchEvent(new CustomEvent('unauthenticated')); } catch (e) {}
+      try { window.dispatchEvent(new CustomEvent('unauthenticated')); } catch (e) { }
     }
     return res;
   } catch (error) {
@@ -162,7 +166,11 @@ async function authFetch(input, init = {}, retryCount = 0) {
     // If network down and mutating request, attempt to queue
     const method = (init.method || 'GET').toUpperCase();
     if ((typeof navigator !== 'undefined' && !navigator.onLine) && method !== 'GET') {
-      try { await queueRequest({ method, url: input, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null }); } catch (e) {}
+      try {
+        await queueRequest({ method, url: input, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null });
+        try { window.dispatchEvent(new CustomEvent('offline-request-queued', { detail: { method, url: input } })); } catch (e) { }
+        try { toastWarn('Acción encolada — se enviará cuando vuelva la conexión'); } catch (e) { }
+      } catch (e) { }
       return new Response(JSON.stringify({ queued: true }), { status: 202, headers: { 'Content-Type': 'application/json' } });
     }
     throw error;

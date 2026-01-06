@@ -186,7 +186,8 @@ ALLOWED_MIME_TYPES = {
 }
 
 # Serve uploaded media at /media (maps to /data)
-app.mount('/media', StaticFiles(directory='/data'), name='media')
+MEDIA_DIR = os.getenv('MEDIA_DIR', os.getenv('UPLOAD_DIR', '/data'))
+app.mount('/media', StaticFiles(directory=MEDIA_DIR), name='media')
 
 # API Versioning: Create v1 router for future-proofing
 # All new routes should use api_v1 router

@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  
+
   build: {
     // Code-splitting for better caching
     rollupOptions: {
@@ -38,5 +38,13 @@ export default defineConfig({
       host: 'localhost',
       port: 5173
     }
+    // LOCAL DEV ONLY: Uncomment this proxy block to forward /api calls to local backend
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://127.0.0.1:8000',
+    //     changeOrigin: true,
+    //     rewrite: (path) => path.replace(/^\/api/, '')
+    //   }
+    // }
   }
 });

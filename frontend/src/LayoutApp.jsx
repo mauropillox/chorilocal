@@ -22,6 +22,8 @@ import { borrarToken } from './auth';
 import ToastContainer from './components/ToastContainer';
 import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
+import OfflineNotifier from './components/OfflineNotifier';
+import OfflineQueue from './components/OfflineQueue';
 
 // Loading fallback para Suspense
 const PageLoader = () => (
@@ -345,6 +347,9 @@ export default function LayoutApp({ onLogout }) {
           </div>
         </header>
 
+        {/* Offline notifier */}
+        <OfflineNotifier />
+
         {/* Navegación principal - COMPACTA CON DROPDOWNS */}
         <nav className="nav-main" role="navigation" aria-label="Navegación principal">
           <button
@@ -457,6 +462,7 @@ export default function LayoutApp({ onLogout }) {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/offline-queue" element={<OfflineQueue />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/pedidos" element={<Pedidos />} />

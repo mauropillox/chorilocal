@@ -41,5 +41,5 @@ window.addEventListener('online', () => {
 
 // Try processing any queued items on load
 if (navigator.onLine) {
-  try { processQueue(); } catch (e) {}
+  try { processQueue(); } catch (e) { }
 }

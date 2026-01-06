@@ -27,7 +27,14 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         const ids = new Set();
-        data.forEach(o => o.productos_ids.forEach(id => ids.add(id)));
+        // Handle case where data might be null/undefined or not an array
+        if (Array.isArray(data)) {
+          data.forEach(o => {
+            if (o.productos_ids && Array.isArray(o.productos_ids)) {
+              o.productos_ids.forEach(id => ids.add(id));
+            }
+          });
+        }
         setProductosEnOferta(ids);
       }
     } catch (e) {
@@ -50,7 +57,7 @@ export default function Dashboard() {
         pedidosRes.json(),
         alertasRes.json()
       ]);
-      
+
       // Handle new endpoints separately (may not exist yet)
       let statsData = null;
       let antiguosData = [];
@@ -110,29 +117,29 @@ export default function Dashboard() {
           ⚡ Acciones Rápidas
         </h3>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={() => navigate('/pedidos')} 
+          <button
+            onClick={() => navigate('/pedidos')}
             className="btn-success"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
           >
             <span style={{ fontSize: '1.2rem' }}>➕</span> Nuevo Pedido
           </button>
-          <button 
-            onClick={() => navigate('/clientes?crear=1')} 
+          <button
+            onClick={() => navigate('/clientes?crear=1')}
             className="btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
           >
             <span style={{ fontSize: '1.2rem' }}>👤</span> Nuevo Cliente
           </button>
-          <button 
-            onClick={() => navigate('/productos?crear=1')} 
+          <button
+            onClick={() => navigate('/productos?crear=1')}
             className="btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
           >
             <span style={{ fontSize: '1.2rem' }}>📦</span> Nuevo Producto
           </button>
-          <button 
-            onClick={() => navigate('/historial')} 
+          <button
+            onClick={() => navigate('/historial')}
             className="btn-ghost"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
           >
@@ -152,8 +159,8 @@ export default function Dashboard() {
         }, {
           label: 'Stock Bajo', value: metrics.stock_bajo_count, from: metrics.stock_bajo_count > 0 ? '#ef4444' : '#64748b', to: metrics.stock_bajo_count > 0 ? '#dc2626' : '#475569', icon: metrics.stock_bajo_count > 0 ? '⚠️' : '', route: '/productos?stockBajo=1'
         }].map((kpi, idx) => (
-          <div 
-            key={idx} 
+          <div
+            key={idx}
             role="button"
             tabIndex={0}
             aria-label={`${kpi.label}: ${kpi.value}. Click para ver detalles`}
@@ -225,7 +232,7 @@ export default function Dashboard() {
 
       {/* Top Productos */}
       <div className="card" style={{ padding: '18px' }}>
-        <h3 
+        <h3
           onClick={() => navigate('/productos')}
           style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
@@ -237,11 +244,11 @@ export default function Dashboard() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {metrics.top_productos.map((prod, idx) => {
-              const medalColors = [ '#eab308', '#9ca3af', '#fb923c' ];
+              const medalColors = ['#eab308', '#9ca3af', '#fb923c'];
               const enOferta = prod.id && productosEnOferta.has(prod.id);
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   onClick={() => navigate(`/productos?buscar=${encodeURIComponent(prod.nombre)}`)}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background 0.1s' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
@@ -260,7 +267,7 @@ export default function Dashboard() {
                     <div style={{ fontWeight: 600, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {prod.nombre}
                       {enOferta && (
-                        <span 
+                        <span
                           onClick={(e) => { e.stopPropagation(); navigate('/ofertas'); }}
                           style={{
                             background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -286,15 +293,15 @@ export default function Dashboard() {
 
       {/* Alertas - Stock Bajo destacado */}
       {alertas.length > 0 && (
-        <div style={{ 
-          padding: '18px', 
+        <div style={{
+          padding: '18px',
           background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
           border: '2px solid #ef4444',
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
           animation: 'pulse-border 2s infinite'
         }}>
-          <h3 
+          <h3
             onClick={() => navigate('/productos?stockBajo=1')}
             style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#dc2626' }}
           >
@@ -303,11 +310,11 @@ export default function Dashboard() {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
             {alertas.slice(0, 6).map((alerta, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 onClick={() => navigate(`/productos?buscar=${encodeURIComponent(alerta.producto)}`)}
-                style={{ 
-                  cursor: 'pointer', 
+                style={{
+                  cursor: 'pointer',
                   transition: 'all 0.15s',
                   background: 'white',
                   padding: '12px',
@@ -320,11 +327,11 @@ export default function Dashboard() {
               >
                 <div style={{ fontWeight: 600, color: '#b91c1c', fontSize: '0.9rem', marginBottom: '4px' }}>{alerta.producto}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ 
-                    background: '#ef4444', 
-                    color: 'white', 
-                    padding: '2px 8px', 
-                    borderRadius: '4px', 
+                  <span style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
                     fontSize: '0.8rem',
                     fontWeight: 700
                   }}>
@@ -336,7 +343,7 @@ export default function Dashboard() {
             ))}
           </div>
           {alertas.length > 6 && (
-            <p 
+            <p
               onClick={() => navigate('/productos?stockBajo=1')}
               style={{ textAlign: 'center', paddingTop: '12px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600, color: '#dc2626' }}
             >
@@ -349,7 +356,7 @@ export default function Dashboard() {
       {/* Pedidos Antiguos Pendientes */}
       {pedidosAntiguos.length > 0 && (
         <div className="alert-warning" style={{ padding: '18px' }}>
-          <h3 
+          <h3
             onClick={() => navigate('/historial?antiguos=1')}
             style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
           >
@@ -358,8 +365,8 @@ export default function Dashboard() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pedidosAntiguos.slice(0, 5).map((pedido, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 onClick={() => navigate(`/historial?pedidoId=${pedido.id}`)}
                 className="card-item"
                 style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
@@ -379,7 +386,7 @@ export default function Dashboard() {
               </div>
             ))}
             {pedidosAntiguos.length > 5 && (
-              <p 
+              <p
                 onClick={() => navigate('/historial?antiguos=1')}
                 style={{ color: '#c2410c', textAlign: 'center', paddingTop: '6px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}
               >
@@ -442,10 +449,10 @@ export default function Dashboard() {
               const colors = { mobile: '#14b8a6', tablet: '#f59e0b', web: '#0ea5e9' };
               const labels = { mobile: 'Móvil', tablet: 'Tablet', web: 'Web' };
               return (
-                <div key={idx} style={{ 
-                  background: 'var(--color-bg-secondary)', 
+                <div key={idx} style={{
+                  background: 'var(--color-bg-secondary)',
                   border: '1px solid var(--color-border)',
-                  borderRadius: '12px', 
+                  borderRadius: '12px',
                   padding: '16px 24px',
                   textAlign: 'center',
                   minWidth: '120px'

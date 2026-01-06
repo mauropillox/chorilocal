@@ -13,6 +13,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["ENVIRONMENT"] = "test"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
 
+# Create temp directories for uploads/media to avoid permission errors
+import tempfile
+_temp_upload_dir = tempfile.mkdtemp(prefix="test_uploads_")
+os.environ["UPLOAD_DIR"] = _temp_upload_dir
+os.environ["MEDIA_DIR"] = _temp_upload_dir
+
 @pytest.fixture(scope="function")
 def temp_db():
     """Create a temporary database for each test"""

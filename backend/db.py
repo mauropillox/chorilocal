@@ -18,8 +18,10 @@ URUGUAY_TZ = timezone(timedelta(hours=-3))
 # Helpers
 # -----------------------------------------------------------------------------
 def _now_iso() -> str:
-    # ISO con timezone (ej: 2025-12-23T01:20:06-03:00)
-    return datetime.now().astimezone().isoformat()
+    # ISO in UTC without timezone offset to match stored expires_at format
+    # Tests (and some insertions) use naive UTC isoformat(), so compare
+    # using UTC naive strings to ensure proper ordering.
+    return datetime.utcnow().isoformat()
 
 
 def _now_uruguay() -> str:
