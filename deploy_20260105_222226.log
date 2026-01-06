@@ -1,0 +1,17 @@
+[22:22:26] === CHORIZAURIO DEPLOYMENT ===
+[22:22:26] 1. Pulling latest changes from GitHub...
+[22:22:28]    ⚠️ git pull failed (continuing anyway)
+[22:22:28] 2. Validating configuration files...
+[22:22:28]    ✓ Configuration files OK
+[22:22:28] 3. Backing up database...
+[22:22:28]    ✓ Local database backed up
+[22:22:28] 4. Stopping existing containers...
+[22:22:28] 5. Building and starting containers...
+
+The command 'docker' could not be found in this WSL 2 distro.
+We recommend to activate the WSL integration in Docker Desktop settings.
+
+For details about using Docker Desktop with WSL 2, visit:
+
+https://docs.docker.com/go/wsl2/
+

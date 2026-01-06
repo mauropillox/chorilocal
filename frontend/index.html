@@ -7,6 +7,25 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Casa de Congelados</title>
+    <script>
+      // FORCE RESET v3: Clear all old theme data and start fresh
+      (function() {
+        var RESET_VERSION = 'v3';
+        if (localStorage.getItem('theme_reset') !== RESET_VERSION) {
+          // One-time reset for all users
+          localStorage.removeItem('theme');
+          localStorage.setItem('theme', 'light');
+          localStorage.setItem('theme_reset', RESET_VERSION);
+        }
+        // Now apply the theme
+        var theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

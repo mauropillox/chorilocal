@@ -1,83 +1,112 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "📥 Clonando repositorio por primera vez..."
-if [ ! -d "chorizaurio" ]; then
-    git clone https://github.com/mauropillox/chorizaurio.git
+# === CHORIZAURIO DEPLOYMENT SCRIPT ===
+# Backup, build, deploy, and verify
+# 
+# Uso:
+#   ./deploy.sh              # Deploy normal (con git pull)
+#   SKIP_PULL=1 ./deploy.sh  # Deploy sin git pull
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKUP_DIR="$REPO_DIR/backups"
+LOG_FILE="$REPO_DIR/deploy_$(date +%Y%m%d_%H%M%S).log"
+
+ts() { date +"%H:%M:%S"; }
+log() { echo "[$(ts)] $*" | tee -a "$LOG_FILE"; }
+
+log "=== CHORIZAURIO DEPLOYMENT ==="
+cd "$REPO_DIR"
+
+
+# 0. Commit and push local changes
+log "0. Committing and pushing local changes..."
+git add .
+git commit -m "Auto-commit by deploy.sh on $(date +%Y-%m-%d_%H-%M-%S)" || log "   ⚠️ Nothing to commit"
+git push || { log "   ❌ git push failed"; exit 1; }
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  git checkout main
+  git pull origin main
+  git merge "$CURRENT_BRANCH"
+fi
+git push origin main || { log "   ❌ git push to main failed"; exit 1; }
+
+# 1. Git pull (opcional)
+if [[ "${SKIP_PULL:-}" != "1" ]]; then
+    log "1. Pulling latest changes from GitHub..."
+    git pull || log "   ⚠️ git pull failed (continuing anyway)"
+else
+    log "1. Skipping git pull (SKIP_PULL=1)"
 fi
 
-cd chorizaurio
-
-echo "🔄 Haciendo pull desde GitHub..."
-git pull
-
-echo "🛑 Deteniendo contenedores anteriores..."
-docker compose down || true
-
-# ✅ Verificar existencia de .env para el backend
+# 2. Validar archivos de configuración
+log "2. Validating configuration files..."
 if [ ! -f .env ]; then
-  echo "❌ Falta archivo .env para el backend (./.env)"
-  exit 1
+    log "   ❌ Missing .env file"
+    exit 1
 fi
-
-# ✅ Verificar existencia de archivo .env para el frontend
 if [ ! -f frontend/.env ]; then
-  echo "❌ Falta archivo frontend/.env"
-  exit 1
-else
-  echo "✅ Archivo .env del frontend ya existe. Verificalo si da error."
+    log "   ❌ Missing frontend/.env file"
+    exit 1
 fi
+log "   ✓ Configuration files OK"
 
-# ✅ Validar VITE_API_URL
-if ! grep -q "VITE_API_URL=http" frontend/.env; then
-  echo "⚠️ VITE_API_URL no está definido correctamente en frontend/.env"
-  exit 1
-fi
-
-# ✅ Base de datos
-echo "🗃️ Verificando base de datos..."
-if [ ! -f ventas.db ]; then
-    echo "⚠️ ventas.db no encontrada. Ejecutando init_db.py..."
-    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
+# 3. Backup database
+log "3. Backing up database..."
+mkdir -p "$BACKUP_DIR"
+if docker compose ps backend --format json 2>/dev/null | grep -q running; then
+    docker compose exec -T backend cp /data/ventas.db /tmp/ventas.db.bak 2>/dev/null || true
+    docker cp chorizaurio-backend:/tmp/ventas.db.bak "$BACKUP_DIR/ventas.db.$(date +%Y%m%d_%H%M%S).bak" 2>/dev/null && \
+        log "   ✓ Database backed up" || log "   ⚠️ DB backup skipped"
 else
-    docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python - <<EOF
-import sqlite3, sys
-db = sqlite3.connect("ventas.db")
-c = db.cursor()
-def check_table_column(table, column):
-    c.execute(f"PRAGMA table_info({table})")
-    return column in [r[1] for r in c.fetchall()]
-try:
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pedidos'")
-    if not c.fetchone():
-        raise Exception("Tabla pedidos no existe.")
-    if not check_table_column("pedidos", "pdf_generado"):
-        raise Exception("Columna pdf_generado no existe.")
-    if not check_table_column("detalles_pedido", "tipo"):
-        raise Exception("Columna tipo no existe.")
-    if not check_table_column("usuarios", "password_hash"):
-        raise Exception("Tabla usuarios incompleta.")
-except Exception as e:
-    print(f"⚠️ {e} Ejecutando init_db.py para corregir...")
-    sys.exit(42)
-EOF
-
-    if [ $? -eq 42 ]; then
-        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python init_db.py
+    if [ -f data/ventas.db ]; then
+        cp data/ventas.db "$BACKUP_DIR/ventas.db.$(date +%Y%m%d_%H%M%S).bak"
+        log "   ✓ Local database backed up"
     else
-        echo "✅ Base de datos OK. Ejecutando migración..."
-        docker run --rm -v "$PWD":/app -w /app --env-file .env python:3.9 python migrar_db.py || true
+        log "   ⚠️ No database to backup"
     fi
 fi
 
-# ✅ Compilar frontend con Node en contenedor (no requiere npm global)
-echo "🧱 Ejecutando build del frontend en contenedor..."
-docker run --rm -v "$PWD/frontend":/app -w /app --env-file .env node:18-alpine sh -c "
-  npm install && npm run build -- --mode production
-"
+# 4. Stop existing containers
+log "4. Stopping existing containers..."
+docker compose down || true
 
-# ✅ Desplegar contenedores
-echo "🚀 Reconstruyendo e iniciando contenedores..."
-docker compose up --build -d
+# 5. Build and deploy
+log "5. Building and starting containers..."
+docker compose build 2>&1 | tee -a "$LOG_FILE"
+docker compose up -d
 
-echo "✅ Deploy completo. Contenedores corriendo en http://pedidosfriosur.com"
+# 6. Wait for services
+log "6. Waiting for services to be ready..."
+for i in {1..30}; do
+    if curl -s http://localhost/api/health >/dev/null 2>&1; then
+        log "   ✓ Services ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        log "   ❌ Services failed to start"
+        docker compose logs --tail=50
+        exit 1
+    fi
+    sleep 1
+done
+
+# 7. Health check
+log "7. Running health check..."
+HEALTH=$(curl -s http://localhost/api/health 2>/dev/null || echo '{"status":"error"}')
+if echo "$HEALTH" | grep -q '"status":"healthy"'; then
+    log "   ✓ Health check passed: $HEALTH"
+else
+    log "   ❌ Health check failed: $HEALTH"
+    exit 1
+fi
+
+# 8. Summary
+log "=== DEPLOYMENT COMPLETE ==="
+log "📋 Logs: $LOG_FILE"
+log "💾 Backups: $BACKUP_DIR"
+log "🌐 App: http://localhost"
+log "📚 API: http://localhost/api/docs"
+log ""
+log "✅ Deploy successful!"

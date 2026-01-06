@@ -1,0 +1,12 @@
+{
+    "python.envFile": "${workspaceFolder}/.env",
+    "terminal.integrated.env.linux": {},
+    "python.defaultInterpreterPath": "python3",
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "*.env": "dotenv",
+        "*.env.*": "dotenv"
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
+}

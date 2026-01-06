@@ -1,20 +1,31 @@
-// auth.js
+export function guardarToken(token) {
+  localStorage.setItem("token", token);
+  try {
+    // notify other tabs about auth change
+    localStorage.setItem('auth_event', String(Date.now()));
+  } catch (e) {}
+}
 
 export function obtenerToken() {
   const token = localStorage.getItem("token");
-  if (!token || token === "null" || token === "undefined") {
-    console.log("No se encontró token válido");
-    return null;
-  }
+  if (!token || token === "null" || token === "undefined") return null;
   return token;
-}
-
-export function guardarToken(token) {
-  localStorage.setItem("token", token);
 }
 
 export function borrarToken() {
   localStorage.removeItem("token");
+  try {
+    localStorage.setItem('auth_event', String(Date.now()));
+  } catch (e) {}
+}
+
+export function onAuthChange(cb) {
+  const handler = (e) => {
+    if (!e) return;
+    if (e.key === 'auth_event') cb();
+  };
+  window.addEventListener('storage', handler);
+  return () => window.removeEventListener('storage', handler);
 }
 
 export function estaAutenticado() {
@@ -22,34 +33,48 @@ export function estaAutenticado() {
 }
 
 /**
- * Helper to fetch with the Authorization header
+ * Decodifica un token JWT de forma segura.
+ * @param {string} token - El token JWT a decodificar
+ * @returns {object|null} - El payload decodificado o null si es inválido
  */
-export async function fetchConToken(url, options = {}) {
-  const token = obtenerToken();
-  const headers = options.headers || {};
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-    console.log("[fetchConToken] Enviando token:", token);
-  } else {
-    console.warn("[fetchConToken] ❌ No hay token disponible");
-  }
-
-  // Detecta si el body es FormData. Si no lo es, setea Content-Type como JSON.
-  const isFormData = options.body instanceof FormData;
-  if (!isFormData) {
-    headers["Content-Type"] = headers["Content-Type"] || "application/json";
-  }
-
+export function decodeToken(token) {
   try {
-    const res = await fetch(url, {
-      ...options,
-      headers,
-    });
-    console.log(`[fetchConToken] Respuesta de ${url}:`, res.status);
-    return res;
-  } catch (err) {
-    console.error(`Error al llamar a ${url}:`, err);
-    return { ok: false };
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    // Validar que la parte del payload sea base64 válido
+    const payload = parts[1];
+    if (!payload) return null;
+    
+    // Decodificar base64
+    const decoded = atob(payload);
+    const parsed = JSON.parse(decoded);
+    
+    // Validar estructura mínima del JWT
+    if (!parsed || typeof parsed !== 'object') return null;
+    
+    return parsed;
+  } catch (e) {
+    console.warn('Error decodificando token:', e.message);
+    return null;
   }
+}
+
+/**
+ * Obtiene información del usuario desde el token actual.
+ * @returns {object|null} - Info del usuario o null
+ */
+export function getUserFromToken() {
+  const token = obtenerToken();
+  if (!token) return null;
+  
+  const payload = decodeToken(token);
+  if (!payload) return null;
+  
+  return {
+    username: payload.sub || payload.username,
+    rol: payload.rol,
+    exp: payload.exp
+  };
 }
