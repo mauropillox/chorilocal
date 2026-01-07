@@ -419,8 +419,8 @@ export default function LayoutApp({ onLogout }) {
             )}
           </div>
 
-          <button onClick={handleLogout} className="btn-logout" aria-label="Cerrar sesión">
-            🚪
+          <button onClick={handleLogout} className="btn-logout" aria-label="Cerrar sesión" title="Cerrar sesión">
+            🚪 Salir
           </button>
         </nav>
 
