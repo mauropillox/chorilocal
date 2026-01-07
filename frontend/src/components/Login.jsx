@@ -1,12 +1,14 @@
 // frontend/src/components/Login.jsx
 import { useState } from 'react';
 import { guardarToken } from '../auth';
+import { useAuth } from './AuthContext';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -14,36 +16,19 @@ export default function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data.detail || 'Error al iniciar sesión');
-        setLoading(false);
-        return;
-      }
-
-      if (!data || !data.access_token) {
-        setError('Respuesta inválida del servidor');
-        setLoading(false);
-        return;
-      }
-
-      guardarToken(data.access_token);
+      // Use AuthContext login to update user state
+      await login(username, password);
       try { window.dispatchEvent(new CustomEvent('auth_changed')); } catch(e){}
       onLoginSuccess(); // dispara setLogueado(true)
       setLoading(false);
     } catch (err) {
       console.error(err);
-      setError('Error de conexión');
+      // Handle specific error messages from backend
+      if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Error de conexión');
+      }
       setLoading(false);
     }
   };

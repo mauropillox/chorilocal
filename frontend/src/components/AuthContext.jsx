@@ -41,7 +41,8 @@ export const AuthProvider = ({ children }) => {
     });
 
     if (!res.ok) {
-      throw new Error("Credenciales inválidas");
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Credenciales inválidas");
     }
 
     const data = await res.json();
@@ -79,7 +80,7 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   // Return default values if context is not available (outside provider)
   if (!context) {
-    return { user: null, login: async () => {}, logout: () => {} };
+    return { user: null, login: async () => { }, logout: () => { } };
   }
   return context;
 };
