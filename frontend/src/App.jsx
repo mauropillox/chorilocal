@@ -5,6 +5,7 @@ import LayoutApp from './LayoutApp';
 import Login from './components/Login';
 import Register from './components/Register';
 import ErrorBoundary from './components/ErrorBoundary';
+import { AuthProvider } from './components/AuthContext';
 import { obtenerToken, borrarToken } from './auth';
 import './App.css';
 
@@ -95,8 +96,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router>
-        <Routes>
+      <AuthProvider>
+        <Router>
+          <Routes>
           {!logueado ? (
             <>
               <Route path="/" element={
@@ -131,8 +133,9 @@ function App() {
               <Route path="*" element={<Navigate to="/clientes" />} />
             </>
           )}
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

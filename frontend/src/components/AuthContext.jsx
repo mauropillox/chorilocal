@@ -75,4 +75,11 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  // Return default values if context is not available (outside provider)
+  if (!context) {
+    return { user: null, login: async () => {}, logout: () => {} };
+  }
+  return context;
+};
