@@ -19,6 +19,7 @@ import ConnectionStatus from './components/ConnectionStatus';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import './App.css';
 import { borrarToken } from './auth';
+import { useAuth } from './components/AuthContext';
 import ToastContainer from './components/ToastContainer';
 import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
@@ -38,6 +39,8 @@ const PageLoader = () => (
 export default function LayoutApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.rol === 'admin';
   const [menuOpen, setMenuOpen] = useState(false);
   const [ofertasCount, setOfertasCount] = useState(0);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -380,36 +383,40 @@ export default function LayoutApp({ onLogout }) {
               <span className="nav-text">Historial</span>
             </Link>
 
-            <span className="nav-separator">|</span>
+            {isAdmin && (
+              <>
+                <span className="nav-separator">|</span>
 
-            {/* Grupo Análisis */}
-            <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">📊</span>
-              <span className="nav-text">Dashboard</span>
-            </Link>
+                {/* Grupo Análisis - Solo Admin */}
+                <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">📊</span>
+                  <span className="nav-text">Dashboard</span>
+                </Link>
 
-            {/* Grupo Promociones */}
-            <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">🎁</span>
-              <span className="nav-text">Ofertas</span>
-              {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
-            </Link>
-            <Link to="/templates" className={`nav-link ${isActive('/templates') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">🔄</span>
-              <span className="nav-text">Recurrentes</span>
-            </Link>
+                {/* Grupo Promociones - Solo Admin */}
+                <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">🎁</span>
+                  <span className="nav-text">Ofertas</span>
+                  {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
+                </Link>
+                <Link to="/templates" className={`nav-link ${isActive('/templates') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">🔄</span>
+                  <span className="nav-text">Recurrentes</span>
+                </Link>
 
-            <span className="nav-separator">|</span>
+                <span className="nav-separator">|</span>
 
-            {/* Grupo Admin (compacto) */}
-            <Link to="/categorias" className={`nav-link ${isActive('/categorias') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">🏷️</span>
-              <span className="nav-text">Categorías</span>
-            </Link>
-            <Link to="/usuarios" className={`nav-link ${isActive('/usuarios') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">⚙️</span>
-              <span className="nav-text">Admin</span>
-            </Link>
+                {/* Grupo Admin (compacto) - Solo Admin */}
+                <Link to="/categorias" className={`nav-link ${isActive('/categorias') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">🏷️</span>
+                  <span className="nav-text">Categorías</span>
+                </Link>
+                <Link to="/usuarios" className={`nav-link ${isActive('/usuarios') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">⚙️</span>
+                  <span className="nav-text">Admin</span>
+                </Link>
+              </>
+            )}
           </div>
 
           <button onClick={handleLogout} className="btn-logout" aria-label="Cerrar sesión">
@@ -419,7 +426,7 @@ export default function LayoutApp({ onLogout }) {
 
         {/* Breadcrumb / ubicación actual */}
         <div className="breadcrumb">
-          <span className="breadcrumb-home" onClick={() => navigate('/dashboard')}>🏠 Inicio</span>
+          <span className="breadcrumb-home" onClick={() => navigate(isAdmin ? '/dashboard' : '/clientes')}>🏠 Inicio</span>
           <span className="breadcrumb-sep">›</span>
           <span className="breadcrumb-current">
             {location.pathname === '/clientes' && '👥 Clientes'}
@@ -436,8 +443,8 @@ export default function LayoutApp({ onLogout }) {
           </span>
         </div>
 
-        {/* Sub-navegación para herramientas de análisis (visible cuando está en dashboard/reportes/precios) */}
-        {['/dashboard', '/reportes', '/listas-precios'].includes(location.pathname) && (
+        {/* Sub-navegación para herramientas de análisis (visible solo para admin cuando está en dashboard/reportes/precios) */}
+        {isAdmin && ['/dashboard', '/reportes', '/listas-precios'].includes(location.pathname) && (
           <div className="sub-nav" style={{
             display: 'flex',
             gap: '0.5rem',
@@ -461,20 +468,25 @@ export default function LayoutApp({ onLogout }) {
           <ToastContainer />
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/offline-queue" element={<OfflineQueue />} />
+              {/* Rutas para todos los usuarios */}
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/historial" element={<HistorialPedidos />} />
-              <Route path="/ofertas" element={<Ofertas />} />
-              <Route path="/reportes" element={<Reportes />} />
-              <Route path="/listas-precios" element={<ListasPrecios />} />
-              <Route path="/templates" element={<Templates />} />
-              <Route path="/usuarios" element={<Usuarios />} />
-              <Route path="/categorias" element={<Categorias />} />
               <Route path="/cambiar-password" element={<CambiarPassword onClose={() => navigate(-1)} />} />
-              <Route path="*" element={<Navigate to="/dashboard" />} />
+
+              {/* Rutas solo para Admin */}
+              <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/clientes" />} />
+              <Route path="/offline-queue" element={isAdmin ? <OfflineQueue /> : <Navigate to="/clientes" />} />
+              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/clientes" />} />
+              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/clientes" />} />
+              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/clientes" />} />
+              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/clientes" />} />
+              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/clientes" />} />
+              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/clientes" />} />
+
+              {/* Ruta por defecto según rol */}
+              <Route path="*" element={<Navigate to={isAdmin ? "/dashboard" : "/clientes"} />} />
             </Routes>
           </Suspense>
         </section>
