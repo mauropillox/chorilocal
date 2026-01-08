@@ -225,27 +225,18 @@ app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 
 # --- Static File Serving for Uploads ---
-# Mount /media/uploads to serve uploaded images
-# On Render, use same base directory as DB_PATH for persistent storage
-DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
-if ENVIRONMENT == "production":
-    # Use the same base directory as the database for persistent storage
-    db_dir = os.path.dirname(DB_PATH)
-    UPLOAD_DIR = os.path.join(db_dir, "uploads")
-else:
+# NOTE: In production on Render, we use base64 data URLs stored in the database
+# instead of filesystem storage (Render's filesystem is ephemeral).
+# This static mount is only used for local development.
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+if ENVIRONMENT != "production":
     UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "data", "uploads")
-
-# Create upload directory if it doesn't exist
-try:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-except Exception as e:
-    logger.warning("upload_dir_creation", message=f"Could not create upload directory: {e}")
-
-# Only mount if directory exists
-if os.path.exists(UPLOAD_DIR):
-    app.mount("/media/uploads", StaticFiles(directory=UPLOAD_DIR), name="media")
-else:
-    logger.warning("upload_dir_missing", message=f"Upload directory not found: {UPLOAD_DIR}")
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        if os.path.exists(UPLOAD_DIR):
+            app.mount("/media/uploads", StaticFiles(directory=UPLOAD_DIR), name="media")
+    except Exception as e:
+        logger.warning("upload_dir_creation", message=f"Could not create upload directory: {e}")
 
 # Backward-compatible routes without /api prefix (for legacy clients/tests)
 app.include_router(auth.router, tags=["Autenticación (Legacy)"])

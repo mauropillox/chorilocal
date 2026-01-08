@@ -165,9 +165,11 @@ export default function Usuarios() {
     return usuarios.filter(u => {
       const matchBusqueda = !busqueda || u.username.toLowerCase().includes(busqueda.toLowerCase());
       const matchRol = !filtroRol || u.rol === filtroRol;
+      // Handle both boolean (true/false) and number (1/0) for activo
+      const isActive = u.activo === true || u.activo === 1;
       const matchEstado = filtroEstado === '' ||
-        (filtroEstado === 'activo' && u.activo === 1) ||
-        (filtroEstado === 'inactivo' && u.activo !== 1);
+        (filtroEstado === 'activo' && isActive) ||
+        (filtroEstado === 'inactivo' && !isActive);
       return matchBusqueda && matchRol && matchEstado;
     });
   }, [usuarios, busqueda, filtroRol, filtroEstado]);
@@ -206,7 +208,7 @@ export default function Usuarios() {
           <div className="stat-label">Total Usuarios</div>
         </div>
         <div className="stat-card-success">
-          <div className="stat-value">{usuarios.filter(u => u.activo === 1).length}</div>
+          <div className="stat-value">{usuarios.filter(u => u.activo === true || u.activo === 1).length}</div>
           <div className="stat-label">Activos</div>
         </div>
         <div className="stat-card-warning">
@@ -294,12 +296,12 @@ export default function Usuarios() {
                     </select>
                   </td>
                   <td>
-                    <span className={user.activo === 1 ? 'pill-success' : 'pill-danger'}>
-                      {user.activo === 1 ? '✓ Activo' : '✗ Inactivo'}
+                    <span className={(user.activo === true || user.activo === 1) ? 'pill-success' : 'pill-danger'}>
+                      {(user.activo === true || user.activo === 1) ? '✓ Activo' : '✗ Inactivo'}
                     </span>
                   </td>
                   <td className="text-xs text-muted">
-                    {formatDate(user.last_login)}
+                    {formatDate(user.ultimo_login || user.last_login)}
                   </td>
                   <td className="text-center">
                     <div className="flex gap-2 justify-center">
@@ -313,11 +315,11 @@ export default function Usuarios() {
                       </button>
                       <button
                         onClick={() => toggleActivo(user)}
-                        className={user.activo === 1 ? 'btn-warning' : 'btn-success'}
+                        className={(user.activo === true || user.activo === 1) ? 'btn-warning' : 'btn-success'}
                         style={{ padding: '0.375rem 0.75rem', minHeight: 'auto' }}
-                        title={user.activo === 1 ? 'Desactivar' : 'Activar'}
+                        title={(user.activo === true || user.activo === 1) ? 'Desactivar' : 'Activar'}
                       >
-                        {user.activo === 1 ? '🚫' : '✓'}
+                        {(user.activo === true || user.activo === 1) ? '🚫' : '✓'}
                       </button>
                       <button
                         onClick={() => setConfirmDelete({ open: true, user })}

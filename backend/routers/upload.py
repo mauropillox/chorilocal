@@ -4,32 +4,21 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import os
 import uuid
-import shutil
+import base64
 
 from deps import get_current_user, limiter, RATE_LIMIT_WRITE
 
 router = APIRouter()
 
-# Upload directory - use same base directory as DB_PATH for persistence on Render
-# On Render, DB_PATH=/etc/secrets/ventas.db, so uploads go to /etc/secrets/uploads/
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
-
-if ENVIRONMENT == "production":
-    # Use the same base directory as the database for persistent storage
-    db_dir = os.path.dirname(DB_PATH)
-    UPLOAD_DIR = os.path.join(db_dir, "uploads")
-else:
-    UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploads")
-
-# Try to ensure upload directory exists - but don't fail if we can't create it at import time
-try:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-except Exception:
-    pass  # Will fail at upload time with proper error message
-
-# Allowed file extensions
+# Allowed file extensions and MIME types
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MIME_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg", 
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp"
+}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 
@@ -46,7 +35,11 @@ async def upload_file(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Upload an image file and return the URL"""
+    """Upload an image file and return a base64 data URL.
+    
+    On Render.com, filesystem is ephemeral so we return the image as a 
+    base64 data URL that can be stored directly in the database.
+    """
     
     # Validate file type
     if not file.filename:
@@ -66,19 +59,12 @@ async def upload_file(
             detail=f"El archivo es demasiado grande. Máximo: {MAX_FILE_SIZE // (1024*1024)}MB"
         )
     
-    # Generate unique filename
+    # Get MIME type
     ext = os.path.splitext(file.filename)[1].lower()
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    mime_type = MIME_TYPES.get(ext, "image/jpeg")
     
-    # Save file
-    try:
-        with open(file_path, "wb") as f:
-            f.write(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al guardar archivo: {str(e)}")
+    # Convert to base64 data URL
+    b64_content = base64.b64encode(content).decode('utf-8')
+    data_url = f"data:{mime_type};base64,{b64_content}"
     
-    # Return URL path (will be served by /media/uploads/)
-    url = f"/media/uploads/{unique_filename}"
-    
-    return {"url": url, "filename": unique_filename}
+    return {"url": data_url, "filename": file.filename, "size": len(content)}
