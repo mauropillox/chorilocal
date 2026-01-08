@@ -35,6 +35,9 @@
 | `BACKUP_RETAIN_COUNT` | Backups to keep | `10` |
 | `BACKUP_TIME_HOUR` | Hour for PC-aligned backup | `22` |
 | `BACKUP_TIMEZONE` | Timezone for aligned backup | `America/Montevideo` |
+| `RATE_LIMIT_ADMIN` | Admin endpoint rate limit | `20/minute` |
+
+**Note:** Environment validation checks SECRET_KEY (min 32 chars), ADMIN_PASSWORD (min 8 chars), ENVIRONMENT ("production"), and CORS_ORIGINS (non-empty) on startup. Weak values cause startup failure.
 
 ---
 
@@ -87,6 +90,40 @@ curl "https://api.pedidosfriosur.com/api/admin/migrations" \
 curl -X POST "https://api.pedidosfriosur.com/api/admin/migrations/run" \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+---
+
+## Delete Operations Safety
+
+### Delete Confirmation Requirement
+All main entity deletes (productos, clientes, categorias) require explicit confirmation to prevent accidental data loss:
+
+**Backend Enforcement:**
+- DELETE requests must include `X-Confirm-Delete: true` header
+- Returns 400 error if header missing or incorrect
+
+**Frontend Workflow:**
+1. User clicks delete button
+2. Frontend calls GET `/api/admin/delete-impact/{entity}/{id}` to preview impact
+3. Shows confirmation dialog with impact details (e.g., "5 pedidos affected")
+4. If user confirms, sends DELETE request with `X-Confirm-Delete: true` header
+
+**Example (Manual Delete via API):**
+```bash
+# 1. Preview impact first
+curl "https://api.pedidosfriosur.com/api/admin/delete-impact/producto/123" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 2. If safe, delete with confirmation header
+curl -X DELETE "https://api.pedidosfriosur.com/api/productos/123" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Confirm-Delete: true"
+```
+
+**Entities with confirmation:**
+- `/api/productos/{id}` - checks for detalles_pedido references
+- `/api/clientes/{id}` - checks for pedidos references
+- `/api/categorias/{id}` - checks for productos references
 
 ---
 

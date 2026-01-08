@@ -41,8 +41,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # --- Rate Limiting Configuration ---
+# Stricter limits for sensitive operations
 RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
 RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "5/minute")
+RATE_LIMIT_ADMIN = os.getenv("RATE_LIMIT_ADMIN", "20/minute")  # Admin operations
 RATE_LIMIT_READ = os.getenv("RATE_LIMIT_READ", "100/minute")
 RATE_LIMIT_WRITE = os.getenv("RATE_LIMIT_WRITE", "30/minute")
 
@@ -132,12 +134,18 @@ def get_oficina_or_admin(user: dict = Depends(get_current_user)) -> dict:
 
 
 def validate_production_secrets():
-    """Validate that all required secrets are set for production"""
+    """
+    Validate that all required environment variables are set for production.
+    Fails fast with clear error messages if critical configuration is missing or weak.
+    """
     from os import getenv
     import db
     
     required_vars = {
-        "SECRET_KEY": "JWT signing key",
+        "SECRET_KEY": "JWT signing key (min 32 chars)",
+        "ADMIN_PASSWORD": "Initial admin user password",
+        "ENVIRONMENT": "Runtime environment (must be 'production')",
+        "CORS_ORIGINS": "Allowed CORS origins (comma-separated URLs)"
     }
     
     # Only require DATABASE_URL if using PostgreSQL
@@ -146,26 +154,53 @@ def validate_production_secrets():
     
     missing = []
     weak_secrets = []
+    config_errors = []
     
     for var, description in required_vars.items():
         value = getenv(var)
+        
+        # Check for missing values
         if not value:
             missing.append(f"{var} ({description})")
-        elif var == "SECRET_KEY":
-            # Check for weak development keys
-            if value in ["a_random_secret_key_for_development", "test-secret", "dev-key"]:
-                weak_secrets.append(f"{var} (using development default)")
+            continue
+        
+        # SECRET_KEY specific validation
+        if var == "SECRET_KEY":
+            weak_defaults = ["a_random_secret_key_for_development", "test-secret", "dev-key", "secret"]
+            if value in weak_defaults:
+                weak_secrets.append(f"{var} (using weak/development default)")
             elif len(value) < 32:
-                weak_secrets.append(f"{var} (too short, minimum 32 characters)")
+                weak_secrets.append(f"{var} (too short, minimum 32 characters required)")
+        
+        # ADMIN_PASSWORD specific validation
+        elif var == "ADMIN_PASSWORD":
+            if len(value) < 8:
+                weak_secrets.append(f"{var} (too short, minimum 8 characters recommended)")
+        
+        # ENVIRONMENT specific validation
+        elif var == "ENVIRONMENT":
+            if value != "production":
+                config_errors.append(f"{var} (must be 'production' but is '{value}')")
+        
+        # CORS_ORIGINS specific validation
+        elif var == "CORS_ORIGINS":
+            origins = [o.strip() for o in value.split(",") if o.strip()]
+            if not origins:
+                config_errors.append(f"{var} (empty or invalid)")
+            elif any("localhost" in o for o in origins):
+                logger.warning(f"{var} contains localhost origins in production")
     
+    # Build error message with context
+    errors = []
     if missing:
-        raise RuntimeError(
-            f"CRITICAL: Missing required environment variables: {', '.join(missing)}"
-        )
-    
+        errors.append(f"Missing required variables: {', '.join(missing)}")
     if weak_secrets:
-        raise RuntimeError(
-            f"CRITICAL: Weak secrets detected: {', '.join(weak_secrets)}"
-        )
+        errors.append(f"Weak/insecure values: {', '.join(weak_secrets)}")
+    if config_errors:
+        errors.append(f"Configuration errors: {', '.join(config_errors)}")
     
-    logger.info("Production secrets validated successfully")
+    if errors:
+        error_msg = "Production environment validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise RuntimeError(error_msg)
+    
+    logger.info("Production environment validation passed")

@@ -62,7 +62,18 @@ async def actualizar_categoria(categoria_id: int, categoria: CategoriaCreate, cu
 
 
 @router.delete("/categorias/{categoria_id}", status_code=204)
-async def eliminar_categoria(categoria_id: int, current_user: dict = Depends(get_admin_user)):
+async def eliminar_categoria(
+    categoria_id: int,
+    request: Request,
+    current_user: dict = Depends(get_admin_user)
+):
+    # Require explicit confirmation header for delete operations
+    if request.headers.get("x-confirm-delete") != "true":
+        raise HTTPException(
+            status_code=400,
+            detail="Delete operation requires confirmation. Set X-Confirm-Delete: true header."
+        )
+    
     result = db.delete_categoria(categoria_id)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])

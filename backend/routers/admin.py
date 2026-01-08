@@ -16,7 +16,7 @@ from typing import List, Dict, Any
 import os
 
 import db
-from deps import get_admin_user, limiter, RATE_LIMIT_WRITE, RATE_LIMIT_READ
+from deps import get_admin_user, limiter, RATE_LIMIT_ADMIN, RATE_LIMIT_WRITE, RATE_LIMIT_READ
 from backup_scheduler import (
     create_backup_now, 
     list_backups, 
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 # ============================================================================
 
 @router.post("/backup-now")
-@limiter.limit(RATE_LIMIT_WRITE)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def trigger_backup(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -59,7 +59,7 @@ async def trigger_backup(
 
 
 @router.get("/backups")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_backups(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -80,7 +80,7 @@ async def get_backups(
 
 
 @router.get("/backups/{filename}")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def download_backup(
     request: Request,
     filename: str,
@@ -118,7 +118,7 @@ async def download_backup(
 
 
 @router.get("/backup-status")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_backup_status(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -148,7 +148,7 @@ async def get_backup_status(
 # ============================================================================
 
 @router.get("/migrations")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_migrations(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -160,7 +160,7 @@ async def get_migrations(
 
 
 @router.post("/migrations/run")
-@limiter.limit(RATE_LIMIT_WRITE)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def run_migrations(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -188,7 +188,7 @@ async def run_migrations(
 # ============================================================================
 
 @router.get("/system-info")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_system_info(
     request: Request,
     current_user: dict = Depends(get_admin_user)
@@ -240,7 +240,7 @@ async def get_system_info(
 # ============================================================================
 
 @router.get("/delete-impact/producto/{producto_id}")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_producto_delete_impact(
     request: Request,
     producto_id: int,
@@ -295,7 +295,7 @@ async def get_producto_delete_impact(
 
 
 @router.get("/delete-impact/cliente/{cliente_id}")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_cliente_delete_impact(
     request: Request,
     cliente_id: int,
@@ -344,7 +344,7 @@ async def get_cliente_delete_impact(
 
 
 @router.get("/delete-impact/categoria/{categoria_id}")
-@limiter.limit(RATE_LIMIT_READ)
+@limiter.limit(RATE_LIMIT_ADMIN)
 async def get_categoria_delete_impact(
     request: Request,
     categoria_id: int,

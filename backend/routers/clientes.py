@@ -63,7 +63,18 @@ async def actualizar_cliente(cliente_id: int, cliente: models.ClienteCreate, cur
 
 
 @router.delete("/clientes/{cliente_id}", status_code=204)
-async def eliminar_cliente(cliente_id: int, current_user: dict = Depends(get_admin_user)):
+async def eliminar_cliente(
+    cliente_id: int,
+    request: Request,
+    current_user: dict = Depends(get_admin_user)
+):
+    # Require explicit confirmation header for delete operations
+    if request.headers.get("x-confirm-delete") != "true":
+        raise HTTPException(
+            status_code=400,
+            detail="Delete operation requires confirmation. Set X-Confirm-Delete: true header."
+        )
+    
     with db.get_db_transaction() as (conn, cursor):
         cursor.execute("SELECT id FROM clientes WHERE id = ?", (cliente_id,))
         if cursor.fetchone() is None:
