@@ -236,6 +236,18 @@ app.include_router(templates.router, tags=["Templates (Legacy)"])
 app.include_router(tags.router, tags=["Tags (Legacy)"])
 
 
+# --- Startup Event ---
+@app.on_event("startup")
+async def startup_event():
+    """Run migrations and initialization on startup"""
+    try:
+        # Run one-time migration to fix localhost URLs
+        from migraciones.fix_localhost_urls import migrate_localhost_urls
+        migrate_localhost_urls()
+    except Exception as e:
+        logger.error("startup_migration_failed", error=str(e))
+
+
 # --- Root Endpoint ---
 @app.get("/")
 def root():
