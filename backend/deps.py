@@ -152,11 +152,18 @@ def validate_production_secrets():
         "SECRET_KEY": "JWT signing key (min 32 chars)",
     }
     
+    # In production, ADMIN_PASSWORD is critical (no default passwords)
+    if ENVIRONMENT == "production":
+        critical_vars["ADMIN_PASSWORD"] = "Admin user password (required in production)"
+    
     # Optional but recommended vars (warn only)
     recommended_vars = {
-        "ADMIN_PASSWORD": "Initial admin user password",
         "CORS_ORIGINS": "Allowed CORS origins (comma-separated URLs)"
     }
+    
+    # In dev/test, ADMIN_PASSWORD is recommended but not critical
+    if ENVIRONMENT != "production":
+        recommended_vars["ADMIN_PASSWORD"] = "Admin user password"
     
     # Only require DATABASE_URL if using PostgreSQL
     if db.USE_POSTGRES:
@@ -183,6 +190,14 @@ def validate_production_secrets():
                 weak_secrets.append(f"{var} (using weak/development default)")
             elif len(value) < 32:
                 weak_secrets.append(f"{var} (too short, minimum 32 characters required)")
+        
+        # ADMIN_PASSWORD validation in production
+        elif var == "ADMIN_PASSWORD":
+            weak_defaults = ["admin", "admin420", "password", "123456"]
+            if value in weak_defaults:
+                weak_secrets.append(f"{var} (using weak/default password)")
+            elif len(value) < 8:
+                weak_secrets.append(f"{var} (too short, minimum 8 characters required)")
     
     # Validate recommended vars (warn only, don't fail)
     for var, description in recommended_vars.items():

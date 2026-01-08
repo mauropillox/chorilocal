@@ -248,7 +248,21 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
             
             # Crear usuario admin usando ADMIN_PASSWORD del entorno
             from passlib.hash import bcrypt
-            admin_password = os.getenv("ADMIN_PASSWORD", "admin420")
+            environment = os.getenv("ENVIRONMENT", "development")
+            admin_password = os.getenv("ADMIN_PASSWORD")
+            
+            # In production, fail if ADMIN_PASSWORD not set (security requirement)
+            if environment == "production" and not admin_password:
+                raise HTTPException(
+                    status_code=500,
+                    detail="CRITICAL: ADMIN_PASSWORD must be set in production environment"
+                )
+            
+            # Fallback for development only
+            if not admin_password:
+                admin_password = "admin420"
+                logger.warning("Using default admin password - NOT FOR PRODUCTION")
+            
             admin_hash = bcrypt.hash(admin_password)
             
             cur.execute("""
