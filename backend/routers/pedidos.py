@@ -241,7 +241,8 @@ async def get_pedidos_creators(request: Request, current_user: dict = Depends(ge
             ORDER BY creado_por
         """)
         creators = cursor.fetchall()
-        return [{"username": c[0]} for c in creators]
+        # Return array of strings (not objects) - frontend expects ["admin", "user1", ...]
+        return [c[0] for c in creators]
 
 
 @router.get("/pedidos/export/csv")
