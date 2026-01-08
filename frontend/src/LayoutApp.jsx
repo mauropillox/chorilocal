@@ -42,7 +42,8 @@ export default function LayoutApp({ onLogout }) {
   const location = useLocation();
   const { user } = useAuth();
   // Role-based access: admin has full access, oficina and vendedor have limited tabs
-  const isAdmin = user?.rol === 'admin';
+  // Accept both 'admin' and 'administrador' roles for backwards compatibility
+  const isAdmin = user?.rol === 'admin' || user?.rol === 'administrador';
   const isOficina = user?.rol === 'oficina';
   const isVendedor = user?.rol === 'vendedor'; // Corrected from 'ventas'
 

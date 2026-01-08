@@ -9,7 +9,9 @@ export function RequireAdmin({ children }) {
     return <div className="p-4 text-gray-600">Cargando sesión...</div>;
   }
 
-  if (!user?.token || user.rol !== "admin") {
+  // Accept both 'admin' and 'administrador' roles
+  const isAdmin = user?.rol === "admin" || user?.rol === "administrador";
+  if (!user?.token || !isAdmin) {
     return <Navigate to="/login" replace />;
   }
 
