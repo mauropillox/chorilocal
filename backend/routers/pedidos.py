@@ -53,10 +53,9 @@ async def get_pedidos_antiguos(
 
 
 @router.post("/pedidos", response_model=models.Pedido)
-@router.post("/pedidos", response_model=models.Pedido)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_user: dict = Depends(get_current_user)):
-    if current_user["rol"] not in ["admin", "vendedor"]:
+    if current_user["rol"] not in ["admin", "vendedor", "administrador", "oficina"]:
         raise HTTPException(status_code=403, detail="No tienes permiso para crear pedidos")
 
     creado_por = current_user["username"]
@@ -114,7 +113,6 @@ async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_us
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al crear el pedido: {e}")
 
-@router.get("/pedidos", response_model=List[models.Pedido])
 @router.get("/pedidos", response_model=List[models.Pedido])
 async def get_pedidos(
     current_user: dict = Depends(get_current_user),
