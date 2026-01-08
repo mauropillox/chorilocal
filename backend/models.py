@@ -63,6 +63,7 @@ class User(BaseModel):
     username: str
     rol: str
     activo: bool = True
+    ultimo_login: Optional[str] = None
 
 class RolUpdate(BaseModel):
     rol: str
