@@ -27,6 +27,9 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # --- Validate Production Configuration ---
 if ENVIRONMENT == "production":
     db.validate_production_config()
+    # Validate required environment variables
+    from deps import validate_production_secrets
+    validate_production_secrets()
     logger.info("startup", message="Starting in PRODUCTION mode with PostgreSQL")
 else:
     logger.info("startup", message="Starting in DEVELOPMENT mode", environment=ENVIRONMENT)
@@ -36,9 +39,10 @@ app = FastAPI(
     title="Chorizaurio API",
     description="Gestión de pedidos y clientes de carnicería",
     version=API_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    # Disable docs in production for security
+    docs_url="/docs" if ENVIRONMENT != "production" else None,
+    redoc_url="/redoc" if ENVIRONMENT != "production" else None,
+    openapi_url="/openapi.json" if ENVIRONMENT != "production" else None
 )
 
 # --- Rate Limiting ---
@@ -187,10 +191,15 @@ async def request_logging_middleware(request: Request, call_next):
 @app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
-    if os.getenv("ENVIRONMENT") == "production":
+    if ENVIRONMENT == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Content-Type-Options"] = "nosniff" 
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # Remove server header for security
+        response.headers.pop("server", None)
     return response
 
 

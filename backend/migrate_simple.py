@@ -15,7 +15,7 @@ PG_CONFIG = {
     'host': 'localhost',
     'database': 'chorizaurio_db',
     'user': 'chorizaurio',
-    'password': os.getenv('PG_PASSWORD', 'chorizaurio123')
+    'password': os.getenv('PG_PASSWORD')
 }
 
 def log(message):

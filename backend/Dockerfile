@@ -14,7 +14,7 @@ RUN groupadd --gid 1000 appgroup && \
 WORKDIR /app
 
 # Copy the requirements.txt file into the container
-COPY requirements.txt /app/
+COPY requirements-prod.txt /app/requirements.txt
 
 # Install the dependencies including gunicorn for production
 RUN pip install --no-cache-dir -r requirements.txt gunicorn

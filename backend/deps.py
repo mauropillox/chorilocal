@@ -129,3 +129,39 @@ def get_oficina_or_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("rol") not in ["admin", "oficina", "administrador"]:
         raise HTTPException(status_code=403, detail="Acceso denegado. Solo administradores u oficina.")
     return user
+
+
+def validate_production_secrets():
+    """Validate that all required secrets are set for production"""
+    from os import getenv
+    
+    required_vars = {
+        "SECRET_KEY": "JWT signing key",
+        "DATABASE_URL": "PostgreSQL connection string",
+    }
+    
+    missing = []
+    weak_secrets = []
+    
+    for var, description in required_vars.items():
+        value = getenv(var)
+        if not value:
+            missing.append(f"{var} ({description})")
+        elif var == "SECRET_KEY":
+            # Check for weak development keys
+            if value in ["a_random_secret_key_for_development", "test-secret", "dev-key"]:
+                weak_secrets.append(f"{var} (using development default)")
+            elif len(value) < 32:
+                weak_secrets.append(f"{var} (too short, minimum 32 characters)")
+    
+    if missing:
+        raise RuntimeError(
+            f"CRITICAL: Missing required environment variables: {', '.join(missing)}"
+        )
+    
+    if weak_secrets:
+        raise RuntimeError(
+            f"CRITICAL: Weak secrets detected: {', '.join(weak_secrets)}"
+        )
+    
+    logger.info("Production secrets validated successfully")

@@ -66,7 +66,24 @@ def validate_production_config():
             raise RuntimeError(
                 "CRITICAL: psycopg2 not installed but required for production"
             )
-        logger.info("Production configuration validated: PostgreSQL enabled")
+        
+        # Validate database URL format
+        if not DATABASE_URL.startswith(('postgresql://', 'postgres://')):
+            raise RuntimeError(
+                "CRITICAL: DATABASE_URL must be a valid PostgreSQL connection string"
+            )
+        
+        # Validate connection pool settings
+        if PG_POOL_MIN_CONN < 1 or PG_POOL_MAX_CONN < PG_POOL_MIN_CONN:
+            raise RuntimeError(
+                f"CRITICAL: Invalid connection pool settings - "
+                f"min={PG_POOL_MIN_CONN}, max={PG_POOL_MAX_CONN}"
+            )
+        
+        logger.info(
+            f"Production configuration validated: PostgreSQL enabled - "
+            f"pool_min={PG_POOL_MIN_CONN}, pool_max={PG_POOL_MAX_CONN}"
+        )
 
 # Timezone Uruguay (UTC-3)
 URUGUAY_TZ = timezone(timedelta(hours=-3))

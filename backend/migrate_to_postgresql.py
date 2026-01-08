@@ -17,7 +17,7 @@ PG_CONFIG = {
     'port': os.getenv('PG_PORT', '5432'),
     'database': os.getenv('PG_DATABASE', 'chorizaurio_dev'),
     'user': os.getenv('PG_USER', 'chorizaurio'),
-    'password': os.getenv('PG_PASSWORD', 'chorizaurio123')
+    'password': os.getenv('PG_PASSWORD')
 }
 
 def log(message):

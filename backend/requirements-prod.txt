@@ -1,0 +1,39 @@
+# Production Requirements - Chorizaurio API
+# Excludes development and testing dependencies
+
+# Web Framework
+fastapi==0.115.12
+uvicorn==0.34.0
+
+# Security & Authentication
+passlib[bcrypt]==1.7.4
+python-jose==3.4.0
+bcrypt==4.0.1
+
+# Data Validation
+pydantic==2.11.0
+pydantic-core==2.33.0
+
+# Crypto Dependencies
+pyasn1==0.4.8
+ecdsa==0.19.1
+rsa==4.9
+six==1.17.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# File Handling
+python-multipart==0.0.20
+reportlab==4.2.5
+openpyxl==3.1.2
+
+# Database - PostgreSQL for Production
+psycopg2-binary==2.9.9
+
+# Monitoring & Logging
+sentry-sdk[fastapi]==1.38.0
+structlog==24.1.0
+
+# Production Server (already included in Dockerfile)
+# gunicorn - installed separately in Docker
