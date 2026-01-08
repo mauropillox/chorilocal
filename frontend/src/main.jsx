@@ -7,6 +7,30 @@ import { initTheme } from './utils'
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
 
+// Sentry for error tracking
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+if (SENTRY_DSN) {
+  try {
+    import("@sentry/react").then((Sentry) => {
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        integrations: [
+          new Sentry.Replay({
+            maskAllText: false,
+            blockAllMedia: false,
+          }),
+        ],
+        tracesSampleRate: 0.1,
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+        environment: import.meta.env.MODE,
+      });
+    });
+  } catch (e) {
+    console.warn("Sentry not available");
+  }
+}
+
 // Make sure other global polyfills are available
 import process from 'process';
 window.process = process;
