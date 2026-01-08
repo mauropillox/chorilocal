@@ -31,7 +31,7 @@ async def migrate_to_postgresql(admin_user: dict = Depends(get_admin_user)):
         logger.info("migration_start", user=admin_user["username"])
         
         # Ejecutar script de migración
-        script_path = os.path.join(os.path.dirname(__file__), "migrate_production.py")
+        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "migrate_production.py")
         result = subprocess.run(
             [sys.executable, script_path],
             capture_output=True,
