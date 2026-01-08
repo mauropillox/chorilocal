@@ -47,15 +47,81 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
         if not db.is_postgres():
             raise HTTPException(status_code=400, detail="Bootstrap only available for PostgreSQL")
         
-        # Crear tablas
-        db.init_db()
-        logger.info("bootstrap_tables_created")
-        
-        # Verificar si ya hay usuarios
-        with db.get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM usuarios")
-            user_count = cursor.fetchone()[0]
+        # Crear tablas directamente para PostgreSQL
+        conn = db.conectar()
+        try:
+            cur = conn.cursor()
+            
+            # Verificar si ya hay tablas
+            cur.execute("""
+                SELECT COUNT(*) FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+            """)
+            table_count = cur.fetchone()[0]
+            
+            if table_count == 0:
+                # Crear todas las tablas necesarias
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS clientes (
+                        id SERIAL PRIMARY KEY,
+                        nombre TEXT NOT NULL,
+                        telefono TEXT,
+                        direccion TEXT,
+                        zona TEXT
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS productos (
+                        id SERIAL PRIMARY KEY,
+                        nombre TEXT NOT NULL,
+                        precio REAL NOT NULL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS categorias (
+                        id SERIAL PRIMARY KEY,
+                        nombre TEXT NOT NULL UNIQUE,
+                        descripcion TEXT,
+                        orden INTEGER DEFAULT 0,
+                        activa BOOLEAN DEFAULT TRUE
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS usuarios (
+                        id SERIAL PRIMARY KEY,
+                        nombre_usuario TEXT NOT NULL UNIQUE,
+                        password_hash TEXT NOT NULL,
+                        rol TEXT DEFAULT 'vendedor',
+                        nombre TEXT,
+                        activo BOOLEAN DEFAULT TRUE
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS pedidos (
+                        id SERIAL PRIMARY KEY,
+                        cliente_id INTEGER REFERENCES clientes(id),
+                        fecha TEXT,
+                        estado TEXT DEFAULT 'pendiente',
+                        vendedor_id INTEGER REFERENCES usuarios(id),
+                        notas TEXT
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS detalles_pedido (
+                        id SERIAL PRIMARY KEY,
+                        pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
+                        producto_id INTEGER REFERENCES productos(id),
+                        cantidad INTEGER NOT NULL,
+                        precio_unitario REAL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS revoked_tokens (
+                        id SERIAL PRIMARY KEY,
+                        jti TEXT NOT NULL UNIQUE,
+                        revoked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                conn.commit()
+                logger.info("bootstrap_tables_created")
+            
+            # Verificar si ya hay usuarios
+            cur.execute("SELECT COUNT(*) FROM usuarios")
+            user_count = cur.fetchone()[0]
             
             if user_count > 0:
                 return JSONResponse({
@@ -68,11 +134,13 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
             from werkzeug.security import generate_password_hash
             admin_hash = generate_password_hash("admin420")
             
-            cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, role, nombre, activo)
+            cur.execute("""
+                INSERT INTO usuarios (nombre_usuario, password_hash, rol, nombre, activo)
                 VALUES (%s, %s, %s, %s, %s)
             """, ("admin", admin_hash, "admin", "Administrador", True))
             conn.commit()
+        finally:
+            conn.close()
         
         logger.info("bootstrap_admin_created")
         
