@@ -7,15 +7,18 @@ import { initTheme } from './utils'
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
 
-// Sentry for error tracking
+// Sentry for error tracking (optional)
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
-if (SENTRY_DSN) {
-  try {
-    import("@sentry/react").then((Sentry) => {
-      Sentry.init({
+if (SENTRY_DSN && typeof window !== 'undefined') {
+  // Use dynamic import with proper error handling
+  const loadSentry = async () => {
+    try {
+      const { init, browserTracingIntegration, replayIntegration } = await import("@sentry/react");
+      init({
         dsn: SENTRY_DSN,
         integrations: [
-          new Sentry.Replay({
+          browserTracingIntegration(),
+          replayIntegration({
             maskAllText: false,
             blockAllMedia: false,
           }),
@@ -25,10 +28,11 @@ if (SENTRY_DSN) {
         replaysOnErrorSampleRate: 1.0,
         environment: import.meta.env.MODE,
       });
-    });
-  } catch (e) {
-    console.warn("Sentry not available");
-  }
+    } catch (e) {
+      console.warn("Sentry not available:", e.message);
+    }
+  };
+  loadSentry();
 }
 
 // Make sure other global polyfills are available

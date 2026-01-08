@@ -449,49 +449,49 @@ export default function Productos() {
     if (filePreview && filePreview.startsWith('blob:')) {
       URL.revokeObjectURL(filePreview);
     }
-    
+
     // Crear preview inmediato
     const previewUrl = URL.createObjectURL(file);
     setFilePreview(previewUrl);
     setFileUploading(true);
-    
+
     try {
       const fd = new FormData();
       fd.append('file', file);
-      
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/upload`, { 
-        method: 'POST', 
+
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/upload`, {
+        method: 'POST',
         body: fd,
         // No establecer Content-Type, el browser lo hace automáticamente con boundary
       });
-      
+
       if (!res.ok) {
         const errorData = await res.text();
         console.error('Upload error:', errorData);
         toastError(`Error al subir imagen: ${res.status}`);
         return;
       }
-      
+
       const data = await res.json();
       let url = data.url || data.path || '';
       if (url.startsWith('/')) {
         url = `${import.meta.env.VITE_API_URL}${url}`;
       }
 
-      if (productoId) { 
-        await actualizarImagenProducto(productoId, url); 
-        toastSuccess('✅ Imagen actualizada correctamente'); 
-      } else { 
-        setImagenUrl(url); 
+      if (productoId) {
+        await actualizarImagenProducto(productoId, url);
+        toastSuccess('✅ Imagen actualizada correctamente');
+      } else {
+        setImagenUrl(url);
         toastSuccess('✅ Imagen cargada correctamente');
       }
       setUrlError('');
-      
-    } catch (err) { 
+
+    } catch (err) {
       console.error('Upload error:', err);
-      toastError('❌ Error de conexión al subir imagen'); 
-    } finally { 
-      setFileUploading(false); 
+      toastError('❌ Error de conexión al subir imagen');
+    } finally {
+      setFileUploading(false);
     }
   };
 
@@ -699,13 +699,12 @@ export default function Productos() {
 
           <div className="form-group">
             <label>Imagen (Drag & Drop o Click)</label>
-            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer drag-zone ${
-              dragActive ? 'drag-active' : 'border-gray-300 hover:border-gray-400'
-            } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
-              onDragEnter={handleDrag} 
-              onDragLeave={handleDrag} 
+            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer drag-zone ${dragActive ? 'drag-active' : 'border-gray-300 hover:border-gray-400'
+              } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
               onDragOver={handleDrag}
-              onDrop={(e) => handleDrop(e)} 
+              onDrop={(e) => handleDrop(e)}
               onClick={() => !fileUploading && fileInputRef.current?.click()}>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               <div className="text-4xl mb-2">{dragActive ? '📤' : '📷'}</div>
@@ -1052,18 +1051,18 @@ export default function Productos() {
                                 alt={p?.nombre || 'Producto'}
                                 className="product-image"
                                 loading="lazy"
-                                onError={(e) => { 
-                                  e.target.onerror = null; 
-                                  e.target.style.display = 'none'; 
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.style.display = 'none';
                                   if (e.target.nextElementSibling) {
                                     e.target.nextElementSibling.style.display = 'flex';
                                   }
                                 }}
                               />
                             ) : null}
-                            <div 
-                              className={`product-image-placeholder ${dragActive ? 'border-primary' : ''}`} 
-                              style={{ 
+                            <div
+                              className={`product-image-placeholder ${dragActive ? 'border-primary' : ''}`}
+                              style={{
                                 display: p?.imagen_url ? 'none' : 'flex',
                                 borderColor: dragActive ? 'var(--color-primary)' : undefined,
                                 backgroundColor: dragActive ? 'var(--color-bg-accent)' : undefined
@@ -1072,11 +1071,10 @@ export default function Productos() {
                               {dragActive ? '📤' : '📦'}
                             </div>
                             <div
-                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg ${
-                                dragActive ? 'opacity-100 bg-primary/20' : ''
-                              }`}
-                              style={{ 
-                                background: dragActive ? 
+                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg ${dragActive ? 'opacity-100 bg-primary/20' : ''
+                                }`}
+                              style={{
+                                background: dragActive ?
                                   'linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1))' :
                                   'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))'
                               }}
@@ -1230,9 +1228,8 @@ export default function Productos() {
                             </div>
 
                             <label
-                              className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer drag-zone ${
-                                dragActive ? 'drag-active' : ''
-                              } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                              className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer drag-zone ${dragActive ? 'drag-active' : ''
+                                } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
                               style={{
                                 backgroundColor: 'var(--color-bg-tertiary, var(--color-bg-secondary))',
                                 border: '2px solid var(--color-border)',

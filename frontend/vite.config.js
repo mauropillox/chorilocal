@@ -24,6 +24,14 @@ export default defineConfig({
           'vendor': ['react', 'react-dom', 'react-select'],
           'utils': ['./src/utils.js', './src/auth.js']
         }
+      },
+      // Handle optional dependencies
+      external: (id) => {
+        // Make Sentry optional for build
+        if (id === '@sentry/react' && !process.env.VITE_SENTRY_DSN) {
+          return true;
+        }
+        return false;
       }
     },
     // Optimize bundle

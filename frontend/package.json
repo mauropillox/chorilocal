@@ -10,8 +10,6 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@sentry/react": "^10.32.1",
-    "@sentry/tracing": "^7.120.4",
     "buffer": "^6.0.3",
     "jspdf": "^3.0.1",
     "react": "^18.0.0",
@@ -20,6 +18,10 @@
     "react-select": "^5.10.1",
     "vite": "^4.5.10",
     "vite-plugin-pwa": "^0.21.2"
+  },
+  "optionalDependencies": {
+    "@sentry/react": "^10.32.1",
+    "@sentry/tracing": "^7.120.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
