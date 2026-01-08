@@ -4,6 +4,7 @@ Chorizaurio API - Main Application Entry Point
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
@@ -15,7 +16,7 @@ import traceback
 import db
 import models
 from deps import limiter
-from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -220,7 +221,27 @@ app.include_router(estadisticas.router, prefix="/api", tags=["Estadísticas"])
 app.include_router(usuarios.router, prefix="/api", tags=["Usuarios"])
 app.include_router(templates.router, prefix="/api", tags=["Templates"])
 app.include_router(tags.router, prefix="/api", tags=["Tags"])
+app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
+
+# --- Static File Serving for Uploads ---
+# Mount /media/uploads to serve uploaded images
+if ENVIRONMENT == "production":
+    UPLOAD_DIR = "/data/uploads"
+else:
+    UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "data", "uploads")
+
+# Create upload directory if it doesn't exist
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except Exception as e:
+    logger.warning("upload_dir_creation", message=f"Could not create upload directory: {e}")
+
+# Only mount if directory exists
+if os.path.exists(UPLOAD_DIR):
+    app.mount("/media/uploads", StaticFiles(directory=UPLOAD_DIR), name="media")
+else:
+    logger.warning("upload_dir_missing", message=f"Upload directory not found: {UPLOAD_DIR}")
 
 # Backward-compatible routes without /api prefix (for legacy clients/tests)
 app.include_router(auth.router, tags=["Autenticación (Legacy)"])
@@ -234,18 +255,21 @@ app.include_router(estadisticas.router, tags=["Estadísticas (Legacy)"])
 app.include_router(usuarios.router, tags=["Usuarios (Legacy)"])
 app.include_router(templates.router, tags=["Templates (Legacy)"])
 app.include_router(tags.router, tags=["Tags (Legacy)"])
+app.include_router(upload.router, tags=["Upload (Legacy)"])
 
 
 # --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
     """Run migrations and initialization on startup"""
+    logger.info("startup_migration", message="Running startup migrations...")
     try:
         # Run one-time migration to fix localhost URLs
         from migraciones.fix_localhost_urls import migrate_localhost_urls
         migrate_localhost_urls()
+        logger.info("startup_migration", message="Startup migrations completed")
     except Exception as e:
-        logger.error("startup_migration_failed", error=str(e))
+        logger.error("startup_migration_failed", error=str(e), exception_type=type(e).__name__)
 
 
 # --- Root Endpoint ---
