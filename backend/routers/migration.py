@@ -246,9 +246,10 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
             conn.commit()
             logger.info("bootstrap_tables_created")
             
-            # Crear usuario admin
+            # Crear usuario admin usando ADMIN_PASSWORD del entorno
             from passlib.hash import bcrypt
-            admin_hash = bcrypt.hash("admin420")
+            admin_password = os.getenv("ADMIN_PASSWORD", "admin420")
+            admin_hash = bcrypt.hash(admin_password)
             
             cur.execute("""
                 INSERT INTO usuarios (username, password_hash, rol, nombre, activo)
@@ -264,10 +265,10 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
             "status": "success",
             "message": "Database bootstrapped with COMPLETE schema",
             "admin_user": "admin",
-            "admin_password": "admin420",
+            "admin_password": "(set via ADMIN_PASSWORD env var)",
             "tables_created": 16,
             "next_steps": [
-                "Login with admin/admin420",
+                "Login with admin and the password from ADMIN_PASSWORD env var",
                 "The database is empty - add products and clients manually or import data"
             ]
         })
