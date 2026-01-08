@@ -131,8 +131,8 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
                 })
             
             # Crear usuario admin
-            from werkzeug.security import generate_password_hash
-            admin_hash = generate_password_hash("admin420")
+            from passlib.hash import bcrypt
+            admin_hash = bcrypt.hash("admin420")
             
             cur.execute("""
                 INSERT INTO usuarios (nombre_usuario, password_hash, rol, nombre, activo)
