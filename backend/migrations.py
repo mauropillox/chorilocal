@@ -27,8 +27,9 @@ from typing import Callable, Dict, List, Optional
 from functools import wraps
 
 import db
+from logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Registry of all migrations
 _migrations: Dict[str, Callable] = {}
@@ -94,22 +95,22 @@ def run_pending_migrations() -> List[str]:
         pending = sorted([name for name in _migrations.keys() if name not in already_done])
         
         if not pending:
-            logger.info("migrations_none_pending")
+            logger.info("No pending migrations")
             return executed
         
-        logger.info("migrations_pending", count=len(pending), names=pending)
+        logger.info(f"Found {len(pending)} pending migrations: {pending}")
         
         for name in pending:
             migration_func = _migrations[name]
             try:
-                logger.info("migration_running", name=name)
+                logger.info(f"Running migration: {name}")
                 migration_func(cursor)
                 _mark_migration_executed(cursor, name, success=True)
                 executed.append(name)
-                logger.info("migration_completed", name=name)
+                logger.info(f"Completed migration: {name}")
             except Exception as e:
                 error_msg = str(e)
-                logger.error("migration_failed", name=name, error=error_msg)
+                logger.error(f"Migration {name} failed: {error_msg}")
                 _mark_migration_executed(cursor, name, success=False, error=error_msg)
                 raise RuntimeError(f"Migration '{name}' failed: {error_msg}") from e
     
@@ -181,11 +182,11 @@ def migrate_001_ensure_activo_default(cursor):
     if 'activo' in columns:
         # Column exists - just ensure new users get activo=1 by default
         # We do NOT UPDATE existing users - that would reactivate disabled ones
-        logger.info("migration_001", message="activo column exists, schema is correct")
+        logger.info("migration_001: activo column exists, schema is correct")
     else:
         # Column doesn't exist - add it (unlikely but safe)
         cursor.execute("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1")
-        logger.info("migration_001", message="Added activo column with default 1")
+        logger.info("migration_001: Added activo column with default 1")
 
 
 @register_migration("002_ensure_last_login_column")
@@ -196,9 +197,9 @@ def migrate_002_ensure_last_login(cursor):
     
     if 'last_login' not in columns:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN last_login TEXT")
-        logger.info("migration_002", message="Added last_login column")
+        logger.info("migration_002: Added last_login column")
     else:
-        logger.info("migration_002", message="last_login column already exists")
+        logger.info("migration_002: last_login column already exists")
 
 
 @register_migration("003_ensure_foreign_keys")
@@ -208,7 +209,7 @@ def migrate_003_ensure_foreign_keys(cursor):
     Note: This must be done per-connection in SQLite.
     """
     cursor.execute("PRAGMA foreign_keys = ON")
-    logger.info("migration_003", message="Foreign keys enabled")
+    logger.info("migration_003: Foreign keys enabled")
 
 
 @register_migration("004_create_backup_metadata")
@@ -224,4 +225,4 @@ def migrate_004_backup_metadata(cursor):
             reason TEXT
         )
     """)
-    logger.info("migration_004", message="Created backup_log table")
+    logger.info("migration_004: Created backup_log table")
