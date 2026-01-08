@@ -269,6 +269,12 @@ async def startup_event():
             affected = cursor.rowcount
             if affected > 0:
                 print(f"✅ Migration: Activated {affected} users")
+            
+            # Migrate legacy 'usuario' role to 'vendedor'
+            cursor.execute("UPDATE usuarios SET rol = 'vendedor' WHERE rol = 'usuario'")
+            affected_roles = cursor.rowcount
+            if affected_roles > 0:
+                print(f"✅ Migration: Changed {affected_roles} users from 'usuario' to 'vendedor' role")
         
         logger.info("startup_migration", message="Startup migrations completed")
     except Exception as e:

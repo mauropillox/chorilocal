@@ -154,8 +154,8 @@ export default function Usuarios() {
   const getRolBadge = (rol) => {
     const styles = {
       admin: 'pill-danger',
-      vendedor: 'pill-info',
-      usuario: 'pill'
+      oficina: 'pill-warning',
+      vendedor: 'pill-info'
     };
     return styles[rol] || 'pill';
   };
@@ -236,8 +236,8 @@ export default function Usuarios() {
           >
             <option value="">Todos los roles</option>
             <option value="admin">👑 Admin</option>
+            <option value="oficina">🏢 Oficina</option>
             <option value="vendedor">💼 Vendedor</option>
-            <option value="usuario">👤 Usuario</option>
           </select>
           <select
             value={filtroEstado}
@@ -290,8 +290,8 @@ export default function Usuarios() {
                       className="text-sm py-1 px-2"
                       style={{ minHeight: 'auto' }}
                     >
-                      <option value="usuario">Usuario</option>
                       <option value="vendedor">Vendedor</option>
+                      <option value="oficina">Oficina</option>
                       <option value="admin">Admin</option>
                     </select>
                   </td>

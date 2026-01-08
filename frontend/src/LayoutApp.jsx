@@ -388,15 +388,15 @@ export default function LayoutApp({ onLogout }) {
               <span className="nav-text">Historial</span>
             </Link>
 
-            {/* Ofertas - visible para todos (ventas solo lectura) */}
-            <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <span className="nav-icon">🎁</span>
-              <span className="nav-text">Ofertas</span>
-              {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
-            </Link>
-
+            {/* Todo lo demás es solo para Admin */}
             {isAdmin && (
               <>
+                {/* Ofertas - Solo Admin */}
+                <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">🎁</span>
+                  <span className="nav-text">Ofertas</span>
+                  {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
+                </Link>
                 <Link to="/hoja-ruta" className={`nav-link ${isActive('/hoja-ruta') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
                   <span className="nav-icon">🚚</span>
                   <span className="nav-text">Ruta</span>
@@ -435,7 +435,7 @@ export default function LayoutApp({ onLogout }) {
 
         {/* Breadcrumb / ubicación actual */}
         <div className="breadcrumb">
-          <span className="breadcrumb-home" onClick={() => navigate(isAdmin ? '/dashboard' : '/clientes')}>🏠 Inicio</span>
+          <span className="breadcrumb-home" onClick={() => navigate(isAdmin ? '/dashboard' : '/pedidos')}>🏠 Inicio</span>
           <span className="breadcrumb-sep">›</span>
           <span className="breadcrumb-current">
             {location.pathname === '/clientes' && '👥 Clientes'}
@@ -447,7 +447,7 @@ export default function LayoutApp({ onLogout }) {
             {location.pathname === '/reportes' && '📈 Reportes'}
             {location.pathname === '/listas-precios' && '💲 Listas de Precios'}
             {location.pathname === '/templates' && '🔄 Pedidos Recurrentes'}
-            {location.pathname === '/ofertas' && '� Ofertas'}
+            {location.pathname === '/ofertas' && '🎁 Ofertas'}
             {location.pathname === '/usuarios' && '⚙️ Administración'}
             {location.pathname === '/categorias' && '🏷️ Categorías'}
           </span>
@@ -478,8 +478,7 @@ export default function LayoutApp({ onLogout }) {
           <ToastContainer />
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              {/* Rutas visibles para todos */}
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Rutas visibles para todos (admin, oficina, vendedor) */}
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/pedidos" element={<Pedidos />} />
@@ -487,16 +486,17 @@ export default function LayoutApp({ onLogout }) {
               <Route path="/cambiar-password" element={<CambiarPassword />} />
 
               {/* Rutas solo para Admin */}
-              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/dashboard" />} />
-              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/dashboard" />} />
-              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/dashboard" />} />
-              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/dashboard" />} />
-              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/dashboard" />} />
-              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/dashboard" />} />
-              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/dashboard" />} />
+              <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/pedidos" />} />
+              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/pedidos" />} />
+              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/pedidos" />} />
+              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/pedidos" />} />
+              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/pedidos" />} />
+              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/pedidos" />} />
+              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/pedidos" />} />
+              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/pedidos" />} />
 
-              {/* Redirect from root to a default page */}
-              <Route path="/" element={<Navigate to="/dashboard" />} />
+              {/* Redirect from root - admin goes to dashboard, others to pedidos */}
+              <Route path="/" element={<Navigate to={isAdmin ? "/dashboard" : "/pedidos"} />} />
               <Route path="*" element={<div>404 - Página no encontrada</div>} />
             </Routes>
           </Suspense>

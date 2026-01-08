@@ -59,9 +59,9 @@ async def desactivar_usuario(user_id: int, current_user: dict = Depends(get_admi
 
 @router.put("/{user_id}/rol")
 async def cambiar_rol(user_id: int, rol: str = Form(...), current_user: dict = Depends(get_admin_user)):
-    """Change user role"""
-    if rol not in ["admin", "vendedor", "oficina", "usuario"]:
-        raise HTTPException(status_code=400, detail="Rol no válido")
+    """Change user role. Valid roles: admin, oficina, vendedor"""
+    if rol not in ["admin", "vendedor", "oficina"]:
+        raise HTTPException(status_code=400, detail="Rol no válido. Roles permitidos: admin, oficina, vendedor")
 
     with db.get_db_transaction() as (conn, cursor):
         cursor.execute("SELECT id FROM usuarios WHERE id = ?", (user_id,))
