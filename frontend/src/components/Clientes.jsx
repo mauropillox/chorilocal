@@ -4,6 +4,7 @@ import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { getSelectStyles } from '../selectStyles';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -256,10 +257,24 @@ export default function Clientes() {
 
   return (
     <div style={{ color: 'var(--color-text)' }}>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-primary)' }}>👥 Clientes</h2>
         <button onClick={exportarCSV} className="btn-secondary">📥 Exportar CSV</button>
       </div>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo gestionar clientes?"
+        icon="👥"
+        items={[
+          { label: 'Agregar cliente nuevo', text: 'Completá el formulario de la izquierda con nombre (obligatorio), teléfono, dirección y zona. La zona es importante para organizar entregas.' },
+          { label: 'Buscar rápido', text: 'Presioná "/" para activar la búsqueda o escribí en la barra superior. Buscá por nombre, teléfono o dirección.' },
+          { label: 'Editar datos', text: 'Clickeá cualquier cliente de la lista para cargar sus datos en el formulario. Modificá lo que necesites y guardá los cambios.' },
+          { label: 'Ver historial', text: 'Cada cliente muestra cuántos pedidos tiene y el total gastado. Clickeá "Ver Pedidos" para ver su historial completo.' },
+          { label: 'Eliminar cliente', text: 'Solo se puede eliminar si no tiene pedidos asociados. Esto protege tu información comercial.' },
+          { label: 'Listas de precios', text: 'Si usás precios diferenciados (mayorista/minorista), asigná la lista correspondiente a cada cliente.' }
+        ]}
+      />
 
       <div className="two-column-layout">
         {/* LEFT: Formulario */}

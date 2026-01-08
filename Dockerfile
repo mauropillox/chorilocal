@@ -1,5 +1,5 @@
 # Usa una imagen base con Python y Node
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Variables de entorno necesarias
 ENV PYTHONDONTWRITEBYTECODE 1

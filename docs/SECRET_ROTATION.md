@@ -1,13 +1,17 @@
 # 🔐 SECRET_KEY Rotation Guide
 
-## ⚠️ ACCIÓN REQUERIDA POST-PUSH
+## ✅ COMPLETADO - Enero 7, 2026
 
 El `SECRET_KEY` anterior fue expuesto en el historial de git:
 ```
-CbkCQmbpKKVQaG2NaEWzfJ9B3ijEAa-PFeIYh3ReSys  ← COMPROMETIDO
+CbkCQmbpKKVQaG2NaEWzfJ9B3ijEAa-PFeIYh3ReSys  ← COMPROMETIDO (ya no se usa)
 ```
 
-## Pasos para Rotar
+**Estado actual:**
+- ✅ **Producción (Render):** Usa `igv9vHDUMejAp92WmbQ24VYfNVtR8-XdXjhfiRCSD7A` (en Secret File)
+- ✅ **Local (.env):** Usa `LOCAL_DEV_ONLY_k8mP2xQ9vL5nR7wT3yA6bC1dE4fG0hJ`
+
+## Pasos Completados
 
 ### 1. Generar nuevo SECRET_KEY
 ```bash

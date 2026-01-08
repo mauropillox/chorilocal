@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
+import HelpBanner from './HelpBanner';
 
 export default function Pedidos() {
   const [clientes, setClientes] = useState([]);
@@ -14,6 +15,7 @@ export default function Pedidos() {
   const [sortBy, setSortBy] = useState('nombre_asc');
   const [showAll, setShowAll] = useState(false);
   const [ofertasActivas, setOfertasActivas] = useState([]);
+  const [notas, setNotas] = useState(''); // Notas/observaciones del pedido
   const searchInputRef = useRef(null);
   const guardarPedidoRef = useRef(null);
 
@@ -71,7 +73,7 @@ export default function Pedidos() {
         console.error('Error cargando ofertas:', e);
       }
     })();
-    
+
     // Restore draft from localStorage
     const draft = localStorage.getItem('pedido_draft');
     if (draft) {
@@ -79,16 +81,17 @@ export default function Pedidos() {
         const parsed = JSON.parse(draft);
         if (parsed.clienteId) setClienteId(parsed.clienteId);
         if (Array.isArray(parsed.productos)) setProductosSeleccionados(parsed.productos);
+        if (parsed.notas) setNotas(parsed.notas);
       } catch (e) { console.error('Failed to restore draft:', e); }
     }
   }, []);
 
   // Auto-save draft to localStorage
   useEffect(() => {
-    if (clienteId || productosSeleccionados.length > 0) {
-      localStorage.setItem('pedido_draft', JSON.stringify({ clienteId, productos: productosSeleccionados }));
+    if (clienteId || productosSeleccionados.length > 0 || notas) {
+      localStorage.setItem('pedido_draft', JSON.stringify({ clienteId, productos: productosSeleccionados, notas }));
     }
-  }, [clienteId, productosSeleccionados]);
+  }, [clienteId, productosSeleccionados, notas]);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedBusqueda(busquedaProducto), 250);
@@ -141,7 +144,7 @@ export default function Pedidos() {
 
   // Obtener descuento activo para un producto
   const obtenerDescuento = (productoId) => {
-    const oferta = ofertasActivas.find(o => 
+    const oferta = ofertasActivas.find(o =>
       o.productos && o.productos.some(p => p.producto_id === productoId)
     );
     return oferta ? oferta.descuento_porcentaje : 0;
@@ -197,13 +200,13 @@ export default function Pedidos() {
   const guardarPedido = useCallback(async () => {
     if (!clienteId) { toastWarn("Debes seleccionar un cliente primero"); return; }
     if (productosSeleccionados.length === 0) { toastWarn("Debes agregar al menos un producto"); return; }
-    
+
     // Verificar stock antes de guardar
     const sinStock = productosSeleccionados.filter(ps => {
       const prod = productos.find(p => p.id === ps.id);
       return prod && (prod.stock || 0) < ps.cantidad;
     });
-    
+
     if (sinStock.length > 0) {
       const msgs = sinStock.map(ps => {
         const prod = productos.find(p => p.id === ps.id);
@@ -212,18 +215,29 @@ export default function Pedidos() {
       toastWarn("Stock insuficiente: " + msgs.join("; "));
       return;
     }
-    
+
     const cliente = clientes.find(c => c.id === parseInt(clienteId));
+
+    // Transform products to match backend ProductoPedido model
+    const productosForBackend = productosSeleccionados.map(p => ({
+      id: p.id,
+      nombre: p.nombre || p.nome,  // Handle both nombre and nome
+      precio: p.precio,
+      cantidad: p.cantidad,
+      tipo: p.tipo
+    }));
+
     const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cliente, productos: productosSeleccionados })
+      body: JSON.stringify({ cliente, productos: productosForBackend, notas: notas.trim() })
     });
     if (res.ok) {
       toastSuccess("Pedido guardado correctamente");
       localStorage.removeItem('pedido_draft'); // Clear draft
       setClienteId('');
       setProductosSeleccionados([]);
+      setNotas('');
       // Recargar productos para actualizar stock
       const { res: rp, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
       if (rp.ok && Array.isArray(data)) setProductos(data);
@@ -236,7 +250,7 @@ export default function Pedidos() {
         toastError(err.detail?.message || "Error al guardar pedido");
       }
     }
-  }, [clienteId, productosSeleccionados, productos, clientes]);
+  }, [clienteId, productosSeleccionados, productos, clientes, notas]);
 
   // Keep ref updated for keyboard shortcut
   useEffect(() => {
@@ -249,10 +263,10 @@ export default function Pedidos() {
     let list = productos.slice();
     const q = debouncedBusqueda.trim().toLowerCase();
     if (q) list = list.filter(p => p.nombre.toLowerCase().includes(q));
-    if (sortBy === 'nombre_asc') list.sort((a,b) => a.nombre.localeCompare(b.nombre));
-    if (sortBy === 'nombre_desc') list.sort((a,b) => b.nombre.localeCompare(a.nombre));
-    if (sortBy === 'precio_asc') list.sort((a,b) => a.precio - b.precio);
-    if (sortBy === 'precio_desc') list.sort((a,b) => b.precio - a.precio);
+    if (sortBy === 'nombre_asc') list.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (sortBy === 'nombre_desc') list.sort((a, b) => b.nombre.localeCompare(a.nombre));
+    if (sortBy === 'precio_asc') list.sort((a, b) => a.precio - b.precio);
+    if (sortBy === 'precio_desc') list.sort((a, b) => b.precio - a.precio);
     return list;
   }, [debouncedBusqueda, showAll, productos, sortBy]);
 
@@ -260,13 +274,27 @@ export default function Pedidos() {
 
   return (
     <div style={{ color: 'var(--color-text)' }}>
-      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--color-primary)' }}>🛒 Crear Pedido</h2>
+      <h2 className="text-xl font-bold mb-3" style={{ color: 'var(--color-primary)' }}>🛒 Crear Pedido</h2>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo crear un pedido?"
+        icon="🛒"
+        items={[
+          { label: 'Paso 1 - Elegir cliente', text: 'Clickeá el selector arriba, escribí el nombre y elegí de la lista. Si es cliente nuevo, andá a la sección Clientes primero.' },
+          { label: 'Paso 2 - Buscar productos', text: 'Presioná "/" para activar el buscador rápido o escribí directamente en la barra. Los productos aparecen con foto, precio y stock.' },
+          { label: 'Paso 3 - Agregar al pedido', text: 'Clickeá el producto para agregarlo. Ajustá la cantidad con los botones + / - o escribí directo en el campo.' },
+          { label: 'Paso 4 - Revisar total', text: 'El resumen de la derecha muestra subtotal, descuentos y total final. Podés aplicar descuentos o elegir método de pago.' },
+          { label: 'Paso 5 - Guardar', text: 'Presioná Ctrl+S o clickeá "💾 Guardar Pedido". El pedido aparecerá en el Historial con estado "Tomado".' },
+          { label: 'Tips', text: 'Usá las categorías para filtrar productos. Los productos en oferta se marcan con 🎁. El stock bajo aparece en naranja.' }
+        ]}
+      />
 
       <div className="two-column-layout">
         {/* LEFT: Panel de pedido */}
         <div className="panel">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Datos del Pedido</h3>
-          
+
           <div className="form-group">
             <label htmlFor="cliente-select">Cliente *</label>
             <select id="cliente-select" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="w-full" aria-label="Seleccionar cliente">
@@ -301,16 +329,20 @@ export default function Pedidos() {
                   return (
                     <div key={p.id} className="card-item flex items-center gap-2 p-2" style={sinPrecio || cantidadInvalida ? { borderLeft: '3px solid #ef4444' } : {}}>
                       {p.imagen_url ? (
-                        <img src={p.imagen_url} alt={p.nombre} className="product-image-sm" />
-                      ) : (
-                        <div className="product-image-placeholder-sm">📦</div>
-                      )}
+                        <img
+                          src={p.imagen_url}
+                          alt={p.nombre}
+                          className="product-image-sm"
+                          onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                        />
+                      ) : null}
+                      <div className="product-image-placeholder-sm" style={{ display: p.imagen_url ? 'none' : 'flex' }}>📦</div>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm truncate font-medium block" style={{ color: 'var(--color-text)' }}>
                           {p.nombre}
                           {itemInfo?.descuento > 0 && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-bold" 
-                                  style={{ background: '#10b981', color: 'white' }}>
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-bold"
+                              style={{ background: '#10b981', color: 'white' }}>
                               🎉 -{itemInfo.descuento}%
                             </span>
                           )}
@@ -334,12 +366,12 @@ export default function Pedidos() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => decrementarCantidad(p.id)} 
+                        <button
+                          onClick={() => decrementarCantidad(p.id)}
                           className="text-sm font-bold rounded"
-                          style={{ 
-                            minWidth: '28px', 
-                            minHeight: '32px', 
+                          style={{
+                            minWidth: '28px',
+                            minHeight: '32px',
                             background: '#ef4444',
                             color: 'white',
                             border: 'none',
@@ -350,22 +382,22 @@ export default function Pedidos() {
                         >
                           −
                         </button>
-                        <input 
-                          type="number" 
-                          step="0.5" 
-                          min="0.5" 
-                          value={p.cantidad} 
-                          onChange={(e) => cambiarCantidad(p.id, e.target.value)} 
-                          className="w-14 p-1 text-sm rounded text-center" 
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          value={p.cantidad}
+                          onChange={(e) => cambiarCantidad(p.id, e.target.value)}
+                          className="w-14 p-1 text-sm rounded text-center"
                           style={{ minHeight: '32px', borderColor: cantidadInvalida ? '#ef4444' : '#d1d5db', border: '1px solid' }}
                           aria-label={`Cantidad de ${p.nombre}`}
                         />
-                        <button 
-                          onClick={() => incrementarCantidad(p.id)} 
+                        <button
+                          onClick={() => incrementarCantidad(p.id)}
                           className="text-sm font-bold rounded"
-                          style={{ 
-                            minWidth: '28px', 
-                            minHeight: '32px', 
+                          style={{
+                            minWidth: '28px',
+                            minHeight: '32px',
                             background: '#10b981',
                             color: 'white',
                             border: 'none',
@@ -428,14 +460,36 @@ export default function Pedidos() {
             </div>
           )}
 
-          <button 
-            onClick={guardarPedido} 
+          {/* Notas del Pedido */}
+          <div className="mt-4">
+            <label htmlFor="pedido-notas" className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
+              📝 Notas / Observaciones (opcional)
+            </label>
+            <textarea
+              id="pedido-notas"
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Ej: Entregar antes de las 15:00, dejar en portería, etc."
+              className="w-full p-3 border rounded-lg text-sm"
+              style={{
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                border: '2px solid var(--color-border)',
+                minHeight: '80px',
+                resize: 'vertical'
+              }}
+              rows="3"
+            />
+          </div>
+
+          <button
+            onClick={guardarPedido}
             disabled={!clienteId || productosSeleccionados.length === 0}
             className="btn-success w-full mt-4"
           >
             💾 Guardar Pedido
           </button>
-          
+
           {!clienteId && (
             <div className="text-sm text-muted text-center mt-2">⚠️ Selecciona un cliente para continuar</div>
           )}
@@ -444,7 +498,7 @@ export default function Pedidos() {
         {/* RIGHT: Catálogo de productos */}
         <div className="panel">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Catálogo</h3>
-          
+
           <div className="flex gap-2 mb-3">
             <input
               type="text"
@@ -503,10 +557,14 @@ export default function Pedidos() {
                 return (
                   <div key={p.id} className={`card-item flex items-center gap-3 ${yaAgregado ? 'opacity-50' : ''} ${(p.stock || 0) < 10 ? 'border-l-4 border-orange-400' : ''}`} style={{ cursor: 'default' }}>
                     {p.imagen_url ? (
-                      <img src={p.imagen_url} alt={p.nombre} className="product-image-sm" />
-                    ) : (
-                      <div className="product-image-placeholder-sm">📦</div>
-                    )}
+                      <img
+                        src={p.imagen_url}
+                        alt={p.nombre}
+                        className="product-image-sm"
+                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                      />
+                    ) : null}
+                    <div className="product-image-placeholder-sm" style={{ display: p.imagen_url ? 'none' : 'flex' }}>📦</div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm truncate flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
                         {p.nombre}
@@ -530,8 +588,8 @@ export default function Pedidos() {
                         </span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => agregarProducto(p)} 
+                    <button
+                      onClick={() => agregarProducto(p)}
                       disabled={yaAgregado || (p.stock || 0) === 0}
                       className={yaAgregado ? "btn-ghost px-3 py-1 text-sm" : (p.stock || 0) === 0 ? "btn-ghost px-3 py-1 text-sm text-red-500" : "btn-primary px-3 py-1 text-sm"}
                       style={{ minHeight: '36px' }}
@@ -543,7 +601,7 @@ export default function Pedidos() {
               })}
             </div>
           )}
-          
+
           {(debouncedBusqueda || showAll) && productosFiltrados.length > 0 && (
             <div className="mt-3 text-sm text-muted text-center">
               Mostrando {productosFiltrados.length} de {productos.length} productos

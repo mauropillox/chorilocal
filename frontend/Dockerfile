@@ -6,14 +6,30 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 ENV NODE_ENV=production
-# Use backend URL directly (Render services are separate)
-ENV VITE_API_URL=https://chorilocal-backend.onrender.com
+
+# Build-time argument for API URL - pass during build with:
+# docker build --build-arg VITE_API_URL=https://your-backend.onrender.com .
+ARG VITE_API_URL=https://chorilocal-backend.onrender.com
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build -- --mode production
 
 # Stage 2: Serve React app with Nginx
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy nginx config - use local config if VITE_API_URL contains localhost, otherwise production
+COPY nginx.local.conf /etc/nginx/conf.d/nginx.local.conf
+COPY nginx.conf /etc/nginx/conf.d/nginx.conf
+
+# Use appropriate config based on build arg
+ARG VITE_API_URL=https://chorilocal-backend.onrender.com
+RUN if echo "$VITE_API_URL" | grep -q "localhost"; then \
+    cp /etc/nginx/conf.d/nginx.local.conf /etc/nginx/conf.d/default.conf; \
+    else \
+    cp /etc/nginx/conf.d/nginx.conf /etc/nginx/conf.d/default.conf; \
+    fi
+
 EXPOSE 80
 EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]

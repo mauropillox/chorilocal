@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toast } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function ListasPrecios() {
   const [listas, setListas] = useState([]);
@@ -9,16 +10,16 @@ export default function ListasPrecios() {
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(null);
   const [vistaDetalle, setVistaDetalle] = useState(null);
-  
+
   // Form
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [multiplicador, setMultiplicador] = useState('1.0');
-  
+
   // Precio especial
   const [productoId, setProductoId] = useState('');
   const [precioEspecial, setPrecioEspecial] = useState('');
-  
+
   // Confirm
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -70,7 +71,7 @@ export default function ListasPrecios() {
       const url = editando
         ? `${import.meta.env.VITE_API_URL}/listas-precios/${editando}`
         : `${import.meta.env.VITE_API_URL}/listas-precios`;
-      
+
       const res = await authFetch(url, {
         method: editando ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +129,7 @@ export default function ListasPrecios() {
 
   const agregarPrecioEspecial = async () => {
     if (!productoId || !precioEspecial || !vistaDetalle) return;
-    
+
     try {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/listas-precios/${vistaDetalle.id}/precios`, {
         method: 'POST',
@@ -138,7 +139,7 @@ export default function ListasPrecios() {
           precio_especial: parseFloat(precioEspecial)
         })
       });
-      
+
       if (res.ok) {
         toast('Precio especial agregado', 'success');
         setProductoId('');
@@ -180,14 +181,19 @@ export default function ListasPrecios() {
       <h1 className="text-2xl font-bold mb-2 text-center" style={{ color: 'var(--color-primary)' }}>
         💰 Listas de Precios
       </h1>
-      
-      {/* Explicación de la función */}
-      <div className="info-banner mb-6 p-4 rounded-xl text-center">
-        <p className="text-sm">
-          <strong>¿Qué es esto?</strong> Crea listas de precios para diferentes tipos de clientes (ej: Mayorista, Minorista).
-          <br />Cada cliente puede tener asignada una lista que ajusta automáticamente los precios.
-        </p>
-      </div>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo usar listas de precios?"
+        icon="💰"
+        items={[
+          { label: 'Crear lista', text: 'Agregá un nombre descriptivo (ej: Mayorista, Minorista) y configurá el tipo de ajuste: porcentaje o monto fijo.' },
+          { label: 'Ajustar precios', text: 'Podés aplicar un descuento o recargo general, o definir precios específicos producto por producto.' },
+          { label: 'Asignar a clientes', text: 'Desde la sección Clientes, asigná la lista correspondiente a cada cliente. Los precios se ajustan automáticamente.' },
+          { label: 'Visualización', text: 'Al crear pedidos, verás los precios ya ajustados según la lista del cliente seleccionado.' },
+          { label: 'Editar o eliminar', text: 'Modificá porcentajes o precios en cualquier momento. Los pedidos anteriores conservan sus precios originales.' }
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulario */}
@@ -195,7 +201,7 @@ export default function ListasPrecios() {
           <h2 className="font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
             {editando ? '✏️ Editar Lista' : '➕ Nueva Lista'}
           </h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
@@ -209,7 +215,7 @@ export default function ListasPrecios() {
                 required
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
                 Descripción
@@ -221,7 +227,7 @@ export default function ListasPrecios() {
                 placeholder="Descripción opcional"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
                 Ajuste de Precio
@@ -238,8 +244,8 @@ export default function ListasPrecios() {
                 />
                 <span className="text-sm text-muted">
                   {parseFloat(multiplicador) === 1 ? '= Precio normal' :
-                   parseFloat(multiplicador) < 1 ? `= ${Math.round((1 - parseFloat(multiplicador)) * 100)}% descuento` :
-                   `= ${Math.round((parseFloat(multiplicador) - 1) * 100)}% recargo`}
+                    parseFloat(multiplicador) < 1 ? `= ${Math.round((1 - parseFloat(multiplicador)) * 100)}% descuento` :
+                      `= ${Math.round((parseFloat(multiplicador) - 1) * 100)}% recargo`}
                 </span>
               </div>
               {/* Preview del precio */}
@@ -271,7 +277,7 @@ export default function ListasPrecios() {
           <h2 className="font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
             📋 Listas Existentes ({listas.length})
           </h2>
-          
+
           {listas.length === 0 ? (
             <div className="text-center py-8 text-muted">
               <div className="text-4xl mb-2">📋</div>
@@ -287,51 +293,52 @@ export default function ListasPrecios() {
                 const mult = parseFloat(lista.multiplicador) || 1;
                 const ajusteTexto = mult === 1 ? 'Sin ajuste' :
                   mult < 1 ? `${Math.round((1 - mult) * 100)}% descuento` :
-                  `${Math.round((mult - 1) * 100)}% recargo`;
+                    `${Math.round((mult - 1) * 100)}% recargo`;
                 const ajusteColor = mult < 1 ? '#16a34a' : mult > 1 ? '#dc2626' : '#64748b';
-                
+
                 return (
-                <div
-                  key={lista.id}
-                  className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow lista-item ${vistaDetalle?.id === lista.id ? 'active' : ''}`}
-                  onClick={() => cargarDetalle(lista.id)}
-                  title="Click para ver detalles y agregar precios especiales"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg" style={{ color: 'var(--color-primary)' }}>
-                        {lista.nombre || '(Sin nombre)'}
-                      </h3>
-                      {lista.descripcion && (
-                        <p className="text-xs text-muted">{lista.descripcion}</p>
-                      )}
-                      <div className="flex flex-wrap gap-3 mt-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded-full ${mult < 1 ? 'badge-discount' : mult > 1 ? 'badge-surcharge' : 'badge-neutral'}`}>
-                          {ajusteTexto}
-                        </span>
-                        <span className="text-muted">📦 {lista.productos_count} {lista.productos_count === 1 ? 'precio especial' : 'precios especiales'}</span>
-                        <span className="text-muted">👥 {lista.clientes_count} {lista.clientes_count === 1 ? 'cliente' : 'clientes'}</span>
+                  <div
+                    key={lista.id}
+                    className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow lista-item ${vistaDetalle?.id === lista.id ? 'active' : ''}`}
+                    onClick={() => cargarDetalle(lista.id)}
+                    title="Click para ver detalles y agregar precios especiales"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg" style={{ color: 'var(--color-primary)' }}>
+                          {lista.nombre || '(Sin nombre)'}
+                        </h3>
+                        {lista.descripcion && (
+                          <p className="text-xs text-muted">{lista.descripcion}</p>
+                        )}
+                        <div className="flex flex-wrap gap-3 mt-2 text-xs">
+                          <span className={`px-2 py-0.5 rounded-full ${mult < 1 ? 'badge-discount' : mult > 1 ? 'badge-surcharge' : 'badge-neutral'}`}>
+                            {ajusteTexto}
+                          </span>
+                          <span className="text-muted">📦 {lista.productos_count} {lista.productos_count === 1 ? 'precio especial' : 'precios especiales'}</span>
+                          <span className="text-muted">👥 {lista.clientes_count} {lista.clientes_count === 1 ? 'cliente' : 'clientes'}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); editarLista(lista); }}
+                          className="btn-secondary text-xs px-2 py-1"
+                          style={{ minHeight: 'auto' }}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); confirmarEliminar(lista); }}
+                          className="btn-danger text-xs px-2 py-1"
+                          style={{ minHeight: 'auto' }}
+                        >
+                          🗑
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); editarLista(lista); }}
-                        className="btn-secondary text-xs px-2 py-1"
-                        style={{ minHeight: 'auto' }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); confirmarEliminar(lista); }}
-                        className="btn-danger text-xs px-2 py-1"
-                        style={{ minHeight: 'auto' }}
-                      >
-                        🗑
-                      </button>
-                    </div>
                   </div>
-                </div>
-              )})}
+                )
+              })}
             </div>
           )}
         </div>

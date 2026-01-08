@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toast } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function Templates() {
   const navigate = useNavigate();
@@ -219,13 +220,18 @@ export default function Templates() {
         🔄 Pedidos Recurrentes
       </h1>
 
-      {/* Explicación de la función */}
-      <div className="info-banner mb-6">
-        <p className="text-sm">
-          <strong>¿Qué es esto?</strong> Guarda combinaciones de productos que pides frecuentemente.
-          <br />Con un click, creas un pedido completo sin seleccionar productos uno por uno.
-        </p>
-      </div>
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo usar pedidos recurrentes?"
+        icon="🔄"
+        items={[
+          { label: 'Qué es un template', text: 'Es una plantilla con productos predefinidos. Guardá combinaciones que pedís frecuentemente para crear pedidos con un solo click.' },
+          { label: 'Crear template', text: 'Completá un nombre descriptivo (ej: "Pedido semanal Juan"), agregá los productos y cantidades que siempre se incluyen.' },
+          { label: 'Usar template', text: 'Desde la lista de templates, clickeá "Usar" para crear un pedido nuevo con esos productos ya cargados. Podés ajustar antes de guardar.' },
+          { label: 'Asignar a cliente', text: 'Podés vincular un template a un cliente específico. Cuando lo uses, se auto-selecciona ese cliente.' },
+          { label: 'Editar o eliminar', text: 'Modificá los productos o cantidades en cualquier momento. Los pedidos creados anteriormente no se afectan.' }
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulario */}

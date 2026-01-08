@@ -4,6 +4,7 @@ import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -250,13 +251,13 @@ export default function Productos() {
     const producto = productos.find(p => p.id === productoId);
     if (!producto) return;
 
-    const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...producto,
-        categoria_id: nuevaCategoriaId ? parseInt(nuevaCategoriaId) : null
-      })
+    // Usar endpoint específico de categoría para evitar validación de precio
+    const url = nuevaCategoriaId
+      ? `${import.meta.env.VITE_API_URL}/productos/${productoId}/categoria?categoria_id=${nuevaCategoriaId}`
+      : `${import.meta.env.VITE_API_URL}/productos/${productoId}/categoria`;
+
+    const res = await authFetch(url, {
+      method: "PUT"
     });
 
     if (res.ok) {
@@ -410,6 +411,9 @@ export default function Productos() {
       // Clean up blob URL to prevent memory leak
       if (filePreview && filePreview.startsWith('blob:')) URL.revokeObjectURL(filePreview);
       setFilePreview(null);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toastError(err.detail || 'Error al actualizar imagen');
     }
   };
 
@@ -532,16 +536,31 @@ export default function Productos() {
 
   return (
     <div style={{ color: 'var(--color-text)' }}>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-primary)' }}>📦 Productos</h2>
         <div className="flex gap-2">
           <button onClick={() => setVistaStock(!vistaStock)} className={vistaStock ? "btn-primary" : "btn-secondary"}>
-            🔄 {vistaStock ? "Normal" : "Gestor Stock"}
+            {vistaStock ? "📋 Volver a Productos" : "📊 Gestor Stock"}
           </button>
           <button onClick={exportarCSV} className="btn-secondary">📥 CSV</button>
           <button onClick={exportarExcel} className="btn-secondary">📊 Excel</button>
         </div>
       </div>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo gestionar productos?"
+        icon="📦"
+        items={[
+          { label: 'Crear producto', text: 'Completá nombre (obligatorio), precio, y opcionalmente categoría, stock inicial y descripción. El código es único y automático.' },
+          { label: 'Imágenes', text: 'Arrastrá y soltá la foto del producto, o clickeá para seleccionar. Las imágenes se comprimen automáticamente. Máximo 5MB.' },
+          { label: 'Vista Gestor Stock', text: 'Clickeá "🔄 Gestor Stock" para ver todos los productos en tabla. Editá stock directamente, descargá CSV o Excel para inventario.' },
+          { label: 'Stock bajo', text: 'Los productos con poco stock aparecen en naranja (⚠). Configurá el mínimo en cada producto. Las alertas aparecen en el Dashboard.' },
+          { label: 'Categorías', text: 'Organizá productos por categorías para facilitar la búsqueda. Asigná colores para identificación visual.' },
+          { label: 'Editar/Eliminar', text: 'Clickeá cualquier producto de la lista para editarlo. Solo podés eliminar productos sin pedidos asociados.' },
+          { label: 'Tips', text: 'Usá descripciones para notas importantes (ej: "Frío", "Frágil"). Los precios se pueden ajustar con listas de precios.' }
+        ]}
+      />
 
       <div className="two-column-layout">
         {/* LEFT: Formulario */}
@@ -935,7 +954,7 @@ export default function Productos() {
                       type="checkbox"
                       className="custom-checkbox"
                       checked={selectedIds.size === productosFiltrados.length && productosFiltrados.length > 0}
-                        onChange={toggleSelectAllVisible}
+                      onChange={toggleSelectAllVisible}
                       aria-label="Seleccionar todos los productos"
                     />
                     <span className="text-xs text-muted">Seleccionar todos</span>
@@ -964,10 +983,15 @@ export default function Productos() {
                             title="Click para cambiar imagen"
                           >
                             {p?.imagen_url ? (
-                              <img src={p.imagen_url} alt={p?.nombre || 'Producto'} className="product-image" loading="lazy" />
-                            ) : (
-                              <div className="product-image-placeholder">📦</div>
-                            )}
+                              <img
+                                src={p.imagen_url}
+                                alt={p?.nombre || 'Producto'}
+                                className="product-image"
+                                loading="lazy"
+                                onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                              />
+                            ) : null}
+                            <div className="product-image-placeholder" style={{ display: p?.imagen_url ? 'none' : 'flex' }}>📦</div>
                             <div
                               className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg"
                               style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))' }}
@@ -1182,149 +1206,151 @@ export default function Productos() {
       </div>
 
       {/* Modal de edición completa de producto */}
-      {editingProducto && (
-        <div className="modal-overlay" onClick={() => !savingEdit && setEditingProducto(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
-              ✏️ Editar Producto
-            </h3>
+      {
+        editingProducto && (
+          <div className="modal-overlay" onClick={() => !savingEdit && setEditingProducto(null)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+              <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
+                ✏️ Editar Producto
+              </h3>
 
-            <div className="space-y-4">
-              {/* Nombre */}
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Nombre *</label>
-                <input
-                  type="text"
-                  value={editForm.nombre}
-                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                  className="w-full p-2 border rounded"
-                  placeholder="Nombre del producto"
-                />
-              </div>
-
-              {/* Precio y Stock en fila */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-4">
+                {/* Nombre */}
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Precio *</label>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Nombre *</label>
                   <input
-                    type="number"
-                    value={editForm.precio}
-                    onChange={(e) => setEditForm({ ...editForm, precio: e.target.value })}
+                    type="text"
+                    value={editForm.nombre}
+                    onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
                     className="w-full p-2 border rounded"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
+                    placeholder="Nombre del producto"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Stock</label>
-                  <input
-                    type="number"
-                    value={editForm.stock}
-                    onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="0"
-                    min="0"
-                  />
-                </div>
-              </div>
 
-              {/* Stock mínimo y tipo */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Stock Mínimo</label>
-                  <input
-                    type="number"
-                    value={editForm.stock_minimo}
-                    onChange={(e) => setEditForm({ ...editForm, stock_minimo: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="10"
-                    min="0"
-                  />
+                {/* Precio y Stock en fila */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Precio *</label>
+                    <input
+                      type="number"
+                      value={editForm.precio}
+                      onChange={(e) => setEditForm({ ...editForm, precio: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Stock</label>
+                    <input
+                      type="number"
+                      value={editForm.stock}
+                      onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Tipo Stock</label>
-                  <select
-                    value={editForm.stock_tipo}
-                    onChange={(e) => setEditForm({ ...editForm, stock_tipo: e.target.value })}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="unidad">Unidad</option>
-                    <option value="caja">Caja</option>
-                    <option value="gancho">Gancho</option>
-                    <option value="tira">Tira</option>
-                  </select>
-                </div>
-              </div>
 
-              {/* Categoría */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>Categoría</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditForm({ ...editForm, categoria_id: '' })}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!editForm.categoria_id ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                    style={{
-                      backgroundColor: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-muted)'
-                    }}
-                  >
-                    Sin categoría
-                  </button>
-                  {categorias.map(cat => (
+                {/* Stock mínimo y tipo */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Stock Mínimo</label>
+                    <input
+                      type="number"
+                      value={editForm.stock_minimo}
+                      onChange={(e) => setEditForm({ ...editForm, stock_minimo: e.target.value })}
+                      className="w-full p-2 border rounded"
+                      placeholder="10"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Tipo Stock</label>
+                    <select
+                      value={editForm.stock_tipo}
+                      onChange={(e) => setEditForm({ ...editForm, stock_tipo: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="unidad">Unidad</option>
+                      <option value="caja">Caja</option>
+                      <option value="gancho">Gancho</option>
+                      <option value="tira">Tira</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Categoría */}
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>Categoría</label>
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      key={cat.id}
-                      onClick={() => setEditForm({ ...editForm, categoria_id: cat.id })}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${String(editForm.categoria_id) === String(cat.id) ? 'ring-2 ring-offset-1' : ''}`}
+                      onClick={() => setEditForm({ ...editForm, categoria_id: '' })}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!editForm.categoria_id ? 'ring-2 ring-primary ring-offset-1' : ''}`}
                       style={{
-                        backgroundColor: `${cat.color}20`,
-                        border: `1px solid ${cat.color}`,
-                        color: cat.color,
-                        '--tw-ring-color': cat.color
+                        backgroundColor: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-muted)'
                       }}
                     >
-                      {cat.nombre}
+                      Sin categoría
                     </button>
-                  ))}
+                    {categorias.map(cat => (
+                      <button
+                        type="button"
+                        key={cat.id}
+                        onClick={() => setEditForm({ ...editForm, categoria_id: cat.id })}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${String(editForm.categoria_id) === String(cat.id) ? 'ring-2 ring-offset-1' : ''}`}
+                        style={{
+                          backgroundColor: `${cat.color}20`,
+                          border: `1px solid ${cat.color}`,
+                          color: cat.color,
+                          '--tw-ring-color': cat.color
+                        }}
+                      >
+                        {cat.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* URL imagen */}
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>URL Imagen (opcional)</label>
+                  <input
+                    type="text"
+                    value={editForm.imagen_url}
+                    onChange={(e) => setEditForm({ ...editForm, imagen_url: e.target.value })}
+                    className="w-full p-2 border rounded"
+                    placeholder="https://..."
+                  />
                 </div>
               </div>
 
-              {/* URL imagen */}
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>URL Imagen (opcional)</label>
-                <input
-                  type="text"
-                  value={editForm.imagen_url}
-                  onChange={(e) => setEditForm({ ...editForm, imagen_url: e.target.value })}
-                  className="w-full p-2 border rounded"
-                  placeholder="https://..."
-                />
+              {/* Botones */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setEditingProducto(null)}
+                  className="btn-secondary flex-1"
+                  disabled={savingEdit}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarEdicionProducto}
+                  className="btn-primary flex-1"
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? '⏳ Guardando...' : '💾 Guardar'}
+                </button>
               </div>
             </div>
-
-            {/* Botones */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setEditingProducto(null)}
-                className="btn-secondary flex-1"
-                disabled={savingEdit}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={guardarEdicionProducto}
-                className="btn-primary flex-1"
-                disabled={savingEdit}
-              >
-                {savingEdit ? '⏳ Guardando...' : '💾 Guardar'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal confirmación eliminar producto */}
       <ConfirmDialog
@@ -1349,6 +1375,6 @@ export default function Productos() {
         cancelText="Cancelar"
         variant="danger"
       />
-    </div>
+    </div >
   );
 }

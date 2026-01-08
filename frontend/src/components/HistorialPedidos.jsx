@@ -5,9 +5,17 @@ import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
 import { getSelectStyles } from '../selectStyles';
+import HelpBanner from './HelpBanner';
+import { useAuth } from './AuthContext';
 
 export default function HistorialPedidos() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  // Role-based access: admin/oficina can filter by user, ventas only see their own
+  const isAdmin = user?.rol === 'admin' || user?.rol === 'administrador';
+  const isOficina = user?.rol === 'oficina';
+  const canFilterByUser = isAdmin || isOficina; // admin and oficina can filter by user
+
   const [pedidos, setPedidos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -30,6 +38,8 @@ export default function HistorialPedidos() {
   const [recentProductos, setRecentProductos] = useState([]);
   const [filtroAntiguos, setFiltroAntiguos] = useState(false); // Filtrar pedidos +24h
   const [filtroPedidoId, setFiltroPedidoId] = useState(null); // Filtrar por ID específico
+  const [filtroCreador, setFiltroCreador] = useState(''); // Filtrar por usuario creador
+  const [creadores, setCreadores] = useState([]); // Lista de usuarios que crearon pedidos
 
   // Función para restaurar pedido eliminado (undo)
   const restaurarPedido = async () => {
@@ -46,9 +56,11 @@ export default function HistorialPedidos() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cliente_id: pedido.cliente_id,
+          cliente: { id: pedido.cliente_id },
           productos: pedido.productos.map(p => ({
             id: p.producto_id || p.id,
+            nombre: p.nombre || p.nome || 'Producto',
+            precio: p.precio || 0,
             cantidad: p.cantidad,
             tipo: p.tipo || 'unidad'
           })),
@@ -144,7 +156,13 @@ export default function HistorialPedidos() {
     return p.id === filtroPedidoId;
   };
 
-  const datosFiltrados = datosActuales.filter(p => coincideTexto(p) && esAntiguo(p) && coincideId(p));
+  // Filtro por usuario creador (solo para admin/oficina)
+  const coincideCreador = (p) => {
+    if (!filtroCreador) return true;
+    return (p.creado_por || '') === filtroCreador;
+  };
+
+  const datosFiltrados = datosActuales.filter(p => coincideTexto(p) && esAntiguo(p) && coincideId(p) && coincideCreador(p));
 
   // Paginación
   const totalPages = Math.ceil(datosFiltrados.length / itemsPerPage);
@@ -152,10 +170,10 @@ export default function HistorialPedidos() {
   const endIndex = startIndex + itemsPerPage;
   const datosPaginados = datosFiltrados.slice(startIndex, endIndex);
 
-  // Reset a página 1 cuando cambia tab o búsqueda
+  // Reset a página 1 cuando cambia tab, búsqueda o filtro
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, busquedaTexto]);
+  }, [activeTab, busquedaTexto, filtroCreador]);
 
   useEffect(() => {
     const handleKeyboard = (e) => {
@@ -192,6 +210,14 @@ export default function HistorialPedidos() {
         else setClientes(Array.isArray(cliData) ? cliData : []);
       }
       if (prodRes.res.ok) setProductos(Array.isArray(prodRes.data) ? prodRes.data : []);
+
+      // Load creators list for filter (only for admin/oficina)
+      if (canFilterByUser) {
+        try {
+          const creatorsRes = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos/creators`);
+          if (creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
+        } catch (e) { console.error('Error loading creators:', e); }
+      }
     } catch (e) { console.error('Error cargando datos:', e); }
     finally { setLoading(false); }
   };
@@ -385,6 +411,7 @@ export default function HistorialPedidos() {
 
       setSelectedIds([]);
       await cargarDatos(); // Reload to show updated status
+      setActiveTab('generados'); // Cambiar a tab de generados
       toastSuccess('PDF generado correctamente');
     } catch (err) {
       toastError('Error al generar PDF: ' + err.message);
@@ -415,9 +442,21 @@ export default function HistorialPedidos() {
         <button onClick={exportarCSV} className="btn-secondary">📥 Exportar CSV</button>
       </div>
 
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo usar el Historial?"
+        icon="📋"
+        items={[
+          { label: 'Pendientes', text: 'Pedidos que aún no tienen PDF generado. Acá podés editar productos y cantidades.' },
+          { label: 'Generados', text: 'Pedidos con PDF generado, listos para imprimir y entregar.' },
+          { label: 'Generar PDF', text: 'Marcá varios pedidos con el checkbox y clickeá "📄 Generar PDFs" para crear los remitos.' },
+          { label: 'Buscar rápido', text: 'Usá la barra de búsqueda para filtrar por cliente o producto.' }
+        ]}
+      />
+
       {/* Banner de filtros activos desde Dashboard */}
       {(filtroAntiguos || filtroPedidoId) && (
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg"
+        <div className="flex items-center gap-3 mb-6 p-3 rounded-lg"
           style={{ backgroundColor: 'var(--color-warning-bg, #fef3cd)', border: '1px solid var(--color-warning, #ffc107)' }}>
           <span style={{ color: 'var(--color-text)' }}>
             🔍 Filtro activo: {filtroAntiguos && '⏰ Pedidos pendientes +24h'}{filtroPedidoId && `📋 Pedido #${filtroPedidoId}`}
@@ -432,8 +471,8 @@ export default function HistorialPedidos() {
         </div>
       )}
 
-      {/* Filters - responsive grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      {/* Filters - responsive grid simplificado */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
           className="text-sm p-2 border rounded w-full" placeholder="Desde" />
         <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
@@ -441,6 +480,32 @@ export default function HistorialPedidos() {
         <input type="text" value={busquedaTexto} onChange={e => setBusquedaTexto(e.target.value)}
           className="text-sm p-2 border rounded w-full" placeholder="🔍 Buscar cliente/producto..." />
       </div>
+
+      {/* Filtro por usuario creador - solo visible para admin/oficina */}
+      {canFilterByUser && creadores.length > 0 && (
+        <div className="mb-4">
+          <select
+            value={filtroCreador}
+            onChange={e => setFiltroCreador(e.target.value)}
+            className="text-sm p-2 border rounded"
+            style={{ background: 'var(--color-bg)', color: 'var(--color-text)', minWidth: '200px' }}
+          >
+            <option value="">👤 Todos los usuarios</option>
+            {creadores.map(c => (
+              <option key={c} value={c}>👤 {c}</option>
+            ))}
+          </select>
+          {filtroCreador && (
+            <button
+              onClick={() => setFiltroCreador('')}
+              className="btn-ghost ml-2"
+              style={{ padding: '4px 8px', minHeight: 'auto' }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tabs para Pendientes y Generados */}
       <div className="flex gap-0 mb-4" style={{ borderRadius: '6px', overflow: 'hidden' }}>
@@ -596,6 +661,28 @@ export default function HistorialPedidos() {
                               <span className="badge badge-success">✅ Generado</span>
                             ) : (
                               <span className="badge badge-pending">⏳ Pendiente</span>
+                            )}
+                            {/* Estado Workflow Badge */}
+                            {(() => {
+                              const estado = p.estado || 'tomado';
+                              const estadoInfo = ESTADOS_PEDIDO[estado];
+                              return (
+                                <span
+                                  className="badge"
+                                  style={{
+                                    background: estadoInfo.bg,
+                                    color: estadoInfo.color,
+                                    border: `1px solid ${estadoInfo.color}`
+                                  }}
+                                >
+                                  {estadoInfo.label}
+                                </span>
+                              );
+                            })()}
+                            {p.repartidor && (
+                              <span className="badge" style={{ background: '#e0e7ff', color: '#3730a3', border: '1px solid #6366f1' }}>
+                                🚚 {p.repartidor}
+                              </span>
                             )}
                             {sinCliente && (
                               <span className="badge badge-danger">

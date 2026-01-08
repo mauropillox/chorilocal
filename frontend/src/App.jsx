@@ -99,40 +99,40 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-          {!logueado ? (
-            <>
-              <Route path="/" element={
-                <div style={{
-                  minHeight: '100vh',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'var(--color-bg)',
-                  padding: '1rem'
-                }}>
-                  <Login onLoginSuccess={() => setLogueado(true)} />
-                </div>
-              } />
-              <Route path="/registro" element={
-                <div style={{
-                  minHeight: '100vh',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'var(--color-bg)',
-                  padding: '1rem'
-                }}>
-                  <Register />
-                </div>
-              } />
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          ) : (
-            <>
-              <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
-              <Route path="*" element={<Navigate to="/clientes" />} />
-            </>
-          )}
+            {!logueado ? (
+              <>
+                <Route path="/" element={
+                  <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'var(--color-bg)',
+                    padding: '1rem'
+                  }}>
+                    <Login onLoginSuccess={() => setLogueado(true)} />
+                  </div>
+                } />
+                <Route path="/registro" element={
+                  <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'var(--color-bg)',
+                    padding: '1rem'
+                  }}>
+                    <Register />
+                  </div>
+                } />
+                <Route path="*" element={<Navigate to="/" />} />
+              </>
+            ) : (
+              <>
+                <Route path="/*" element={<LayoutApp onLogout={() => setLogueado(false)} />} />
+                <Route path="*" element={<Navigate to="/clientes" />} />
+              </>
+            )}
           </Routes>
         </Router>
       </AuthProvider>

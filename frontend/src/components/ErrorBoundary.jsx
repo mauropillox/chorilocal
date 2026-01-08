@@ -36,15 +36,15 @@ class ErrorBoundary extends Component {
             <div className="error-icon">⚠️</div>
             <h1>Algo salió mal</h1>
             <p>Ocurrió un error inesperado. Por favor, intenta recargar la página.</p>
-            
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+
+            {import.meta.env.DEV && this.state.error && (
               <details className="error-details">
                 <summary>Detalles del error (desarrollo)</summary>
                 <pre>{this.state.error.toString()}</pre>
                 <pre>{this.state.errorInfo?.componentStack}</pre>
               </details>
             )}
-            
+
             <div className="error-actions">
               <button onClick={this.handleReload} className="btn-primary">
                 🔄 Recargar página

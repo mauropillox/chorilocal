@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { authFetchJson } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
+import HelpBanner from './HelpBanner';
 
 export default function Reportes() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('ventas');
-  
+
   const [desde, setDesde] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
   });
   const [hasta, setHasta] = useState(() => new Date().toISOString().split('T')[0]);
-  
+
   const [reporteVentas, setReporteVentas] = useState(null);
   const [reporteInventario, setReporteInventario] = useState(null);
   const [reporteClientes, setReporteClientes] = useState(null);
@@ -26,7 +27,7 @@ export default function Reportes() {
       toast('No hay datos para exportar', 'warn');
       return;
     }
-    
+
     const csvContent = [
       headers.join(','),
       ...data.map(row => headers.map(h => {
@@ -39,7 +40,7 @@ export default function Reportes() {
         return strVal;
       }).join(','))
     ].join('\n');
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -185,14 +186,22 @@ export default function Reportes() {
       <h1 className="text-2xl font-bold mb-2 text-center" style={{ color: 'var(--color-primary)' }}>
         📊 Reportes Avanzados
       </h1>
-      
-      <div className="info-banner mb-6">
-        <p className="text-sm">
-          Analiza ventas, inventario y clientes. Filtra por fechas y descubre tus productos más vendidos.
-        </p>
-      </div>
 
-      <div className="flex gap-2 mb-6 justify-center flex-wrap">
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo usar los reportes?"
+        icon="📊"
+        items={[
+          { label: 'Ventas', text: 'Analizá ventas por período, método de pago, zona o repartidor. Descubrí tus días y horarios de mayor venta.' },
+          { label: 'Productos', text: 'Mirá el ranking de productos más vendidos, los que tienen menor rotación y cuáles generan más ganancia.' },
+          { label: 'Inventario', text: 'Revisá stock actual, productos por debajo del mínimo y proyección de necesidades de reposición.' },
+          { label: 'Clientes', text: 'Conocé tus mejores clientes, frecuencia de compra, ticket promedio y clientes inactivos.' },
+          { label: 'Rendimiento', text: 'Métricas de eficiencia: tiempos de entrega, pedidos por hora, comparativas entre períodos.' },
+          { label: 'Exportar', text: 'Descargá cualquier reporte en CSV o Excel para análisis externo o presentaciones.' }
+        ]}
+      />
+
+      <div className="flex gap-3 mb-6 justify-center flex-wrap">
         <button onClick={() => setTab('ventas')} className={tab === 'ventas' ? 'btn-primary' : 'btn-secondary'}>
           💰 Ventas
         </button>

@@ -14,6 +14,7 @@ const Templates = lazy(() => import('./components/Templates'));
 const Usuarios = lazy(() => import('./components/Usuarios'));
 const Categorias = lazy(() => import('./components/Categorias'));
 const CambiarPassword = lazy(() => import('./components/CambiarPassword'));
+const HojaRuta = lazy(() => import('./components/HojaRuta'));
 
 import ConnectionStatus from './components/ConnectionStatus';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
@@ -40,7 +41,12 @@ export default function LayoutApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const isAdmin = user?.rol === 'admin';
+  // Role-based access: admin has full access, oficina and ventas have limited tabs
+  const isAdmin = user?.rol === 'admin' || user?.rol === 'administrador';
+  const isOficina = user?.rol === 'oficina';
+  const isVentas = user?.rol === 'ventas';
+  // oficina and ventas can only see: Clientes, Productos, Pedidos, Historial
+  const hasLimitedAccess = isOficina || isVentas;
   const [menuOpen, setMenuOpen] = useState(false);
   const [ofertasCount, setOfertasCount] = useState(0);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -220,13 +226,15 @@ export default function LayoutApp({ onLogout }) {
           </div>
 
           {/* Global Search */}
-          <div style={{ position: 'relative', flex: '0 1 300px' }}>
+          <div style={{ position: 'relative', flex: '0 1 300px' }} role="search">
             <input
               id="global-search"
               type="text"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="🔍 Buscar... (Ctrl+K)"
+              aria-label="Buscar clientes o productos"
+              aria-describedby="search-hint"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -238,9 +246,11 @@ export default function LayoutApp({ onLogout }) {
                 fontSize: '0.875rem'
               }}
             />
+            <span id="search-hint" className="sr-only">Presioná Ctrl+K para abrir búsqueda rápida</span>
             {globalSearch && (
               <button
                 onClick={() => { setGlobalSearch(''); setSearchResults(null); }}
+                aria-label="Limpiar búsqueda"
                 style={{
                   position: 'absolute',
                   right: '8px',
@@ -260,21 +270,26 @@ export default function LayoutApp({ onLogout }) {
 
             {/* Search Results Dropdown */}
             {searchResults && (globalSearch.trim().length >= 2) && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                marginTop: '4px',
-                background: 'var(--color-bg)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                zIndex: 1000,
-                maxHeight: '400px',
-                overflow: 'auto'
-              }}>
-                {searching && <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Buscando...</div>}
+              <div
+                role="listbox"
+                aria-label="Resultados de búsqueda"
+                aria-live="polite"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  maxHeight: '400px',
+                  overflow: 'auto'
+                }}
+              >
+                {searching && <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }} aria-live="polite">Buscando...</div>}
 
                 {!searching && searchResults.clientes.length === 0 && searchResults.productos.length === 0 && (
                   <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
@@ -283,51 +298,61 @@ export default function LayoutApp({ onLogout }) {
                 )}
 
                 {searchResults.clientes.length > 0 && (
-                  <div>
+                  <div role="group" aria-label="Clientes encontrados">
                     <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
                       👥 CLIENTES
                     </div>
                     {searchResults.clientes.map(c => (
-                      <div
+                      <button
                         key={c.id}
                         onClick={() => { navigate(`/clientes?buscar=${encodeURIComponent(c.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
+                        role="option"
                         style={{
+                          width: '100%',
                           padding: '10px 12px',
                           cursor: 'pointer',
                           borderBottom: '1px solid var(--color-border)',
-                          transition: 'background 0.1s'
+                          transition: 'background 0.1s',
+                          background: 'transparent',
+                          border: 'none',
+                          textAlign: 'left'
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{c.nombre}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{c.telefono || 'Sin teléfono'}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
 
                 {searchResults.productos.length > 0 && (
-                  <div>
+                  <div role="group" aria-label="Productos encontrados">
                     <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
                       📦 PRODUCTOS
                     </div>
                     {searchResults.productos.map(p => (
-                      <div
+                      <button
                         key={p.id}
                         onClick={() => { navigate(`/productos?buscar=${encodeURIComponent(p.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
+                        role="option"
                         style={{
+                          width: '100%',
                           padding: '10px 12px',
                           cursor: 'pointer',
                           borderBottom: '1px solid var(--color-border)',
-                          transition: 'background 0.1s'
+                          transition: 'background 0.1s',
+                          background: 'transparent',
+                          border: 'none',
+                          textAlign: 'left'
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{p.nombre}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>${p.precio} - Stock: {p.stock || 0}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -383,21 +408,25 @@ export default function LayoutApp({ onLogout }) {
               <span className="nav-text">Historial</span>
             </Link>
 
+            {/* Ofertas - visible para todos (ventas solo lectura) */}
+            <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+              <span className="nav-icon">🎁</span>
+              <span className="nav-text">Ofertas</span>
+              {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
+            </Link>
+
             {isAdmin && (
               <>
+                <Link to="/hoja-ruta" className={`nav-link ${isActive('/hoja-ruta') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                  <span className="nav-icon">🚚</span>
+                  <span className="nav-text">Ruta</span>
+                </Link>
                 <span className="nav-separator">|</span>
 
                 {/* Grupo Análisis - Solo Admin */}
                 <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
                   <span className="nav-icon">📊</span>
                   <span className="nav-text">Dashboard</span>
-                </Link>
-
-                {/* Grupo Promociones - Solo Admin */}
-                <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-                  <span className="nav-icon">🎁</span>
-                  <span className="nav-text">Ofertas</span>
-                  {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
                 </Link>
                 <Link to="/templates" className={`nav-link ${isActive('/templates') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
                   <span className="nav-icon">🔄</span>
@@ -433,6 +462,7 @@ export default function LayoutApp({ onLogout }) {
             {location.pathname === '/productos' && '📦 Productos'}
             {location.pathname === '/pedidos' && '🛒 Nuevo Pedido'}
             {location.pathname === '/historial' && '📋 Historial'}
+            {location.pathname === '/hoja-ruta' && '🚚 Hoja de Ruta'}
             {location.pathname === '/dashboard' && '📊 Dashboard'}
             {location.pathname === '/reportes' && '📈 Reportes'}
             {location.pathname === '/listas-precios' && '💲 Listas de Precios'}
@@ -473,12 +503,13 @@ export default function LayoutApp({ onLogout }) {
               <Route path="/productos" element={<Productos />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/historial" element={<HistorialPedidos />} />
+              <Route path="/ofertas" element={<Ofertas />} />
               <Route path="/cambiar-password" element={<CambiarPassword onClose={() => navigate(-1)} />} />
 
               {/* Rutas solo para Admin */}
+              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/clientes" />} />
               <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/clientes" />} />
               <Route path="/offline-queue" element={isAdmin ? <OfflineQueue /> : <Navigate to="/clientes" />} />
-              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/clientes" />} />
               <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/clientes" />} />
               <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/clientes" />} />
               <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/clientes" />} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchConToken } from "../auth";
+import HelpBanner from './HelpBanner';
 
 export default function AdminPanel() {
   const [usuarios, setUsuarios] = useState([]);
@@ -167,6 +168,20 @@ export default function AdminPanel() {
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">Panel de Administración</h2>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo administrar usuarios?"
+        icon="⚙️"
+        items={[
+          { label: 'Crear usuario', text: 'Completá nombre de usuario (único) y contraseña segura. Elegí el rol: "Admin" para gestión completa o "Usuario" para acceso limitado.' },
+          { label: 'Roles y permisos', text: 'Los Admin pueden: ver Dashboard, Reportes, gestionar Ofertas, Categorías, Usuarios y acceder a Hoja de Ruta. Los Usuarios solo ven: Clientes, Productos, Pedidos e Historial.' },
+          { label: 'Activar/Desactivar', text: 'Podés deshabilitar usuarios sin eliminarlos. Un usuario inactivo no puede iniciar sesión pero conserva su historial.' },
+          { label: 'Editar desde tabla', text: 'Clickeá los selectores de rol o estado en la tabla para cambiarlos al instante. Los cambios se guardan automáticamente.' },
+          { label: 'Eliminar usuario', text: 'Solo se puede eliminar si no tiene pedidos o acciones asociadas. Esto protege la trazabilidad del sistema.' },
+          { label: 'Seguridad', text: 'Las contraseñas se guardan encriptadas. Los usuarios pueden cambiar su propia contraseña desde el menú superior (🔐).' }
+        ]}
+      />
 
       <div className="bg-white border p-4 mb-6 rounded shadow-md">
         <h3 className="text-lg font-semibold mb-2">Crear nuevo usuario</h3>

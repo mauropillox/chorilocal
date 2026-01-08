@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { authFetchJson } from '../authFetch';
 import { toast } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -186,19 +187,18 @@ export default function Usuarios() {
         ⚙️ Administración de Usuarios
       </h1>
 
-      {/* Info Banner - ¿Qué es esto? */}
-      <div className="info-banner mb-6" style={{
-        background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
-        borderRadius: '12px',
-        padding: '1rem 1.25rem',
-        border: '1px solid #a855f7'
-      }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#6b21a8' }}>💡 ¿Qué es esto?</h3>
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#581c87', lineHeight: 1.5 }}>
-          Aquí puedes gestionar los usuarios del sistema. Los <strong>administradores</strong> tienen acceso completo,
-          mientras que los usuarios normales tienen permisos limitados. Puedes activar o desactivar cuentas sin eliminarlas.
-        </p>
-      </div>
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo gestionar usuarios?"
+        icon="👥"
+        items={[
+          { label: 'Roles disponibles', text: 'Los Administradores tienen acceso completo al sistema. Los Usuarios normales pueden gestionar clientes, productos y pedidos.' },
+          { label: 'Crear usuario', text: 'Completá nombre de usuario (único), contraseña segura y seleccioná el rol apropiado.' },
+          { label: 'Activar/Desactivar', text: 'Podés deshabilitar cuentas sin eliminarlas. Un usuario inactivo no puede iniciar sesión pero conserva su historial.' },
+          { label: 'Resetear contraseña', text: 'Si un usuario olvida su contraseña, podés generar una nueva desde aquí y comunicársela.' },
+          { label: 'Eliminar usuario', text: 'Solo se puede eliminar si no tiene acciones asociadas. Preferí desactivar para mantener la trazabilidad.' }
+        ]}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="stat-card">

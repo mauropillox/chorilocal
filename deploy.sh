@@ -5,12 +5,14 @@ set -euo pipefail
 # Backup, build, deploy, and verify
 # 
 # Uso:
-#   ./deploy.sh              # Deploy normal (con git pull)
-#   SKIP_PULL=1 ./deploy.sh  # Deploy sin git pull
+#   ./deploy.sh                    # Deploy normal (con git pull)
+#   SKIP_PULL=1 ./deploy.sh        # Deploy sin git pull
+#   AUTO_COMMIT=1 ./deploy.sh      # Deploy con auto-commit (NO recomendado)
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$REPO_DIR/backups"
-LOG_FILE="$REPO_DIR/deploy_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="$REPO_DIR/logs/deploy_$(date +%Y%m%d_%H%M%S).log"
+mkdir -p "$REPO_DIR/logs"
 
 ts() { date +"%H:%M:%S"; }
 log() { echo "[$(ts)] $*" | tee -a "$LOG_FILE"; }
@@ -19,23 +21,31 @@ log "=== CHORIZAURIO DEPLOYMENT ==="
 cd "$REPO_DIR"
 
 
-# 0. Commit and push local changes
-log "0. Committing and pushing local changes..."
-git add .
-# Ensure sensitive or large local files are NOT staged for auto-commit
-# Unstage common sensitive files if accidentally added: .env, frontend/.env and any DB in data/
-git reset --quiet -- .env frontend/.env || true
-git reset --quiet -- data || true
-git reset --quiet -- "data/ventas.db" || true
-git commit -m "Auto-commit by deploy.sh on $(date +%Y-%m-%d_%H-%M-%S)" || log "   ⚠️ Nothing to commit"
-git push || { log "   ❌ git push failed"; exit 1; }
+# 0. Check for uncommitted changes (warn but don't auto-commit by default)
+log "0. Checking git status..."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    if [[ "${AUTO_COMMIT:-}" == "1" ]]; then
+        log "   ⚠️ AUTO_COMMIT enabled - committing changes..."
+        git add .
+        # Ensure sensitive files are NOT staged
+        git reset --quiet -- .env frontend/.env data/ backups/ logs/ *.log 2>/dev/null || true
+        git commit -m "Auto-commit by deploy.sh on $(date +%Y-%m-%d_%H-%M-%S)" || log "   Nothing to commit"
+        git push || { log "   ❌ git push failed"; exit 1; }
+    else
+        log "   ⚠️ Uncommitted changes detected!"
+        log "   💡 Commit your changes manually before deploying, or use AUTO_COMMIT=1"
+        git status --short
+    fi
+else
+    log "   ✓ Working directory clean"
+fi
+
+# Ensure we're on main for deployment
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$CURRENT_BRANCH" != "main" ]; then
-  git checkout main
-  git pull origin main
-  git merge "$CURRENT_BRANCH"
+    log "   ⚠️ Not on main branch (currently on $CURRENT_BRANCH)"
+    log "   💡 Consider merging to main before production deploy"
 fi
-git push origin main || { log "   ❌ git push to main failed"; exit 1; }
 
 # 1. Git pull (opcional)
 if [[ "${SKIP_PULL:-}" != "1" ]]; then
@@ -85,7 +95,7 @@ docker compose up -d
 # 6. Wait for services
 log "6. Waiting for services to be ready..."
 for i in {1..30}; do
-    if curl -s http://localhost/api/health >/dev/null 2>&1; then
+    if curl -s http://localhost:8000/health >/dev/null 2>&1; then
         log "   ✓ Services ready"
         break
     fi
@@ -99,7 +109,7 @@ done
 
 # 7. Health check
 log "7. Running health check..."
-HEALTH=$(curl -s http://localhost/api/health 2>/dev/null || echo '{"status":"error"}')
+HEALTH=$(curl -s http://localhost:8000/health 2>/dev/null || echo '{"status":"error"}')
 if echo "$HEALTH" | grep -q '"status":"healthy"'; then
     log "   ✓ Health check passed: $HEALTH"
 else
@@ -111,7 +121,8 @@ fi
 log "=== DEPLOYMENT COMPLETE ==="
 log "📋 Logs: $LOG_FILE"
 log "💾 Backups: $BACKUP_DIR"
-log "🌐 App: http://localhost"
-log "📚 API: http://localhost/api/docs"
+log "🌐 Frontend: http://localhost"
+log "🔧 Backend API: http://localhost:8000"
+log "📚 API Docs: http://localhost:8000/docs"
 log ""
 log "✅ Deploy successful!"

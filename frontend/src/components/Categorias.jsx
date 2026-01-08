@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
+import HelpBanner from './HelpBanner';
 
 export default function Categorias() {
   const [categorias, setCategorias] = useState([]);
@@ -58,10 +59,10 @@ export default function Categorias() {
     setSaving(true);
     try {
       const payload = { nombre: nombre.trim(), descripcion, color, orden };
-      const url = editingId 
+      const url = editingId
         ? `${import.meta.env.VITE_API_URL}/categorias/${editingId}`
         : `${import.meta.env.VITE_API_URL}/categorias`;
-      
+
       const res = await authFetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,21 +113,18 @@ export default function Categorias() {
 
   return (
     <div>
-      {/* Info Banner - ¿Qué es esto? */}
-      <div className="info-banner" style={{ 
-        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', 
-        borderRadius: '12px', 
-        padding: '1rem 1.25rem', 
-        marginBottom: '1.5rem',
-        border: '1px solid #3b82f6'
-      }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#1e40af' }}>💡 ¿Qué es esto?</h3>
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#1e3a8a', lineHeight: 1.5 }}>
-          Las <strong>categorías</strong> permiten agrupar productos (ej: Embutidos, Quesos, Bebidas). 
-          Los <strong>colores</strong> aparecen como indicador visual en el listado de productos cuando filtras por categoría, 
-          facilitando la identificación rápida. Puedes asignar una categoría a cada producto desde la sección de Productos.
-        </p>
-      </div>
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo gestionar categorías?"
+        icon="🏷️"
+        items={[
+          { label: 'Crear categoría', text: 'Agregá un nombre descriptivo (ej: Embutidos, Quesos, Bebidas) y opcionalmente asigná un color para identificación visual.' },
+          { label: 'Colores visuales', text: 'Los colores aparecen como indicador en el listado de productos. Facilitan la identificación rápida cuando filtrás por categoría.' },
+          { label: 'Asignar productos', text: 'Desde la sección Productos, podés asignar una categoría a cada producto usando el selector correspondiente.' },
+          { label: 'Filtrar productos', text: 'En el listado de productos podés filtrar por categoría para ver solo los productos de ese tipo.' },
+          { label: 'Editar o eliminar', text: 'Modificá nombres o colores en cualquier momento. Solo podés eliminar categorías sin productos asociados.' }
+        ]}
+      />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -251,11 +249,11 @@ export default function Categorias() {
               }}
             >
               {!cat.activa && (
-                <span style={{ 
+                <span style={{
                   position: 'absolute',
                   top: '8px',
                   right: '8px',
-                  fontSize: '0.65rem', 
+                  fontSize: '0.65rem',
                   color: 'white',
                   backgroundColor: 'var(--color-danger)',
                   padding: '2px 6px',
@@ -285,10 +283,10 @@ export default function Categorias() {
                   }}
                 />
               </div>
-              <div style={{ 
-                marginTop: '1rem', 
-                display: 'flex', 
-                gap: '0.5rem', 
+              <div style={{
+                marginTop: '1rem',
+                display: 'flex',
+                gap: '0.5rem',
                 justifyContent: 'flex-end',
                 borderTop: '1px solid var(--color-border)',
                 paddingTop: '0.75rem'
@@ -302,9 +300,9 @@ export default function Categorias() {
                 </button>
                 <button
                   onClick={() => setDeleteId(cat.id)}
-                  style={{ 
-                    padding: '6px 12px', 
-                    fontSize: '0.8rem', 
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
                     minHeight: '32px',
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
                     color: 'var(--color-danger)',

@@ -254,6 +254,12 @@ def ensure_schema() -> None:
         _ensure_column(cur, "pedidos", "user_agent", "TEXT")  # Info del navegador
         _ensure_column(cur, "pedidos", "ultimo_editor", "TEXT")  # Último usuario que editó
         _ensure_column(cur, "pedidos", "fecha_ultima_edicion", "TEXT")  # Timestamp última edición
+        
+        # === ESTADOS DE PEDIDO ===
+        # Estados: tomado → preparando → listo → entregado (o cancelado)
+        _ensure_column(cur, "pedidos", "estado", "TEXT DEFAULT 'tomado'")
+        _ensure_column(cur, "pedidos", "repartidor", "TEXT")  # Asignación de repartidor
+        _ensure_column(cur, "pedidos", "fecha_entrega", "TEXT")  # Cuando se entregó
 
         # Tabla historial de modificaciones
         cur.execute("""
@@ -1534,7 +1540,22 @@ def add_pedido(pedido: Dict[str, Any], creado_por: str = None, dispositivo: str 
         return {**pedido, "id": pid}
 
 
-def get_pedidos() -> List[Dict[str, Any]]:
+def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_por: str = None) -> List[Dict[str, Any]] | Dict[str, Any]:
+    """
+    Obtiene pedidos con paginación opcional y filtros.
+    
+    Args:
+        page: Número de página (1-based). Si es None, retorna todos los pedidos.
+        limit: Cantidad de pedidos por página (default 50, max 200).
+        estado: Filtrar por estado (tomado, preparando, listo, entregado, cancelado).
+        creado_por: Filtrar por usuario que creó el pedido (para rol 'ventas').
+    
+    Returns:
+        Sin paginación: Lista de pedidos (compatibilidad hacia atrás).
+        Con paginación: Dict con {data: [], total: int, page: int, limit: int, pages: int}.
+    
+    OPTIMIZADO: Usa batch loading para eliminar N+1 queries.
+    """
     con = conectar()
     try:
         cur = con.cursor()
@@ -1544,114 +1565,140 @@ def get_pedidos() -> List[Dict[str, Any]]:
         cols_det = _table_columns(cur, "detalles_pedido")
         pedido_fk = _detalles_pedido_col(cur)
         prod_fk = _detalles_producto_col(cur)
+        pr_cols = _table_columns(cur, "productos")
+        include_img = "imagen_url" in pr_cols
+        has_tipo = "tipo" in cols_det
 
-        # Base pedidos - incluir nuevos campos de tracking
+        # Build SELECT columns for pedidos
         sel = ["id", cliente_col]
-        if "fecha" in cols_ped:
-            sel.append("fecha")
-        if "pdf_generado" in cols_ped:
-            sel.append("pdf_generado")
-        if "fecha_creacion" in cols_ped:
-            sel.append("fecha_creacion")
-        if "fecha_generacion" in cols_ped:
-            sel.append("fecha_generacion")
-        if "creado_por" in cols_ped:
-            sel.append("creado_por")
-        if "generado_por" in cols_ped:
-            sel.append("generado_por")
-        if "notas" in cols_ped:
-            sel.append("notas")
-        if "dispositivo" in cols_ped:
-            sel.append("dispositivo")
-        if "ultimo_editor" in cols_ped:
-            sel.append("ultimo_editor")
-        if "fecha_ultima_edicion" in cols_ped:
-            sel.append("fecha_ultima_edicion")
+        optional_cols = ["fecha", "pdf_generado", "fecha_creacion", "fecha_generacion", 
+                        "creado_por", "generado_por", "notas", "dispositivo", 
+                        "ultimo_editor", "fecha_ultima_edicion", "estado", 
+                        "repartidor", "fecha_entrega"]
+        for col in optional_cols:
+            if col in cols_ped:
+                sel.append(col)
 
-        cur.execute(f"SELECT {', '.join(sel)} FROM pedidos ORDER BY id DESC")
+        # Build base query with optional estado filter and creado_por filter
+        where_clauses = []
+        params = []
+        
+        if estado:
+            # Handle 'tomado' as default for NULL estado
+            if estado == 'tomado':
+                where_clauses.append("(estado = ? OR estado IS NULL)")
+            else:
+                where_clauses.append("estado = ?")
+            params.append(estado)
+        
+        if creado_por:
+            where_clauses.append("creado_por = ?")
+            params.append(creado_por)
+        
+        where_clause = ""
+        if where_clauses:
+            where_clause = "WHERE " + " AND ".join(where_clauses)
+
+        # Get total count for pagination
+        count_query = f"SELECT COUNT(*) FROM pedidos {where_clause}"
+        cur.execute(count_query, params)
+        total_count = cur.fetchone()[0]
+
+        # Build main query with pagination
+        base_query = f"SELECT {', '.join(sel)} FROM pedidos {where_clause} ORDER BY id DESC"
+        
+        if page is not None:
+            offset = (page - 1) * limit
+            base_query += f" LIMIT {limit} OFFSET {offset}"
+        
+        cur.execute(base_query, params)
         pedidos_rows = cur.fetchall()
 
+        if not pedidos_rows:
+            if page is not None:
+                return {"data": [], "total": total_count, "page": page, "limit": limit, "pages": 0}
+            return []
+
+        # OPTIMIZATION: Batch load all productos for all pedidos in ONE query
+        pedido_ids = [r["id"] for r in pedidos_rows]
+        placeholders = ",".join("?" * len(pedido_ids))
+        
+        sel_cols = f"dp.{pedido_fk} as pedido_id, pr.id, pr.nombre, pr.precio, dp.cantidad"
+        if has_tipo:
+            sel_cols += ", dp.tipo"
+        if include_img:
+            sel_cols += ", pr.imagen_url"
+        
+        cur.execute(
+            f"""SELECT {sel_cols} 
+                FROM detalles_pedido dp 
+                JOIN productos pr ON dp.{prod_fk} = pr.id 
+                WHERE dp.{pedido_fk} IN ({placeholders})""",
+            pedido_ids
+        )
+        
+        # Group productos by pedido_id
+        productos_por_pedido: Dict[int, List[Dict]] = {}
+        for rr in cur.fetchall():
+            pid = rr["pedido_id"]
+            if pid not in productos_por_pedido:
+                productos_por_pedido[pid] = []
+            item = {
+                "id": rr["id"],
+                "nombre": rr["nombre"],
+                "precio": rr["precio"],
+                "cantidad": rr["cantidad"],
+                "tipo": rr["tipo"] if has_tipo else "unidad",
+            }
+            if include_img:
+                item["imagen_url"] = rr["imagen_url"]
+            productos_por_pedido[pid].append(item)
+
+        # Build final pedidos list
+        # Get column names for safe access (sqlite3.Row doesn't have .get())
+        col_names = set(sel)
+        
+        def safe_get(row, col, default=None):
+            """Safely get value from sqlite3.Row."""
+            if col in col_names:
+                val = row[col]
+                return val if val is not None else default
+            return default
+        
         pedidos: List[Dict[str, Any]] = []
         for r in pedidos_rows:
             pid = r["id"]
-            cliente_id = r[cliente_col]
-            fecha = r["fecha"] if "fecha" in r.keys() else None
-            pdf_generado = bool(r["pdf_generado"]) if "pdf_generado" in r.keys() else False
-            
-            # Nuevos campos de tracking
-            fecha_creacion = r["fecha_creacion"] if "fecha_creacion" in r.keys() else None
-            fecha_generacion = r["fecha_generacion"] if "fecha_generacion" in r.keys() else None
-            creado_por = r["creado_por"] if "creado_por" in r.keys() else None
-            generado_por = r["generado_por"] if "generado_por" in r.keys() else None
-            notas = r["notas"] if "notas" in r.keys() else None
-            dispositivo = r["dispositivo"] if "dispositivo" in r.keys() else None
-            ultimo_editor = r["ultimo_editor"] if "ultimo_editor" in r.keys() else None
-            fecha_ultima_edicion = r["fecha_ultima_edicion"] if "fecha_ultima_edicion" in r.keys() else None
+            pedido = {
+                "id": pid,
+                "cliente_id": r[cliente_col],
+                "fecha": safe_get(r, "fecha"),
+                "pdf_generado": bool(safe_get(r, "pdf_generado", False)),
+                "fecha_creacion": safe_get(r, "fecha_creacion"),
+                "fecha_generacion": safe_get(r, "fecha_generacion"),
+                "creado_por": safe_get(r, "creado_por"),
+                "generado_por": safe_get(r, "generado_por"),
+                "notas": safe_get(r, "notas"),
+                "dispositivo": safe_get(r, "dispositivo"),
+                "ultimo_editor": safe_get(r, "ultimo_editor"),
+                "fecha_ultima_edicion": safe_get(r, "fecha_ultima_edicion"),
+                "estado": safe_get(r, "estado", "tomado"),
+                "repartidor": safe_get(r, "repartidor"),
+                "fecha_entrega": safe_get(r, "fecha_entrega"),
+                "productos": productos_por_pedido.get(pid, []),
+            }
+            pedidos.append(pedido)
 
-            # Detalles + productos
-            # Include imagen_url from productos if available
-            pr_cols = _table_columns(cur, "productos")
-            include_img = "imagen_url" in pr_cols
-
-            if "tipo" in cols_det:
-                sel_cols = "pr.id, pr.nombre, pr.precio, dp.cantidad, dp.tipo"
-                if include_img:
-                    sel_cols += ", pr.imagen_url"
-                cur.execute(
-                    f"SELECT {sel_cols} FROM detalles_pedido dp JOIN productos pr ON dp.{prod_fk} = pr.id WHERE dp.{pedido_fk} = ?",
-                    (pid,),
-                )
-                productos = []
-                for rr in cur.fetchall():
-                    item = {
-                        "id": rr["id"],
-                        "nombre": rr["nombre"],
-                        "precio": rr["precio"],
-                        "cantidad": rr["cantidad"],
-                        "tipo": rr["tipo"],
-                    }
-                    if include_img:
-                        item["imagen_url"] = rr["imagen_url"]
-                    productos.append(item)
-            else:
-                sel_cols = "pr.id, pr.nombre, pr.precio, dp.cantidad"
-                if include_img:
-                    sel_cols += ", pr.imagen_url"
-                cur.execute(
-                    f"SELECT {sel_cols} FROM detalles_pedido dp JOIN productos pr ON dp.{prod_fk} = pr.id WHERE dp.{pedido_fk} = ?",
-                    (pid,),
-                )
-                productos = []
-                for rr in cur.fetchall():
-                    item = {
-                        "id": rr["id"],
-                        "nombre": rr["nombre"],
-                        "precio": rr["precio"],
-                        "cantidad": rr["cantidad"],
-                        "tipo": "unidad",
-                    }
-                    if include_img:
-                        item["imagen_url"] = rr["imagen_url"]
-                    productos.append(item)
-
-            pedidos.append(
-                {
-                    "id": pid,
-                    "cliente_id": cliente_id,
-                    "fecha": fecha,
-                    "pdf_generado": pdf_generado,
-                    "fecha_creacion": fecha_creacion,
-                    "fecha_generacion": fecha_generacion,
-                    "creado_por": creado_por,
-                    "generado_por": generado_por,
-                    "notas": notas,
-                    "dispositivo": dispositivo,
-                    "ultimo_editor": ultimo_editor,
-                    "fecha_ultima_edicion": fecha_ultima_edicion,
-                    "productos": productos,
-                }
-            )
-
+        # Return with pagination info or just list
+        if page is not None:
+            pages = (total_count + limit - 1) // limit  # Ceiling division
+            return {
+                "data": pedidos,
+                "total": total_count,
+                "page": page,
+                "limit": limit,
+                "pages": pages
+            }
+        
         return pedidos
     finally:
         con.close()
@@ -1825,6 +1872,84 @@ def update_pedido_estado(pedido_id: int, estado: Any, generado_por: str = None) 
         return {"id": pedido_id, "pdf_generado": bool(estado)}
     finally:
         con.close()
+
+
+# === ESTADOS DE PEDIDO WORKFLOW ===
+# Estados válidos: tomado → preparando → listo → entregado (o cancelado en cualquier punto)
+ESTADOS_PEDIDO_VALIDOS = ["tomado", "preparando", "listo", "entregado", "cancelado"]
+
+def update_pedido_workflow(pedido_id: int, nuevo_estado: str, repartidor: str = None, usuario: str = None) -> Dict[str, Any]:
+    """
+    Actualiza el estado del workflow del pedido.
+    Estados: tomado → preparando → listo → entregado (o cancelado)
+    """
+    if nuevo_estado not in ESTADOS_PEDIDO_VALIDOS:
+        raise ValueError(f"Estado inválido: {nuevo_estado}. Válidos: {ESTADOS_PEDIDO_VALIDOS}")
+    
+    con = conectar()
+    try:
+        cur = con.cursor()
+        cols = _table_columns(cur, "pedidos")
+        
+        if "estado" not in cols:
+            raise Exception("La tabla pedidos no tiene columna estado")
+        
+        updates = ["estado = ?"]
+        values = [nuevo_estado]
+        
+        # Si se asigna repartidor
+        if repartidor and "repartidor" in cols:
+            updates.append("repartidor = ?")
+            values.append(repartidor)
+        
+        # Si se marca como entregado, registrar fecha
+        if nuevo_estado == "entregado" and "fecha_entrega" in cols:
+            updates.append("fecha_entrega = ?")
+            values.append(_now_uruguay())
+        
+        # Registrar quién hizo el cambio
+        if usuario and "ultimo_editor" in cols:
+            updates.append("ultimo_editor = ?")
+            values.append(usuario)
+        if "fecha_ultima_edicion" in cols:
+            updates.append("fecha_ultima_edicion = ?")
+            values.append(_now_uruguay())
+        
+        values.append(pedido_id)
+        cur.execute(f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
+        
+        # Registrar en historial si existe la tabla
+        tables = [r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+        if "historial_pedidos" in tables:
+            cur.execute("""
+                INSERT INTO historial_pedidos (pedido_id, accion, usuario, fecha, detalles)
+                VALUES (?, ?, ?, ?, ?)
+            """, (pedido_id, "cambio_estado", usuario or "sistema", _now_uruguay(), f"Estado cambiado a: {nuevo_estado}"))
+        
+        con.commit()
+        return {"id": pedido_id, "estado": nuevo_estado, "repartidor": repartidor}
+    finally:
+        con.close()
+
+
+def get_pedidos_por_estado(estado: str = None) -> List[Dict[str, Any]]:
+    """
+    Obtiene pedidos filtrados por estado.
+    Si estado es None, devuelve todos.
+    """
+    pedidos = get_pedidos()
+    if estado is None:
+        return pedidos
+    return [p for p in pedidos if p.get("estado", "tomado") == estado]
+
+
+def get_pedidos_por_repartidor(repartidor: str) -> List[Dict[str, Any]]:
+    """
+    Obtiene pedidos asignados a un repartidor específico.
+    Útil para la hoja de ruta.
+    """
+    pedidos = get_pedidos()
+    return [p for p in pedidos if p.get("repartidor") == repartidor]
 
 
 def update_pedido_cliente(pedido_id: int, cliente_id: int) -> Dict[str, Any]:
@@ -2098,6 +2223,22 @@ def get_all_usuarios() -> List[Dict[str, Any]]:
         
         cur.execute(f"SELECT {', '.join(sel)} FROM usuarios ORDER BY id")
         return [dict(r) for r in cur.fetchall()]
+    finally:
+        con.close()
+
+
+def get_pedidos_creators() -> List[str]:
+    """Obtiene lista de usuarios únicos que han creado pedidos (para filtro)"""
+    con = conectar()
+    try:
+        cur = con.cursor()
+        cur.execute("""
+            SELECT DISTINCT creado_por 
+            FROM pedidos 
+            WHERE creado_por IS NOT NULL AND creado_por != ''
+            ORDER BY creado_por
+        """)
+        return [r[0] for r in cur.fetchall()]
     finally:
         con.close()
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authFetch from '../authFetch';
 import { DashboardSkeleton } from './Skeleton';
+import HelpBanner from './HelpBanner';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -110,6 +111,20 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Ayuda colapsable */}
+      <HelpBanner
+        title="¿Cómo usar el Dashboard?"
+        icon="📊"
+        items={[
+          { label: 'Tarjetas de métricas', text: 'Las 4 tarjetas superiores muestran: Ventas Hoy, Pedidos Pendientes, Stock Bajo y Clientes Activos. Los números se actualizan en tiempo real.' },
+          { label: 'Productos más vendidos', text: 'Ranking de los 5 productos que más se venden. Los números (🥇🥈🥉) indican la posición. Los productos en oferta se marcan con 🎁.' },
+          { label: 'Alertas de stock', text: 'Lista de productos por debajo del stock mínimo. Clickeá "Ver Producto" para editarlo y reponer stock rápidamente.' },
+          { label: 'Últimos pedidos', text: 'Muestra los últimos 5 pedidos con estado actual. Clickeá cualquiera para ir al historial y editarlo.' },
+          { label: 'Acciones rápidas', text: 'Botones para ir directamente a las secciones más usadas: Nuevo Pedido, Ver Clientes, Gestionar Productos, Ver Reportes.' },
+          { label: 'Navegación rápida', text: 'Presioná Ctrl+5 para volver al Dashboard desde cualquier sección. Usá los atajos numéricos para otras secciones.' }
+        ]}
+      />
 
       {/* Quick Actions - Acciones Rápidas */}
       <div className="card" style={{ padding: '16px' }}>

@@ -23,6 +23,7 @@ import threading
 import time
 import urllib.request
 import re
+import secrets
 
 # Load Render Secret File (.env) if it exists
 SECRET_FILE_PATH = "/etc/secrets/.env"
@@ -252,9 +253,16 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Token inválido o expirado. Inicia sesión nuevamente.")
 
 def get_admin_user(user=Depends(get_current_user)):
-    if user.get("rol") != "admin":
+    if user.get("rol") not in ["admin", "administrador"]:
         logger.warning(f"Unauthorized access: user={user.get('username')}, rol={user.get('rol')}")
         raise HTTPException(status_code=403, detail="Acceso denegado. Solo administradores pueden realizar esta acción.")
+    return user
+
+def get_oficina_or_admin(user=Depends(get_current_user)):
+    """Permite acceso a usuarios con rol 'admin' u 'oficina'"""
+    if user.get("rol") not in ["admin", "oficina", "administrador"]:
+        logger.warning(f"Unauthorized access: user={user.get('username')}, rol={user.get('rol')}")
+        raise HTTPException(status_code=403, detail="Acceso denegado. Solo administradores u oficina pueden realizar esta acción.")
     return user
 
 def require_role(allowed_roles: list):
@@ -301,7 +309,7 @@ class CategoriaCreate(BaseModel):
 class Producto(BaseModel):
     id: Optional[int] = None
     nombre: Optional[str] = Field(None, min_length=2, max_length=100)
-    precio: Optional[float] = Field(None, gt=0, description="Precio debe ser mayor a 0")
+    precio: Optional[float] = Field(None, ge=0, description="Precio debe ser mayor o igual a 0")
     imagen_url: Optional[str] = None
     stock: Optional[float] = Field(default=0, ge=0, description="Stock no puede ser negativo")
     stock_minimo: Optional[float] = Field(default=10, ge=0)
@@ -319,6 +327,33 @@ class Producto(BaseModel):
             raise ValueError("El valor debe ser múltiplo de 0.5 (ej: 0.5, 1, 1.5, 2, etc)")
         return redondeado
 
+# Modelo simple para items en pedidos (no hereda validaciones complejas de Producto)
+class ProductoPedido(BaseModel):
+    id: int = Field(..., description="ID del producto")
+    nombre: Optional[str] = Field(None, description="Nombre del producto (opcional)")
+    precio: Optional[float] = Field(None, ge=0, description="Precio del producto (opcional)")
+    cantidad: float = Field(..., gt=0, description="Cantidad a pedir")
+    tipo: str = Field(..., description="Tipo de unidad de medida")
+
+    @field_validator('cantidad')
+    @classmethod
+    def validar_cantidad(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("La cantidad debe ser mayor a 0")
+        # Redondear a múltiplo de 0.5
+        redondeado = round(v * 2) / 2
+        if abs(v - redondeado) > 0.01:  # Tolerancia para floats
+            raise ValueError("La cantidad debe ser múltiplo de 0.5 (ej: 0.5, 1, 1.5, 2, etc)")
+        return redondeado
+
+    @field_validator('tipo')
+    @classmethod
+    def validar_tipo(cls, v: str) -> str:
+        if v not in ['unidad', 'caja', 'gancho', 'tira']:
+            raise ValueError("El tipo debe ser 'unidad', 'caja', 'gancho' o 'tira'")
+        return v
+
+# Modelo completo que extiende Producto para otras funciones
 class ProductoConCantidad(Producto):
     cantidad: float
     tipo: str
@@ -344,7 +379,7 @@ class ProductoConCantidad(Producto):
 class Pedido(BaseModel):
     id: Optional[int] = None
     cliente: ClienteRef
-    productos: List[ProductoConCantidad]
+    productos: List[ProductoPedido]  # Usando el modelo simple para pedidos
     fecha: Optional[str] = None
     pdf_generado: bool = False
 
@@ -496,6 +531,19 @@ def logout(request: Request, token: str = Depends(oauth2_scheme)):
             return {"message": "Sesión cerrada (token antiguo)"}
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
+
+
+@app.get("/me")
+def get_current_user_info(user=Depends(get_current_user)):
+    """Obtiene información del usuario actual"""
+    db_user = db.get_usuario(user["username"])
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {
+        "username": db_user["username"],
+        "rol": db_user["rol"],
+        "activo": db_user.get("activo", 1)
+    }
 
 
 @app.post("/refresh")
@@ -1042,8 +1090,30 @@ def upload_file(request: Request, file: UploadFile = File(...), user=Depends(get
     return {"url": f"/media/uploads/{safe_name}"}
 
 @app.get("/pedidos")
-def get_pedidos(user=Depends(get_current_user)):
-    return db.get_pedidos()
+def get_pedidos(
+    page: int = Query(None, ge=1, description="Página (1-based). Si no se especifica, retorna todos."),
+    limit: int = Query(50, ge=1, le=200, description="Pedidos por página (max 200)"),
+    estado: str = Query(None, description="Filtrar por estado: tomado, preparando, listo, entregado, cancelado"),
+    creado_por: str = Query(None, description="Filtrar por usuario que creó el pedido"),
+    user=Depends(get_current_user)
+):
+    """
+    Obtiene pedidos con paginación opcional.
+    - ventas: solo ve sus propios pedidos
+    - oficina/admin: ve todos los pedidos
+    """
+    # Para usuarios 'ventas', forzar filtro por su username
+    user_rol = user.get("rol", "")
+    if user_rol == "ventas":
+        creado_por = user.get("username")
+    
+    return db.get_pedidos(page=page, limit=limit, estado=estado, creado_por=creado_por)
+
+
+@app.get("/pedidos/creators")
+def get_pedidos_creators(user=Depends(get_oficina_or_admin)):
+    """Obtiene lista de usuarios que han creado pedidos (para filtro dropdown)"""
+    return db.get_pedidos_creators()
 
 @app.get("/pedidos/export/csv")
 def export_pedidos_csv(
@@ -1124,6 +1194,46 @@ def delete_pedido(pedido_id: int, request: Request, user=Depends(get_admin_user)
 @app.patch("/pedidos/{pedido_id}")
 def update_pedido_estado(pedido_id: int, user=Depends(get_current_user)):
     return db.update_pedido_estado(pedido_id, 1)
+
+
+# === ESTADOS DE PEDIDO WORKFLOW ===
+class EstadoPedidoUpdate(BaseModel):
+    estado: str  # tomado, preparando, listo, entregado, cancelado
+    repartidor: Optional[str] = None
+
+
+@app.put("/pedidos/{pedido_id}/estado")
+def update_pedido_workflow(pedido_id: int, data: EstadoPedidoUpdate, user=Depends(get_current_user)):
+    """
+    Actualiza el estado del workflow del pedido.
+    Estados: tomado → preparando → listo → entregado (o cancelado)
+    """
+    try:
+        result = db.update_pedido_workflow(
+            pedido_id, 
+            data.estado, 
+            repartidor=data.repartidor,
+            usuario=user.get('username')
+        )
+        logger.info(f"PUT /pedidos/{pedido_id}/estado -> {data.estado} by {user['username']}")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/pedidos/por-estado/{estado}")
+def get_pedidos_por_estado(estado: str, user=Depends(get_current_user)):
+    """Obtiene pedidos filtrados por estado"""
+    if estado not in db.ESTADOS_PEDIDO_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Estado inválido: {estado}")
+    return db.get_pedidos_por_estado(estado)
+
+
+@app.get("/pedidos/por-repartidor/{repartidor}")
+def get_pedidos_por_repartidor(repartidor: str, user=Depends(get_current_user)):
+    """Obtiene pedidos asignados a un repartidor (hoja de ruta)"""
+    return db.get_pedidos_por_repartidor(repartidor)
+
 
 @app.put("/pedidos/{pedido_id}/cliente")
 def update_pedido_cliente(pedido_id: int, cliente_id: int, user=Depends(get_current_user)):
@@ -1271,6 +1381,126 @@ def generar_pdfs(request: Request, body: GenerarPDFsRequest, user=Depends(get_cu
             except Exception as rollback_err:
                 logger.error(f"ROLLBACK_FAILED: {rollback_err}")
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+
+class GenerarHojaRutaRequest(BaseModel):
+    """Request para generar hoja de ruta PDF"""
+    repartidor: str
+    zona: str = ""  # Opcional: filtrar por zona
+    estados: list = []  # Opcional: filtrar por estados (default: tomado, preparando, listo)
+
+
+@app.post("/hoja-ruta/generar-pdf")
+@limiter.limit("20/minute")
+def generar_hoja_ruta_pdf(request: Request, body: GenerarHojaRutaRequest, user=Depends(get_current_user)):
+    """
+    Genera un PDF de hoja de ruta para un repartidor específico.
+    El PDF incluye todos los pedidos asignados a ese repartidor, agrupados por zona,
+    con checkboxes para marcar entregas, espacio para firma y resumen final.
+    """
+    ctx = get_request_context(request)
+    repartidor = body.repartidor.strip()
+    
+    if not repartidor:
+        raise HTTPException(status_code=400, detail="Debe especificar un repartidor")
+    
+    # Get all pedidos
+    todos_pedidos = db.get_pedidos()
+    
+    # Filter by repartidor
+    pedidos_repartidor = [p for p in todos_pedidos if p.get('repartidor') == repartidor]
+    
+    # Filter by estados (default: no entregados ni cancelados)
+    estados_validos = body.estados if body.estados else ['tomado', 'preparando', 'listo']
+    pedidos_filtrados = [p for p in pedidos_repartidor if (p.get('estado') or 'tomado') in estados_validos]
+    
+    # Optional: filter by zona
+    clientes = db.get_clientes()
+    clientes_dict = {c['id']: c for c in clientes}
+    
+    if body.zona:
+        pedidos_filtrados = [
+            p for p in pedidos_filtrados 
+            if clientes_dict.get(p.get('cliente_id'), {}).get('zona') == body.zona
+        ]
+    
+    if not pedidos_filtrados:
+        raise HTTPException(status_code=404, detail=f"No hay pedidos pendientes para {repartidor}")
+    
+    # Generate PDF
+    fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M")
+    pdf_bytes = pdf_utils.generar_pdf_hoja_ruta(pedidos_filtrados, clientes, repartidor, fecha_generacion)
+    
+    # Log
+    logger.info(f"HOJA_RUTA_GENERATED: repartidor={repartidor} pedidos={len(pedidos_filtrados)} by={user.get('username')}")
+    db.audit_log(user.get('username'), "HOJA_RUTA_GENERATE", "pedidos", 
+                 datos_despues={"repartidor": repartidor, "count": len(pedidos_filtrados), "zona": body.zona or "todas"},
+                 ip_address=ctx["ip"], user_agent=ctx["user_agent"])
+    
+    # Return PDF
+    filename = f"hoja_ruta_{repartidor.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/hoja-ruta/repartidores")
+def get_repartidores_con_pedidos(user=Depends(get_current_user)):
+    """
+    Obtiene la lista de repartidores que tienen pedidos pendientes,
+    junto con el conteo de pedidos por estado.
+    """
+    todos_pedidos = db.get_pedidos()
+    clientes = db.get_clientes()
+    clientes_dict = {c['id']: c for c in clientes}
+    
+    repartidores = {}
+    sin_asignar = {"total": 0, "tomado": 0, "preparando": 0, "listo": 0, "zonas": set()}
+    
+    for p in todos_pedidos:
+        estado = p.get('estado') or 'tomado'
+        if estado in ['entregado', 'cancelado']:
+            continue
+            
+        repartidor = p.get('repartidor')
+        cliente = clientes_dict.get(p.get('cliente_id'), {})
+        zona = cliente.get('zona', 'Sin Zona')
+        
+        if not repartidor:
+            sin_asignar["total"] += 1
+            sin_asignar[estado] = sin_asignar.get(estado, 0) + 1
+            sin_asignar["zonas"].add(zona)
+        else:
+            if repartidor not in repartidores:
+                repartidores[repartidor] = {"total": 0, "tomado": 0, "preparando": 0, "listo": 0, "zonas": set()}
+            repartidores[repartidor]["total"] += 1
+            repartidores[repartidor][estado] = repartidores[repartidor].get(estado, 0) + 1
+            repartidores[repartidor]["zonas"].add(zona)
+    
+    # Convert sets to lists for JSON serialization
+    result = []
+    for rep, data in sorted(repartidores.items()):
+        result.append({
+            "repartidor": rep,
+            "total": data["total"],
+            "tomado": data.get("tomado", 0),
+            "preparando": data.get("preparando", 0),
+            "listo": data.get("listo", 0),
+            "zonas": sorted(list(data["zonas"]))
+        })
+    
+    return {
+        "repartidores": result,
+        "sin_asignar": {
+            "total": sin_asignar["total"],
+            "tomado": sin_asignar.get("tomado", 0),
+            "preparando": sin_asignar.get("preparando", 0),
+            "listo": sin_asignar.get("listo", 0),
+            "zonas": sorted(list(sin_asignar["zonas"]))
+        }
+    }
 
 
 # === Edición de ítems de pedidos pendientes ===
@@ -1858,7 +2088,8 @@ def backup_health(request: Request):
     if expected_key:
         if not api_key:
             raise HTTPException(status_code=401, detail="API key required in X-API-Key header")
-        if api_key != expected_key:
+        # Use constant-time comparison to prevent timing attacks
+        if not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Invalid API key")
     
     db_path = os.getenv("DB_PATH", "/data/ventas.db")

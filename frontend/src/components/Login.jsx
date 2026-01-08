@@ -18,7 +18,7 @@ export default function Login({ onLoginSuccess }) {
     try {
       // Use AuthContext login to update user state
       await login(username, password);
-      try { window.dispatchEvent(new CustomEvent('auth_changed')); } catch(e){}
+      try { window.dispatchEvent(new CustomEvent('auth_changed')); } catch (e) { }
       onLoginSuccess(); // dispara setLogueado(true)
       setLoading(false);
     } catch (err) {
@@ -35,32 +35,68 @@ export default function Login({ onLoginSuccess }) {
 
   return (
     <div className="auth-card">
-      <h2 className="auth-title">Iniciar Sesión</h2>
-      {error && <p className="auth-error">{error}</p>}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🧊</div>
+        <h2 className="auth-title">FRIOSUR - Pedidos</h2>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', margin: 0 }}>
+          Sistema de gestión de pedidos
+        </p>
+      </div>
+      {error && (
+        <div className="auth-error" role="alert">
+          <span style={{ marginRight: '6px' }}>⚠️</span>{error}
+        </div>
+      )}
       <form onSubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoFocus
-          required
-          aria-label="Usuario"
-        />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          aria-label="Contraseña"
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Ingresando...' : 'Ingresar'}
+        <div className="form-group">
+          <label htmlFor="login-username" style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '4px', display: 'block', color: 'var(--color-text)' }}>
+            👤 Usuario
+          </label>
+          <input
+            id="login-username"
+            type="text"
+            placeholder="Ingresá tu usuario"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoFocus
+            autoComplete="username"
+            required
+            aria-label="Usuario"
+            aria-describedby="username-help"
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="login-password" style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '4px', display: 'block', color: 'var(--color-text)' }}>
+            🔒 Contraseña
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="Ingresá tu contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            aria-label="Contraseña"
+          />
+        </div>
+        <button type="submit" disabled={loading} style={{ marginTop: '0.5rem' }}>
+          {loading ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span className="spinner-small"></span> Ingresando...
+            </span>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              🚀 Ingresar
+            </span>
+          )}
         </button>
       </form>
       <p>
-        ¿No tenés cuenta? <a href="/registro">Registrate</a>
+        ¿No tenés cuenta? <a href="/registro">Registrate aquí</a>
+      </p>
+      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+        💡 Tip: Si olvidaste tu contraseña, contactá al administrador
       </p>
     </div>
   );
