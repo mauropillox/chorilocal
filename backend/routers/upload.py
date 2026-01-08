@@ -10,10 +10,15 @@ from deps import get_current_user, limiter, RATE_LIMIT_WRITE
 
 router = APIRouter()
 
-# Upload directory - use /data/uploads in production, ./data/uploads in dev
+# Upload directory - use same base directory as DB_PATH for persistence on Render
+# On Render, DB_PATH=/etc/secrets/ventas.db, so uploads go to /etc/secrets/uploads/
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
+
 if ENVIRONMENT == "production":
-    UPLOAD_DIR = "/data/uploads"
+    # Use the same base directory as the database for persistent storage
+    db_dir = os.path.dirname(DB_PATH)
+    UPLOAD_DIR = os.path.join(db_dir, "uploads")
 else:
     UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploads")
 

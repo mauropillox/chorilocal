@@ -226,8 +226,12 @@ app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 
 # --- Static File Serving for Uploads ---
 # Mount /media/uploads to serve uploaded images
+# On Render, use same base directory as DB_PATH for persistent storage
+DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 if ENVIRONMENT == "production":
-    UPLOAD_DIR = "/data/uploads"
+    # Use the same base directory as the database for persistent storage
+    db_dir = os.path.dirname(DB_PATH)
+    UPLOAD_DIR = os.path.join(db_dir, "uploads")
 else:
     UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "data", "uploads")
 
