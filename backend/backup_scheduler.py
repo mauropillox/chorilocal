@@ -309,8 +309,18 @@ def start_backup_scheduler():
     _scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True, name="BackupScheduler")
     _scheduler_thread.start()
     
-    # Create initial backup on startup
+    # Create initial backup on startup only if no recent backup exists
+    # This avoids multiple workers each creating startup backups
     try:
+        existing = list_backups()
+        if existing:
+            # Check if most recent backup is less than 5 minutes old
+            from datetime import datetime
+            latest_time = datetime.fromisoformat(existing[0]["created_at"].replace("Z", "+00:00"))
+            age_seconds = (datetime.now(latest_time.tzinfo) - latest_time).total_seconds()
+            if age_seconds < 300:  # 5 minutes
+                logger.info(f"Skipping startup backup - recent backup exists ({age_seconds:.0f}s ago)")
+                return
         create_backup_now(reason="startup")
     except Exception as e:
         logger.warning(f"Startup backup failed: {e}")
