@@ -1,7 +1,7 @@
 """Pedidos (Orders) Router"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List, Optional, Dict, Any
-import datetime
+from datetime import datetime, timedelta
 
 import db
 import models
@@ -11,6 +11,45 @@ from deps import (
 )
 
 router = APIRouter()
+
+
+@router.get("/pedidos/antiguos")
+@limiter.limit(RATE_LIMIT_READ)
+async def get_pedidos_antiguos(
+    request: Request,
+    horas: int = Query(default=24, ge=1, le=168),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get old pending orders (older than N hours)"""
+    try:
+        fecha_limite = (datetime.now() - timedelta(hours=horas)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        with db.get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, 
+                       p.creado_por, c.nombre as cliente_nombre, p.pdf_generado
+                FROM pedidos p
+                JOIN clientes c ON p.cliente_id = c.id
+                WHERE p.estado IN ('Pendiente', 'pendiente', 'En Preparación', 'preparando')
+                AND p.fecha < ?
+                ORDER BY p.fecha ASC
+                LIMIT 10
+            """, (fecha_limite,))
+            
+            pedidos = cur.fetchall()
+            return [{
+                "id": p[0],
+                "cliente_id": p[1],
+                "fecha": p[2],
+                "estado": p[3],
+                "notas": p[4],
+                "creado_por": p[5],
+                "cliente_nombre": p[6],
+                "pdf_generado": p[7]
+            } for p in pedidos]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting old orders: {str(e)}")
 
 
 @router.post("/pedidos", response_model=models.Pedido)

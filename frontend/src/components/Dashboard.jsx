@@ -46,26 +46,52 @@ export default function Dashboard() {
   const cargarDatos = async () => {
     try {
       const [metricsRes, pedidosRes, alertasRes, statsRes, antiguosRes] = await Promise.all([
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`),
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/pedidos_por_dia?dias=30`),
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/alertas`),
-        authFetch(`${import.meta.env.VITE_API_URL}/estadisticas/usuarios`),
-        authFetch(`${import.meta.env.VITE_API_URL}/pedidos/antiguos?horas=24`)
+        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`).catch(() => null),
+        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/pedidos_por_dia?dias=30`).catch(() => null),
+        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/alertas`).catch(() => null),
+        authFetch(`${import.meta.env.VITE_API_URL}/estadisticas/usuarios`).catch(() => null),
+        authFetch(`${import.meta.env.VITE_API_URL}/pedidos/antiguos?horas=24`).catch(() => null)
       ]);
 
-      const [metricsData, pedidosData, alertasData] = await Promise.all([
-        metricsRes.json(),
-        pedidosRes.json(),
-        alertasRes.json()
-      ]);
-
-      // Handle new endpoints separately (may not exist yet)
+      // Parse responses safely - default to empty/null if failed
+      let metricsData = null;
+      let pedidosData = [];
+      let alertasData = [];
       let statsData = null;
       let antiguosData = [];
+
       try {
-        if (statsRes.ok) statsData = await statsRes.json();
-        if (antiguosRes.ok) antiguosData = await antiguosRes.json();
-      } catch { /* Stats endpoints not available */ }
+        if (metricsRes?.ok) {
+          metricsData = await metricsRes.json();
+        }
+      } catch { /* metrics failed */ }
+
+      try {
+        if (pedidosRes?.ok) {
+          const data = await pedidosRes.json();
+          pedidosData = Array.isArray(data) ? data : [];
+        }
+      } catch { /* pedidos failed */ }
+
+      try {
+        if (alertasRes?.ok) {
+          const data = await alertasRes.json();
+          alertasData = Array.isArray(data) ? data : [];
+        }
+      } catch { /* alertas failed */ }
+
+      try {
+        if (statsRes?.ok) {
+          statsData = await statsRes.json();
+        }
+      } catch { /* stats failed */ }
+
+      try {
+        if (antiguosRes?.ok) {
+          const data = await antiguosRes.json();
+          antiguosData = Array.isArray(data) ? data : [];
+        }
+      } catch { /* antiguos failed */ }
 
       setMetrics(metricsData);
       setPedidosPorDia(pedidosData);
@@ -98,7 +124,14 @@ export default function Dashboard() {
     );
   }
 
-  const maxPedidos = Math.max(...pedidosPorDia.map(p => p.cantidad), 1);
+  // Safe arrays with defaults
+  const safePedidosPorDia = Array.isArray(pedidosPorDia) ? pedidosPorDia : [];
+  const safeAlertas = Array.isArray(alertas) ? alertas : [];
+  const safePedidosAntiguos = Array.isArray(pedidosAntiguos) ? pedidosAntiguos : [];
+  const safeTopProductos = Array.isArray(metrics?.top_productos) ? metrics.top_productos : [];
+  const safeEstadisticasUsuarios = estadisticasUsuarios || { por_vendedor: [], por_dispositivo: [] };
+
+  const maxPedidos = Math.max(...safePedidosPorDia.map(p => p.cantidad), 1);
 
   return (
     <div className="panel" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -211,11 +244,11 @@ export default function Dashboard() {
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text)' }}>
           📈 Pedidos Últimos 30 Días ({metrics.pedidos_mes} total)
         </h3>
-        {pedidosPorDia.length === 0 ? (
+        {safePedidosPorDia.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '8px 0' }}>No hay pedidos en los últimos 30 días</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {pedidosPorDia.slice(-14).map((item, idx) => (
+            {safePedidosPorDia.slice(-14).map((item, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '88px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
                   {new Date(item.fecha).toLocaleDateString('es-AR', { month: 'short', day: 'numeric' })}
@@ -254,11 +287,11 @@ export default function Dashboard() {
           🏆 Top 5 Productos Más Vendidos
           <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>→ Ver todos</span>
         </h3>
-        {metrics.top_productos.length === 0 ? (
+        {safeTopProductos.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '8px 0' }}>No hay datos de ventas</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {metrics.top_productos.map((prod, idx) => {
+            {safeTopProductos.map((prod, idx) => {
               const medalColors = ['#eab308', '#9ca3af', '#fb923c'];
               const enOferta = prod.id && productosEnOferta.has(prod.id);
               return (
@@ -307,7 +340,7 @@ export default function Dashboard() {
       </div>
 
       {/* Alertas - Stock Bajo destacado */}
-      {alertas.length > 0 && (
+      {safeAlertas.length > 0 && (
         <div style={{
           padding: '18px',
           background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
@@ -320,11 +353,11 @@ export default function Dashboard() {
             onClick={() => navigate('/productos?stockBajo=1')}
             style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#dc2626' }}
           >
-            🚨 ¡ATENCIÓN! Stock Bajo ({alertas.length} productos)
+            🚨 ¡ATENCIÓN! Stock Bajo ({safeAlertas.length} productos)
             <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: 'auto' }}>Click para gestionar →</span>
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
-            {alertas.slice(0, 6).map((alerta, idx) => (
+            {safeAlertas.slice(0, 6).map((alerta, idx) => (
               <div
                 key={idx}
                 onClick={() => navigate(`/productos?buscar=${encodeURIComponent(alerta.producto)}`)}
@@ -357,29 +390,29 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-          {alertas.length > 6 && (
+          {safeAlertas.length > 6 && (
             <p
               onClick={() => navigate('/productos?stockBajo=1')}
               style={{ textAlign: 'center', paddingTop: '12px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600, color: '#dc2626' }}
             >
-              Ver {alertas.length - 6} productos más →
+              Ver {safeAlertas.length - 6} productos más →
             </p>
           )}
         </div>
       )}
 
       {/* Pedidos Antiguos Pendientes */}
-      {pedidosAntiguos.length > 0 && (
+      {safePedidosAntiguos.length > 0 && (
         <div className="alert-warning" style={{ padding: '18px' }}>
           <h3
             onClick={() => navigate('/historial?antiguos=1')}
             style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
           >
-            ⏰ Pedidos Pendientes +24 horas ({pedidosAntiguos.length})
+            ⏰ Pedidos Pendientes +24 horas ({safePedidosAntiguos.length})
             <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>→ Ver todos</span>
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {pedidosAntiguos.slice(0, 5).map((pedido, idx) => (
+            {safePedidosAntiguos.slice(0, 5).map((pedido, idx) => (
               <div
                 key={idx}
                 onClick={() => navigate(`/historial?pedidoId=${pedido.id}`)}
@@ -400,12 +433,12 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-            {pedidosAntiguos.length > 5 && (
+            {safePedidosAntiguos.length > 5 && (
               <p
                 onClick={() => navigate('/historial?antiguos=1')}
                 style={{ color: '#c2410c', textAlign: 'center', paddingTop: '6px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}
               >
-                Ver {pedidosAntiguos.length - 5} pedidos más →
+                Ver {safePedidosAntiguos.length - 5} pedidos más →
               </p>
             )}
           </div>
@@ -413,14 +446,14 @@ export default function Dashboard() {
       )}
 
       {/* Estadísticas por Usuario */}
-      {estadisticasUsuarios && estadisticasUsuarios.por_vendedor && estadisticasUsuarios.por_vendedor.length > 0 && (
+      {safeEstadisticasUsuarios.por_vendedor && safeEstadisticasUsuarios.por_vendedor.length > 0 && (
         <div className="card" style={{ padding: '18px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text)' }}>
             👥 Actividad por Vendedor
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {estadisticasUsuarios.por_vendedor.slice(0, 5).map((vendedor, idx) => {
-              const maxCantidad = estadisticasUsuarios.por_vendedor[0]?.cantidad || 1;
+            {safeEstadisticasUsuarios.por_vendedor.slice(0, 5).map((vendedor, idx) => {
+              const maxCantidad = safeEstadisticasUsuarios.por_vendedor[0]?.cantidad || 1;
               return (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '120px', fontWeight: 600, color: 'var(--color-text)', fontSize: '0.95rem' }}>
@@ -453,13 +486,13 @@ export default function Dashboard() {
       )}
 
       {/* Actividad por Dispositivo */}
-      {estadisticasUsuarios && estadisticasUsuarios.por_dispositivo && estadisticasUsuarios.por_dispositivo.length > 0 && (
+      {safeEstadisticasUsuarios.por_dispositivo && safeEstadisticasUsuarios.por_dispositivo.length > 0 && (
         <div className="card" style={{ padding: '18px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text)' }}>
             📱 Pedidos por Dispositivo
           </h3>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            {estadisticasUsuarios.por_dispositivo.map((item, idx) => {
+            {safeEstadisticasUsuarios.por_dispositivo.map((item, idx) => {
               const icons = { mobile: '📱', tablet: '📱', web: '💻' };
               const colors = { mobile: '#14b8a6', tablet: '#f59e0b', web: '#0ea5e9' };
               const labels = { mobile: 'Móvil', tablet: 'Tablet', web: 'Web' };
