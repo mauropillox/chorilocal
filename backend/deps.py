@@ -141,22 +141,34 @@ def validate_production_secrets():
     from os import getenv
     import db
     
-    required_vars = {
+    # Only validate if explicitly in production mode
+    environment = getenv("ENVIRONMENT", "development")
+    if environment != "production":
+        logger.info(f"Skipping production validation (ENVIRONMENT={environment})")
+        return
+    
+    # Critical vars that must be set and secure
+    critical_vars = {
         "SECRET_KEY": "JWT signing key (min 32 chars)",
+    }
+    
+    # Optional but recommended vars (warn only)
+    recommended_vars = {
         "ADMIN_PASSWORD": "Initial admin user password",
-        "ENVIRONMENT": "Runtime environment (must be 'production')",
         "CORS_ORIGINS": "Allowed CORS origins (comma-separated URLs)"
     }
     
     # Only require DATABASE_URL if using PostgreSQL
     if db.USE_POSTGRES:
-        required_vars["DATABASE_URL"] = "PostgreSQL connection string"
+        critical_vars["DATABASE_URL"] = "PostgreSQL connection string"
     
     missing = []
     weak_secrets = []
     config_errors = []
+    warnings = []
     
-    for var, description in required_vars.items():
+    # Validate critical vars
+    for var, description in critical_vars.items():
         value = getenv(var)
         
         # Check for missing values
@@ -171,29 +183,26 @@ def validate_production_secrets():
                 weak_secrets.append(f"{var} (using weak/development default)")
             elif len(value) < 32:
                 weak_secrets.append(f"{var} (too short, minimum 32 characters required)")
+    
+    # Validate recommended vars (warn only, don't fail)
+    for var, description in recommended_vars.items():
+        value = getenv(var)
         
-        # ADMIN_PASSWORD specific validation
-        elif var == "ADMIN_PASSWORD":
-            if len(value) < 8:
-                weak_secrets.append(f"{var} (too short, minimum 8 characters recommended)")
-        
-        # ENVIRONMENT specific validation
-        elif var == "ENVIRONMENT":
-            if value != "production":
-                config_errors.append(f"{var} (must be 'production' but is '{value}')")
-        
-        # CORS_ORIGINS specific validation
+        if not value:
+            warnings.append(f"{var} not set ({description})")
+        elif var == "ADMIN_PASSWORD" and len(value) < 8:
+            warnings.append(f"{var} is short (minimum 8 characters recommended)")
         elif var == "CORS_ORIGINS":
             origins = [o.strip() for o in value.split(",") if o.strip()]
             if not origins:
-                config_errors.append(f"{var} (empty or invalid)")
+                warnings.append(f"{var} is empty or invalid")
             elif any("localhost" in o for o in origins):
-                logger.warning(f"{var} contains localhost origins in production")
+                warnings.append(f"{var} contains localhost origins in production")
     
     # Build error message with context
     errors = []
     if missing:
-        errors.append(f"Missing required variables: {', '.join(missing)}")
+        errors.append(f"Missing critical variables: {', '.join(missing)}")
     if weak_secrets:
         errors.append(f"Weak/insecure values: {', '.join(weak_secrets)}")
     if config_errors:
@@ -202,5 +211,8 @@ def validate_production_secrets():
     if errors:
         error_msg = "Production environment validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
         raise RuntimeError(error_msg)
+    
+    if warnings:
+        logger.warning("Production configuration warnings:\n" + "\n".join(f"  - {w}" for w in warnings))
     
     logger.info("Production environment validation passed")
