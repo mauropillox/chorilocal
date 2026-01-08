@@ -41,12 +41,14 @@ export default function LayoutApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  // Role-based access: admin has full access, oficina and ventas have limited tabs
-  const isAdmin = user?.rol === 'admin' || user?.rol === 'administrador';
+  // Role-based access: admin has full access, oficina and vendedor have limited tabs
+  const isAdmin = user?.rol === 'admin';
   const isOficina = user?.rol === 'oficina';
-  const isVentas = user?.rol === 'ventas';
-  // oficina and ventas can only see: Clientes, Productos, Pedidos, Historial
-  const hasLimitedAccess = isOficina || isVentas;
+  const isVendedor = user?.rol === 'vendedor'; // Corrected from 'ventas'
+
+  // oficina and vendedor can only see: Clientes, Productos, Pedidos, Historial
+  const hasLimitedAccess = isOficina || isVendedor;
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [ofertasCount, setOfertasCount] = useState(0);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -180,9 +182,9 @@ export default function LayoutApp({ onLogout }) {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await fetch(`${import.meta.env.VITE_API_URL}/logout`, {
+        // Use authFetch to handle token and potential 401s gracefully
+        await authFetch(`${import.meta.env.VITE_API_URL}/api/logout`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
         });
       }
     } catch (e) {
@@ -194,7 +196,7 @@ export default function LayoutApp({ onLogout }) {
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname.startsWith(path);
 
   // Obtener nombre de usuario del token (usando auth module)
   const getUserName = () => {
@@ -225,153 +227,130 @@ export default function LayoutApp({ onLogout }) {
             <p className="header-subtitle" style={{ marginLeft: '0.5rem', color: 'var(--color-text-muted)' }}>Sistema de Gestión de Pedidos</p>
           </div>
 
-          {/* Global Search */}
-          <div style={{ position: 'relative', flex: '0 1 300px' }} role="search">
-            <input
-              id="global-search"
-              type="text"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              placeholder="🔍 Buscar... (Ctrl+K)"
-              aria-label="Buscar clientes o productos"
-              aria-describedby="search-hint"
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                paddingRight: '30px',
-                borderRadius: '8px',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg)',
-                color: 'var(--color-text)',
-                fontSize: '0.875rem'
-              }}
-            />
-            <span id="search-hint" className="sr-only">Presioná Ctrl+K para abrir búsqueda rápida</span>
-            {globalSearch && (
+          <div className="flex items-center space-x-4">
+            {/* Global Search */}
+            <div className="relative">
+              <input
+                id="global-search"
+                type="text"
+                placeholder="Buscar (Ctrl+K)"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                className="bg-gray-700 text-white rounded-md px-3 py-1.5 text-sm w-48 focus:w-64 transition-all duration-300"
+              />
               <button
                 onClick={() => { setGlobalSearch(''); setSearchResults(null); }}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                 aria-label="Limpiar búsqueda"
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--color-text-muted)',
-                  padding: '2px',
-                  minHeight: 'auto'
-                }}
               >
                 ✕
               </button>
-            )}
 
-            {/* Search Results Dropdown */}
-            {searchResults && (globalSearch.trim().length >= 2) && (
-              <div
-                role="listbox"
-                aria-label="Resultados de búsqueda"
-                aria-live="polite"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '4px',
-                  background: 'var(--color-bg)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                  zIndex: 1000,
-                  maxHeight: '400px',
-                  overflow: 'auto'
-                }}
+              {/* Search Results Dropdown */}
+              {searchResults && (globalSearch.trim().length >= 2) && (
+                <div
+                  role="listbox"
+                  aria-label="Resultados de búsqueda"
+                  aria-live="polite"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                    maxHeight: '400px',
+                    overflow: 'auto'
+                  }}
+                >
+                  {searching && <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }} aria-live="polite">Buscando...</div>}
+
+                  {!searching && searchResults.clientes.length === 0 && searchResults.productos.length === 0 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                      No se encontraron resultados
+                    </div>
+                  )}
+
+                  {searchResults.clientes.length > 0 && (
+                    <div role="group" aria-label="Clientes encontrados">
+                      <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
+                        👥 CLIENTES
+                      </div>
+                      {searchResults.clientes.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => { navigate(`/clientes?buscar=${encodeURIComponent(c.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
+                          role="option"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--color-border)',
+                            transition: 'background 0.1s',
+                            background: 'transparent',
+                            border: 'none',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{c.nombre}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{c.telefono || 'Sin teléfono'}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {searchResults.productos.length > 0 && (
+                    <div role="group" aria-label="Productos encontrados">
+                      <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
+                        📦 PRODUCTOS
+                      </div>
+                      {searchResults.productos.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => { navigate(`/productos?buscar=${encodeURIComponent(p.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
+                          role="option"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--color-border)',
+                            transition: 'background 0.1s',
+                            background: 'transparent',
+                            border: 'none',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>${p.precio} - Stock: {p.stock || 0}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="header-user">
+              <span className="user-badge" aria-label={`Usuario: ${getUserName()}`}>👤 {getUserName()}</span>
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="btn-ghost"
+                style={{ padding: '6px 10px', fontSize: '0.875rem' }}
+                aria-label="Cambiar contraseña"
+                title="Cambiar contraseña"
               >
-                {searching && <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }} aria-live="polite">Buscando...</div>}
-
-                {!searching && searchResults.clientes.length === 0 && searchResults.productos.length === 0 && (
-                  <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                    No se encontraron resultados
-                  </div>
-                )}
-
-                {searchResults.clientes.length > 0 && (
-                  <div role="group" aria-label="Clientes encontrados">
-                    <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
-                      👥 CLIENTES
-                    </div>
-                    {searchResults.clientes.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => { navigate(`/clientes?buscar=${encodeURIComponent(c.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
-                        role="option"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--color-border)',
-                          transition: 'background 0.1s',
-                          background: 'transparent',
-                          border: 'none',
-                          textAlign: 'left'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{c.nombre}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{c.telefono || 'Sin teléfono'}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {searchResults.productos.length > 0 && (
-                  <div role="group" aria-label="Productos encontrados">
-                    <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
-                      📦 PRODUCTOS
-                    </div>
-                    {searchResults.productos.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => { navigate(`/productos?buscar=${encodeURIComponent(p.nombre)}`); setGlobalSearch(''); setSearchResults(null); }}
-                        role="option"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--color-border)',
-                          transition: 'background 0.1s',
-                          background: 'transparent',
-                          border: 'none',
-                          textAlign: 'left'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{p.nombre}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>${p.precio} - Stock: {p.stock || 0}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="header-user">
-            <span className="user-badge" aria-label={`Usuario: ${getUserName()}`}>👤 {getUserName()}</span>
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className="btn-ghost"
-              style={{ padding: '6px 10px', fontSize: '0.875rem' }}
-              aria-label="Cambiar contraseña"
-              title="Cambiar contraseña"
-            >
-              🔐
-            </button>
-            <ThemeToggle />
+                🔐
+              </button>
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
@@ -498,26 +477,26 @@ export default function LayoutApp({ onLogout }) {
           <ToastContainer />
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              {/* Rutas para todos los usuarios */}
+              {/* Rutas visibles para todos */}
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/historial" element={<HistorialPedidos />} />
-              <Route path="/ofertas" element={<Ofertas />} />
-              <Route path="/cambiar-password" element={<CambiarPassword onClose={() => navigate(-1)} />} />
+              <Route path="/cambiar-password" element={<CambiarPassword />} />
 
               {/* Rutas solo para Admin */}
-              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/clientes" />} />
-              <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/clientes" />} />
-              <Route path="/offline-queue" element={isAdmin ? <OfflineQueue /> : <Navigate to="/clientes" />} />
-              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/clientes" />} />
-              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/clientes" />} />
-              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/clientes" />} />
-              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/clientes" />} />
-              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/clientes" />} />
+              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/dashboard" />} />
+              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/dashboard" />} />
+              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/dashboard" />} />
+              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/dashboard" />} />
+              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/dashboard" />} />
+              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/dashboard" />} />
+              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/dashboard" />} />
 
-              {/* Ruta por defecto según rol */}
-              <Route path="*" element={<Navigate to={isAdmin ? "/dashboard" : "/clientes"} />} />
+              {/* Redirect from root to a default page */}
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route path="*" element={<div>404 - Página no encontrada</div>} />
             </Routes>
           </Suspense>
         </section>

@@ -123,11 +123,13 @@ def get_db_connection():
     con = conectar()
     try:
         yield con
-    except Exception:
-        con.rollback()
-        raise
+    except Exception as e:
+        if con:
+            con.rollback()
+        raise e
     finally:
-        con.close()
+        if con:
+            con.close()
 
 
 @contextmanager
@@ -728,17 +730,15 @@ def verificar_tablas_y_columnas() -> None:
 # -----------------------------------------------------------------------------
 def get_cliente_by_id(cliente_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un cliente por su ID."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute(
+        _execute(
+            cur,
             "SELECT id, nombre, telefono, direccion, zona, lista_precio_id FROM clientes WHERE id = ?",
-            (cliente_id,)
+            (cliente_id,),
         )
-        row = cur.fetchone()
-        return dict(row) if row else None
-    finally:
-        con.close()
+        row = _fetchone_as_dict(cur)
+        return row
 
 
 def get_clientes(page: Optional[int] = None, limit: int = 50, search: Optional[str] = None) -> Dict[str, Any]:
@@ -747,8 +747,7 @@ def get_clientes(page: Optional[int] = None, limit: int = 50, search: Optional[s
     Si page es None, devuelve todos (formato lista para compatibilidad).
     Si page es número, devuelve objeto con data, total, page, pages.
     """
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         
         # Construir query base
@@ -761,109 +760,105 @@ def get_clientes(page: Optional[int] = None, limit: int = 50, search: Optional[s
             params = [search_term, search_term, search_term, search_term]
         
         # Contar total
-        cur.execute(f"SELECT COUNT(*) {base_query}", tuple(params))
+        _execute(cur, f"SELECT COUNT(*) {base_query}", tuple(params))
         total = cur.fetchone()[0]
         
         # Si no hay paginación, devolver lista simple (compatibilidad)
         if page is None:
-            cur.execute(f"SELECT id, nombre, telefono, direccion, zona, lista_precio_id {base_query} ORDER BY nombre", tuple(params))
-            return [dict(r) for r in cur.fetchall()]
+            _execute(cur, f"SELECT id, nombre, telefono, direccion, zona, lista_precio_id {base_query} ORDER BY nombre", tuple(params))
+            return _fetchall_as_dict(cur)
         
         # Con paginación
         offset = (page - 1) * limit
         pages = (total + limit - 1) // limit if limit > 0 else 1
         
-        cur.execute(
+        _execute(
+            cur,
             f"SELECT id, nombre, telefono, direccion, zona, lista_precio_id {base_query} ORDER BY nombre LIMIT ? OFFSET ?",
             tuple(params) + (limit, offset)
         )
         
         return {
-            "data": [dict(r) for r in cur.fetchall()],
+            "data": _fetchall_as_dict(cur),
             "total": total,
             "page": page,
             "pages": pages,
             "limit": limit
         }
-    finally:
-        con.close()
 
 
 def add_cliente(cliente: Dict[str, Any]) -> Dict[str, Any]:
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         # Validar duplicado por nombre (case-insensitive)
         nombre = (cliente.get("nombre") or "").strip()
         if nombre:
-            cur.execute(
+            _execute(
+                cur,
                 "SELECT id FROM clientes WHERE nombre = ? COLLATE NOCASE LIMIT 1",
                 (nombre,),
             )
             if cur.fetchone():
+                con.rollback()
                 return {"error": "CLIENTE_DUPLICADO", "detail": f"El cliente '{nombre}' ya existe"}
 
-        cur.execute(
+        _execute(
+            cur,
             "INSERT INTO clientes (nombre, telefono, direccion, zona) VALUES (?, ?, ?, ?)",
             (nombre, cliente.get("telefono", ""), cliente.get("direccion", ""), cliente.get("zona", "")),
         )
-        con.commit()
         cliente["id"] = cur.lastrowid
         cliente["nombre"] = nombre
         return cliente
-    finally:
-        con.close()
 
 
 def update_cliente(cliente_id: int, cliente: Dict[str, Any]) -> Dict[str, Any]:
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         # Validar duplicado si se modifica nombre
         nombre = cliente.get("nombre")
         if nombre is not None:
             nombre = (str(nombre) or "").strip()
-            cur.execute(
+            _execute(
+                cur,
                 "SELECT id FROM clientes WHERE nombre = ? COLLATE NOCASE AND id != ? LIMIT 1",
                 (nombre, cliente_id),
             )
             if cur.fetchone():
+                con.rollback()
                 return {"error": "CLIENTE_DUPLICADO", "detail": f"El cliente '{nombre}' ya existe"}
         else:
-            nombre = None
-        
+            # Si no se pasa nombre, hay que buscar el actual para no sobreescribirlo con None
+            _execute(cur, "SELECT nombre FROM clientes WHERE id = ?", (cliente_id,))
+            current_cliente = _fetchone_as_dict(cur)
+            if not current_cliente:
+                con.rollback()
+                return {"error": "CLIENTE_NO_ENCONTRADO", "detail": f"Cliente con id {cliente_id} no existe"}
+            nombre = current_cliente['nombre']
+
         # Obtener valores para actualizar
-        nombre_final = nombre if nombre is not None else cliente.get("nombre")
         telefono = cliente.get("telefono", "")
         direccion = cliente.get("direccion", "")
         lista_precio_id = cliente.get("lista_precio_id")
         
         # Validar que lista_precio_id exista si se proporciona
         if lista_precio_id is not None:
-            cur.execute("SELECT id FROM listas_precios WHERE id = ?", (lista_precio_id,))
+            _execute(cur, "SELECT id FROM listas_precios WHERE id = ?", (lista_precio_id,))
             if not cur.fetchone():
+                con.rollback()
                 return {"error": "LISTA_NO_EXISTE", "detail": f"Lista de precios {lista_precio_id} no existe"}
         
         zona = cliente.get("zona", "")
-        cur.execute(
+        _execute(
+            cur,
             "UPDATE clientes SET nombre=?, telefono=?, direccion=?, zona=?, lista_precio_id=? WHERE id=?",
-            (nombre_final, telefono, direccion, zona, lista_precio_id, cliente_id),
+            (nombre, telefono, direccion, zona, lista_precio_id, cliente_id),
         )
-        con.commit()
         return {"status": "updated"}
-    finally:
-        con.close()
 
 
 def delete_cliente(cliente_id: int) -> Dict[str, Any]:
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
-        con.commit()
+    with get_db_transaction() as (con, cur):
+        _execute(cur, "DELETE FROM clientes WHERE id = ?", (cliente_id,))
         return {"status": "deleted"}
-    finally:
-        con.close()
 
 
 # UTF-8 BOM for Excel compatibility
@@ -882,10 +877,9 @@ def _sanitize_csv_field(value: str) -> str:
 
 def export_clientes_csv() -> str:
     """Exporta todos los clientes a formato CSV (Excel compatible)"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("SELECT id, nombre, telefono, direccion, zona FROM clientes ORDER BY nombre")
+        _execute(cur, "SELECT id, nombre, telefono, direccion, zona FROM clientes ORDER BY nombre")
         rows = cur.fetchall()
         
         d = CSV_DELIMITER
@@ -900,8 +894,6 @@ def export_clientes_csv() -> str:
         
         # Add BOM for Excel UTF-8 compatibility
         return CSV_BOM + "\n".join(lines)
-    finally:
-        con.close()
 
 
 # -----------------------------------------------------------------------------
@@ -909,79 +901,72 @@ def export_clientes_csv() -> str:
 # -----------------------------------------------------------------------------
 def get_categorias(incluir_inactivas: bool = False) -> List[Dict[str, Any]]:
     """Obtiene todas las categorías ordenadas."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         query = "SELECT id, nombre, descripcion, color, orden, activa, fecha_creacion FROM categorias"
         if not incluir_inactivas:
             query += " WHERE activa = 1"
         query += " ORDER BY orden, nombre"
-        cur.execute(query)
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
+        _execute(cur, query)
+        return _fetchall_as_dict(cur)
 
 
 def get_categoria_by_id(categoria_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene una categoría por su ID."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute(
+        _execute(
+            cur,
             "SELECT id, nombre, descripcion, color, orden, activa, fecha_creacion FROM categorias WHERE id = ?",
             (categoria_id,)
         )
-        row = cur.fetchone()
-        return dict(row) if row else None
-    finally:
-        con.close()
+        return _fetchone_as_dict(cur)
 
 
 def add_categoria(categoria: Dict[str, Any]) -> Dict[str, Any]:
     """Crea una nueva categoría."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         nombre = (categoria.get("nombre") or "").strip()
         if not nombre:
+            con.rollback()
             return {"error": "El nombre es requerido"}
         
         # Verificar duplicados
-        cur.execute("SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)", (nombre,))
+        _execute(cur, "SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)", (nombre,))
         if cur.fetchone():
+            con.rollback()
             return {"error": f"Ya existe una categoría con el nombre '{nombre}'"}
         
         descripcion = categoria.get("descripcion", "")
         color = categoria.get("color", "#6366f1")
         orden = categoria.get("orden", 0)
         
-        cur.execute(
+        _execute(
+            cur,
             "INSERT INTO categorias (nombre, descripcion, color, orden, activa, fecha_creacion) VALUES (?, ?, ?, ?, 1, ?)",
             (nombre, descripcion, color, orden, _now_uruguay_iso())
         )
-        con.commit()
         return {"id": cur.lastrowid, "nombre": nombre, "descripcion": descripcion, "color": color, "orden": orden}
-    finally:
-        con.close()
 
 
 def update_categoria(categoria_id: int, categoria: Dict[str, Any]) -> Dict[str, Any]:
     """Actualiza una categoría existente."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         nombre = (categoria.get("nombre") or "").strip()
         if not nombre:
+            con.rollback()
             return {"error": "El nombre es requerido"}
         
         # Verificar que existe
-        cur.execute("SELECT id FROM categorias WHERE id = ?", (categoria_id,))
+        _execute(cur, "SELECT id FROM categorias WHERE id = ?", (categoria_id,))
         if not cur.fetchone():
+            con.rollback()
             return {"error": "Categoría no encontrada"}
         
         # Verificar duplicados (excluyendo esta)
-        cur.execute("SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND id != ?", (nombre, categoria_id))
+        _execute(cur, "SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND id != ?", (nombre, categoria_id))
         if cur.fetchone():
+            con.rollback()
             return {"error": f"Ya existe otra categoría con el nombre '{nombre}'"}
         
         descripcion = categoria.get("descripcion", "")
@@ -989,63 +974,47 @@ def update_categoria(categoria_id: int, categoria: Dict[str, Any]) -> Dict[str, 
         orden = categoria.get("orden", 0)
         activa = 1 if categoria.get("activa", True) else 0
         
-        cur.execute(
+        _execute(
+            cur,
             "UPDATE categorias SET nombre = ?, descripcion = ?, color = ?, orden = ?, activa = ? WHERE id = ?",
             (nombre, descripcion, color, orden, activa, categoria_id)
         )
-        con.commit()
         return {"id": categoria_id, "nombre": nombre, "descripcion": descripcion, "color": color, "orden": orden, "activa": bool(activa)}
-    finally:
-        con.close()
 
 
 def delete_categoria(categoria_id: int) -> Dict[str, Any]:
     """Elimina una categoría (o desactiva si tiene productos)."""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        
+    with get_db_transaction() as (con, cur):
         # Verificar si tiene productos asociados
-        cur.execute("SELECT COUNT(*) FROM productos WHERE categoria_id = ?", (categoria_id,))
+        _execute(cur, "SELECT COUNT(*) FROM productos WHERE categoria_id = ?", (categoria_id,))
         count = cur.fetchone()[0]
         
         if count > 0:
             # Solo desactivar, no eliminar
-            cur.execute("UPDATE categorias SET activa = 0 WHERE id = ?", (categoria_id,))
-            con.commit()
+            _execute(cur, "UPDATE categorias SET activa = 0 WHERE id = ?", (categoria_id,))
             return {"status": "deactivated", "message": f"Categoría desactivada (tiene {count} productos)"}
         else:
-            cur.execute("DELETE FROM categorias WHERE id = ?", (categoria_id,))
-            con.commit()
+            _execute(cur, "DELETE FROM categorias WHERE id = ?", (categoria_id,))
             return {"status": "deleted", "message": "Categoría eliminada"}
-    finally:
-        con.close()
 
 
 def get_productos_por_categoria(categoria_id: int) -> List[Dict[str, Any]]:
     """Obtiene productos de una categoría específica."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute(
+        _execute(
+            cur,
             "SELECT id, nombre, precio, stock, imagen_url FROM productos WHERE categoria_id = ? ORDER BY nombre",
             (categoria_id,)
         )
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
+        return _fetchall_as_dict(cur)
 
 
 def asignar_categoria_producto(producto_id: int, categoria_id: Optional[int]) -> Dict[str, Any]:
     """Asigna o quita una categoría a un producto."""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("UPDATE productos SET categoria_id = ? WHERE id = ?", (categoria_id, producto_id))
-        con.commit()
+    with get_db_transaction() as (con, cur):
+        _execute(cur, "UPDATE productos SET categoria_id = ? WHERE id = ?", (categoria_id, producto_id))
         return {"status": "ok", "producto_id": producto_id, "categoria_id": categoria_id}
-    finally:
-        con.close()
 
 
 # -----------------------------------------------------------------------------
@@ -1063,10 +1032,9 @@ def audit_log(
 ) -> None:
     """Registra una acción en el audit log."""
     import json
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute(
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
             """INSERT INTO audit_log 
                (timestamp, usuario, accion, tabla, registro_id, datos_antes, datos_despues, ip_address, user_agent)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -1082,9 +1050,6 @@ def audit_log(
                 user_agent
             )
         )
-        con.commit()
-    finally:
-        con.close()
 
 
 def get_audit_logs(
@@ -1097,8 +1062,7 @@ def get_audit_logs(
 ) -> Dict[str, Any]:
     """Obtiene registros del audit log con filtros."""
     import json
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         
         query = "SELECT id, timestamp, usuario, accion, tabla, registro_id, datos_antes, datos_despues, ip_address FROM audit_log"
@@ -1125,71 +1089,70 @@ def get_audit_logs(
             count_query += where
         
         # Count total
-        cur.execute(count_query, tuple(params))
+        _execute(cur, count_query, tuple(params))
         total = cur.fetchone()[0]
         
         # Get data
         query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
-        cur.execute(query, tuple(params))
+        _execute(cur, query, tuple(params))
         
-        logs = []
-        for row in cur.fetchall():
-            log = dict(row)
+        rows = _fetchall_as_dict(cur)
+        for log in rows:
             # Parse JSON fields
             if log.get("datos_antes"):
                 try:
                     log["datos_antes"] = json.loads(log["datos_antes"])
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
             if log.get("datos_despues"):
                 try:
                     log["datos_despues"] = json.loads(log["datos_despues"])
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
-            logs.append(log)
         
         return {
-            "data": logs,
+            "data": rows,
             "total": total,
             "limit": limit,
             "offset": offset
         }
-    finally:
-        con.close()
 
 
 def get_audit_summary() -> Dict[str, Any]:
     """Resumen de actividad del audit log."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         
         # Total de acciones hoy
-        cur.execute(
+        _execute(
+            cur,
             "SELECT COUNT(*) FROM audit_log WHERE DATE(timestamp) = DATE('now')"
         )
         hoy = cur.fetchone()[0]
         
         # Por tabla
-        cur.execute(
+        _execute(
+            cur,
             "SELECT tabla, COUNT(*) as count FROM audit_log GROUP BY tabla ORDER BY count DESC LIMIT 10"
         )
-        por_tabla = [{"tabla": r[0], "count": r[1]} for r in cur.fetchall()]
+        por_tabla = _fetchall_as_dict(cur)
         
         # Por usuario (últimos 7 días)
-        cur.execute(
+        _execute(
+            cur,
             """SELECT usuario, COUNT(*) as count FROM audit_log 
                WHERE timestamp >= datetime('now', '-7 days')
                GROUP BY usuario ORDER BY count DESC LIMIT 10"""
         )
-        por_usuario = [{"usuario": r[0], "count": r[1]} for r in cur.fetchall()]
+        por_usuario = _fetchall_as_dict(cur)
         
         # Últimas 10 acciones
-        cur.execute(
+        _execute(
+            cur,
             "SELECT timestamp, usuario, accion, tabla FROM audit_log ORDER BY timestamp DESC LIMIT 10"
         )
-        ultimas = [{"timestamp": r[0], "usuario": r[1], "accion": r[2], "tabla": r[3]} for r in cur.fetchall()]
+        ultimas = _fetchall_as_dict(cur)
         
         return {
             "acciones_hoy": hoy,
@@ -1197,16 +1160,13 @@ def get_audit_summary() -> Dict[str, Any]:
             "por_usuario": por_usuario,
             "ultimas_acciones": ultimas
         }
-    finally:
-        con.close()
 
 
 # -----------------------------------------------------------------------------
 # Productos
 # -----------------------------------------------------------------------------
 def get_productos(search: Optional[str] = None, sort: Optional[str] = None, categoria_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         cols = _table_columns(cur, "productos")
         sel = ["id", "nombre", "precio"]
@@ -1243,41 +1203,41 @@ def get_productos(search: Optional[str] = None, sort: Optional[str] = None, cate
             elif sort == 'precio_desc':
                 order = " ORDER BY precio DESC"
 
-        cur.execute(base + order, tuple(params))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
+        _execute(cur, base + order, tuple(params))
+        return _fetchall_as_dict(cur)
 
 
 def get_producto_by_id(producto_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un producto por su ID"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("SELECT * FROM productos WHERE id = ?", (producto_id,))
-        row = cur.fetchone()
-        return dict(row) if row else None
-    finally:
-        con.close()
+        _execute(cur, "SELECT * FROM productos WHERE id = ?", (producto_id,))
+        return _fetchone_as_dict(cur)
 
 
 def add_producto(producto: Dict[str, Any]) -> Dict[str, Any]:
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "productos")
 
         fields = ["nombre", "precio"]
         nombre = (producto.get("nombre") or "").strip()
-        precio = float(producto.get("precio"))
+        
+        try:
+            precio = float(producto.get("precio"))
+        except (ValueError, TypeError):
+            con.rollback()
+            return {"error": "PRECIO_INVALIDO", "detail": "El precio debe ser un número."}
+
 
         # Validar duplicado por nombre (case-insensitive)
         if nombre:
-            cur.execute(
+            _execute(
+                cur,
                 "SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE LIMIT 1",
                 (nombre,),
             )
             if cur.fetchone():
+                con.rollback()
                 return {"error": "PRODUCTO_DUPLICADO", "detail": f"El producto '{nombre}' ya existe"}
 
         values = [nombre, precio]
@@ -1303,43 +1263,33 @@ def add_producto(producto: Dict[str, Any]) -> Dict[str, Any]:
             fields.append("categoria_id")
             values.append(int(producto.get("categoria_id")))
 
-        cur.execute(
+        _execute(
+            cur,
             f"INSERT INTO productos ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})",
             tuple(values),
         )
-        con.commit()
         producto["id"] = cur.lastrowid
         producto["nombre"] = nombre
         producto["precio"] = precio
         return producto
-    finally:
-        con.close()
 
 # Helpers de existencia
 def cliente_existe(nombre: str) -> bool:
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("SELECT id FROM clientes WHERE nombre = ? COLLATE NOCASE LIMIT 1", (nombre.strip(),))
+        _execute(cur, "SELECT id FROM clientes WHERE nombre = ? COLLATE NOCASE LIMIT 1", (nombre.strip(),))
         return cur.fetchone() is not None
-    finally:
-        con.close()
 
 def producto_existe(nombre: str) -> bool:
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE LIMIT 1", (nombre.strip(),))
+        _execute(cur, "SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE LIMIT 1", (nombre.strip(),))
         return cur.fetchone() is not None
-    finally:
-        con.close()
 
 
 def update_producto(producto_id: int, producto: Dict[str, Any]) -> Dict[str, Any]:
     """Actualiza fields permitidos de un producto (nombre, precio, imagen_url) si existen."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "productos")
 
         fields = []
@@ -1348,11 +1298,13 @@ def update_producto(producto_id: int, producto: Dict[str, Any]) -> Dict[str, Any
         if "nombre" in producto and producto.get("nombre") is not None and "nombre" in cols:
             nombre = (str(producto.get("nombre")) or "").strip()
             # Validar duplicado con otro id
-            cur.execute(
+            _execute(
+                cur,
                 "SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE AND id != ? LIMIT 1",
                 (nombre, producto_id),
             )
             if cur.fetchone():
+                con.rollback()
                 return {"error": "PRODUCTO_DUPLICADO", "detail": f"El producto '{nombre}' ya existe"}
             fields.append("nombre = ?")
             values.append(nombre)
@@ -1385,8 +1337,7 @@ def update_producto(producto_id: int, producto: Dict[str, Any]) -> Dict[str, Any
             return {"status": "no_changes"}
 
         values.append(producto_id)
-        cur.execute(f"UPDATE productos SET {', '.join(fields)} WHERE id = ?", tuple(values))
-        con.commit()
+        _execute(cur, f"UPDATE productos SET {', '.join(fields)} WHERE id = ?", tuple(values))
 
         # return updated row
         sel = ["id", "nombre", "precio"]
@@ -1400,48 +1351,42 @@ def update_producto(producto_id: int, producto: Dict[str, Any]) -> Dict[str, Any
             sel.append("stock_tipo")
         if "categoria_id" in cols:
             sel.append("categoria_id")
-        cur.execute(f"SELECT {', '.join(sel)} FROM productos WHERE id = ?", (producto_id,))
-        row = cur.fetchone()
-        return dict(row) if row else {"status": "not_found"}
-    finally:
-        con.close()
+        _execute(cur, f"SELECT {', '.join(sel)} FROM productos WHERE id = ?", (producto_id,))
+        row = _fetchone_as_dict(cur)
+        return row if row else {"status": "not_found"}
 
 
 def delete_producto(producto_id: int) -> Dict[str, Any]:
     """Elimina un producto si no tiene pedidos asociados"""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         # Verificar si el producto existe
-        cur.execute("SELECT id, nombre FROM productos WHERE id = ?", (producto_id,))
-        producto = cur.fetchone()
+        _execute(cur, "SELECT id, nombre FROM productos WHERE id = ?", (producto_id,))
+        producto = _fetchone_as_dict(cur)
         if not producto:
+            con.rollback()
             return {"status": "not_found", "message": "Producto no encontrado"}
         
         # Verificar si tiene pedidos asociados
-        cur.execute("SELECT COUNT(*) FROM detalles_pedido WHERE producto_id = ?", (producto_id,))
+        _execute(cur, "SELECT COUNT(*) FROM detalles_pedido WHERE producto_id = ?", (producto_id,))
         pedidos_count = cur.fetchone()[0]
         if pedidos_count > 0:
+            con.rollback()
             return {"status": "error", "message": f"No se puede eliminar el producto porque tiene {pedidos_count} pedido(s) asociado(s)"}
         
         # Eliminar de tablas relacionadas (usando nombres correctos de tablas)
-        cur.execute("DELETE FROM oferta_productos WHERE producto_id = ?", (producto_id,))
-        cur.execute("DELETE FROM precios_lista WHERE producto_id = ?", (producto_id,))
-        cur.execute("DELETE FROM detalles_template WHERE producto_id = ?", (producto_id,))
+        _execute(cur, "DELETE FROM oferta_productos WHERE producto_id = ?", (producto_id,))
+        _execute(cur, "DELETE FROM precios_lista WHERE producto_id = ?", (producto_id,))
+        _execute(cur, "DELETE FROM detalles_template WHERE producto_id = ?", (producto_id,))
         
         # Eliminar el producto
-        cur.execute("DELETE FROM productos WHERE id = ?", (producto_id,))
-        con.commit()
+        _execute(cur, "DELETE FROM productos WHERE id = ?", (producto_id,))
         
         return {"status": "ok", "message": f"Producto '{producto['nombre']}' eliminado correctamente"}
-    finally:
-        con.close()
 
 
 def export_productos_csv() -> str:
     """Exporta todos los productos a formato CSV (Excel compatible)"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         cols = _table_columns(cur, "productos")
         has_stock = "stock" in cols
@@ -1458,8 +1403,8 @@ def export_productos_csv() -> str:
             query += " LEFT JOIN categorias c ON p.categoria_id = c.id"
         query += " ORDER BY p.nombre"
         
-        cur.execute(query)
-        rows = cur.fetchall()
+        _execute(cur, query)
+        rows = _fetchall_as_dict(cur)
         
         d = CSV_DELIMITER
         header = f"id{d}nombre{d}precio{d}imagen_url"
@@ -1483,23 +1428,21 @@ def export_productos_csv() -> str:
             lines.append(line)
         
         return CSV_BOM + "\n".join(lines)
-    finally:
-        con.close()
 
 
-def update_stock(producto_id: int, cantidad: int, operacion: str = "restar") -> Dict[str, Any]:
+def update_stock(producto_id: int, cantidad: float, operacion: str = "restar") -> Dict[str, Any]:
     """Actualiza el stock de un producto. operacion: 'sumar' o 'restar'"""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "productos")
         if "stock" not in cols:
+            con.rollback()
             return {"error": "Stock no soportado"}
         
         # Obtener stock actual
-        cur.execute("SELECT stock FROM productos WHERE id = ?", (producto_id,))
-        row = cur.fetchone()
+        _execute(cur, "SELECT stock FROM productos WHERE id = ?", (producto_id,))
+        row = _fetchone_as_dict(cur)
         if not row:
+            con.rollback()
             return {"error": "Producto no encontrado"}
         
         stock_actual = row["stock"] or 0
@@ -1509,11 +1452,8 @@ def update_stock(producto_id: int, cantidad: int, operacion: str = "restar") -> 
         else:
             nuevo_stock = stock_actual + cantidad
         
-        cur.execute("UPDATE productos SET stock = ? WHERE id = ?", (nuevo_stock, producto_id))
-        con.commit()
+        _execute(cur, "UPDATE productos SET stock = ? WHERE id = ?", (nuevo_stock, producto_id))
         return {"id": producto_id, "stock_anterior": stock_actual, "stock_nuevo": nuevo_stock}
-    finally:
-        con.close()
 
 
 def batch_update_stock_atomic(productos: List[Dict[str, Any]], operacion: str = "restar") -> Dict[str, Any]:
@@ -1531,11 +1471,10 @@ def batch_update_stock_atomic(productos: List[Dict[str, Any]], operacion: str = 
     if not productos:
         return {"ok": True, "updated": []}
     
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "productos")
         if "stock" not in cols:
+            con.rollback()
             return {"error": "Stock no soportado en esta versión de la base de datos"}
         
         updated = []
@@ -1548,8 +1487,8 @@ def batch_update_stock_atomic(productos: List[Dict[str, Any]], operacion: str = 
                 continue
             
             # Obtener stock actual
-            cur.execute("SELECT id, nombre, stock FROM productos WHERE id = ?", (producto_id,))
-            row = cur.fetchone()
+            _execute(cur, "SELECT id, nombre, stock FROM productos WHERE id = ?", (producto_id,))
+            row = _fetchone_as_dict(cur)
             
             if not row:
                 con.rollback()
@@ -1562,7 +1501,7 @@ def batch_update_stock_atomic(productos: List[Dict[str, Any]], operacion: str = 
             else:
                 nuevo_stock = stock_actual + cantidad
             
-            cur.execute("UPDATE productos SET stock = ? WHERE id = ?", (nuevo_stock, producto_id))
+            _execute(cur, "UPDATE productos SET stock = ? WHERE id = ?", (nuevo_stock, producto_id))
             
             updated.append({
                 "id": producto_id,
@@ -1572,20 +1511,12 @@ def batch_update_stock_atomic(productos: List[Dict[str, Any]], operacion: str = 
                 "cantidad": cantidad
             })
         
-        con.commit()
         return {"ok": True, "updated": updated, "count": len(updated)}
-    
-    except Exception as e:
-        con.rollback()
-        return {"error": f"Error en actualización de stock: {str(e)}"}
-    finally:
-        con.close()
 
 
 def verificar_stock_pedido(productos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Verifica si hay stock suficiente para los productos del pedido"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         cols = _table_columns(cur, "productos")
         if "stock" not in cols:
@@ -1596,8 +1527,8 @@ def verificar_stock_pedido(productos: List[Dict[str, Any]]) -> List[Dict[str, An
             producto_id = p.get("id")
             cantidad = p.get("cantidad", 1)
             
-            cur.execute("SELECT nombre, stock FROM productos WHERE id = ?", (producto_id,))
-            row = cur.fetchone()
+            _execute(cur, "SELECT nombre, stock FROM productos WHERE id = ?", (producto_id,))
+            row = _fetchone_as_dict(cur)
             if row:
                 stock = row["stock"] or 0
                 if stock < cantidad:
@@ -1609,24 +1540,22 @@ def verificar_stock_pedido(productos: List[Dict[str, Any]]) -> List[Dict[str, An
                     })
         
         return errores
-    finally:
-        con.close()
 
 
 # -----------------------------------------------------------------------------
 # Pedidos
 # -----------------------------------------------------------------------------
-def _pedidos_cliente_col(cur: sqlite3.Cursor) -> str:
+def _pedidos_cliente_col(cur: Union[sqlite3.Cursor, Any]) -> str:
     cols = _table_columns(cur, "pedidos")
     return "cliente_id" if "cliente_id" in cols else "id_cliente"
 
 
-def _detalles_pedido_col(cur: sqlite3.Cursor) -> str:
+def _detalles_pedido_col(cur: Union[sqlite3.Cursor, Any]) -> str:
     cols = _table_columns(cur, "detalles_pedido")
     return "pedido_id" if "pedido_id" in cols else "id_pedido"
 
 
-def _detalles_producto_col(cur: sqlite3.Cursor) -> str:
+def _detalles_producto_col(cur: Union[sqlite3.Cursor, Any]) -> str:
     cols = _table_columns(cur, "detalles_pedido")
     return "producto_id" if "producto_id" in cols else "id_producto"
 
@@ -1655,7 +1584,7 @@ def add_pedido(pedido: Dict[str, Any], creado_por: str = None, dispositivo: str 
             cliente_id = cliente.get("id")
 
         if cliente_id is None:
-            raise Exception("Pedido inválido: falta cliente_id / cliente.id")
+            raise ValueError("Pedido inválido: falta cliente_id / cliente.id")
 
         cliente_col = _pedidos_cliente_col(cur)
         cols_pedidos = _table_columns(cur, "pedidos")
@@ -1691,7 +1620,8 @@ def add_pedido(pedido: Dict[str, Any], creado_por: str = None, dispositivo: str 
             fields.append("user_agent")
             values.append(user_agent[:500] if user_agent else None)
 
-        cur.execute(
+        _execute(
+            cur,
             f"INSERT INTO pedidos ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})",
             tuple(values),
         )
@@ -1708,23 +1638,25 @@ def add_pedido(pedido: Dict[str, Any], creado_por: str = None, dispositivo: str 
                 # fallback: buscar por nombre si vino sin id
                 nombre = prod.get("nombre")
                 if not nombre:
-                    raise Exception("Producto inválido en pedido: falta id/producto_id y nombre")
-                cur.execute("SELECT id FROM productos WHERE nombre = ? LIMIT 1", (nombre,))
-                r = cur.fetchone()
+                    raise ValueError("Producto inválido en pedido: falta id/producto_id y nombre")
+                _execute(cur, "SELECT id FROM productos WHERE nombre = ? LIMIT 1", (nombre,))
+                r = _fetchone_as_dict(cur)
                 if not r:
-                    raise Exception(f"Producto no existe en DB: {nombre}")
+                    raise ValueError(f"Producto no existe en DB: {nombre}")
                 product_id = r["id"]
 
             cantidad = float(prod.get("cantidad", 0))
             tipo = prod.get("tipo", "unidad")
 
             if "tipo" in cols_det:
-                cur.execute(
+                _execute(
+                    cur,
                     f"INSERT INTO detalles_pedido ({pedido_fk}, {prod_fk}, cantidad, tipo) VALUES (?, ?, ?, ?)",
                     (pid, product_id, cantidad, tipo),
                 )
             else:
-                cur.execute(
+                _execute(
+                    cur,
                     f"INSERT INTO detalles_pedido ({pedido_fk}, {prod_fk}, cantidad) VALUES (?, ?, ?)",
                     (pid, product_id, cantidad),
                 )
@@ -1749,8 +1681,7 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
     
     OPTIMIZADO: Usa batch loading para eliminar N+1 queries.
     """
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
 
         cliente_col = _pedidos_cliente_col(cur)
@@ -1794,18 +1725,19 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
 
         # Get total count for pagination
         count_query = f"SELECT COUNT(*) FROM pedidos {where_clause}"
-        cur.execute(count_query, params)
+        _execute(cur, count_query, params)
         total_count = cur.fetchone()[0]
 
         # Build main query with pagination
         base_query = f"SELECT {', '.join(sel)} FROM pedidos {where_clause} ORDER BY id DESC"
         
         if page is not None:
+            limit = min(max(1, limit), 200) # Clamp limit
             offset = (page - 1) * limit
             base_query += f" LIMIT {limit} OFFSET {offset}"
         
-        cur.execute(base_query, params)
-        pedidos_rows = cur.fetchall()
+        _execute(cur, base_query, params)
+        pedidos_rows = _fetchall_as_dict(cur)
 
         if not pedidos_rows:
             if page is not None:
@@ -1822,17 +1754,18 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
         if include_img:
             sel_cols += ", pr.imagen_url"
         
-        cur.execute(
+        _execute(
+            cur,
             f"""SELECT {sel_cols} 
                 FROM detalles_pedido dp 
                 JOIN productos pr ON dp.{prod_fk} = pr.id 
                 WHERE dp.{pedido_fk} IN ({placeholders})""",
-            pedido_ids
+            tuple(pedido_ids)
         )
         
         # Group productos by pedido_id
         productos_por_pedido: Dict[int, List[Dict]] = {}
-        for rr in cur.fetchall():
+        for rr in _fetchall_as_dict(cur):
             pid = rr["pedido_id"]
             if pid not in productos_por_pedido:
                 productos_por_pedido[pid] = []
@@ -1848,22 +1781,20 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
             productos_por_pedido[pid].append(item)
 
         # Build final pedidos list
-        # Get column names for safe access (sqlite3.Row doesn't have .get())
-        col_names = set(sel)
+        # Get column names for safe access
+        col_names = set(pedidos_rows[0].keys()) if pedidos_rows else set()
         
         def safe_get(row, col, default=None):
-            """Safely get value from sqlite3.Row."""
-            if col in col_names:
-                val = row[col]
-                return val if val is not None else default
-            return default
+            """Safely get value from dict."""
+            val = row.get(col, default)
+            return val if val is not None else default
         
         pedidos: List[Dict[str, Any]] = []
         for r in pedidos_rows:
             pid = r["id"]
             pedido = {
                 "id": pid,
-                "cliente_id": r[cliente_col],
+                "cliente_id": r.get(cliente_col),
                 "fecha": safe_get(r, "fecha"),
                 "pdf_generado": bool(safe_get(r, "pdf_generado", False)),
                 "fecha_creacion": safe_get(r, "fecha_creacion"),
@@ -1883,7 +1814,7 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
 
         # Return with pagination info or just list
         if page is not None:
-            pages = (total_count + limit - 1) // limit  # Ceiling division
+            pages = (total_count + limit - 1) // limit if limit > 0 else 0 # Ceiling division
             return {
                 "data": pedidos,
                 "total": total_count,
@@ -1893,49 +1824,40 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
             }
         
         return pedidos
-    finally:
-        con.close()
 
 
 def delete_pedido(pedido_id: int) -> Dict[str, Any]:
     """Elimina un pedido y todos sus registros relacionados (detalles, historial)."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         pedido_fk = _detalles_pedido_col(cur)
 
         # Eliminar en orden: primero tablas dependientes, luego pedido principal
-        cur.execute(f"DELETE FROM detalles_pedido WHERE {pedido_fk} = ?", (pedido_id,))
+        _execute(cur, f"DELETE FROM detalles_pedido WHERE {pedido_fk} = ?", (pedido_id,))
         
         # Eliminar historial de modificaciones si existe
-        cols = _table_columns(cur, "historial_pedidos") if "historial_pedidos" in [r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()] else []
-        if cols:
-            cur.execute("DELETE FROM historial_pedidos WHERE pedido_id = ?", (pedido_id,))
+        if _table_exists(cur, "historial_pedidos"):
+            _execute(cur, "DELETE FROM historial_pedidos WHERE pedido_id = ?", (pedido_id,))
         
-        cur.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
-        con.commit()
+        _execute(cur, "DELETE FROM pedidos WHERE id = ?", (pedido_id,))
         return {"status": "deleted"}
-    finally:
-        con.close()
 
 
-def _pedido_pendiente(cur: sqlite3.Cursor, pedido_id: int) -> bool:
+def _pedido_pendiente(cur: Union[sqlite3.Cursor, Any], pedido_id: int) -> bool:
     cols = _table_columns(cur, "pedidos")
     if "pdf_generado" not in cols:
         return True
-    cur.execute("SELECT pdf_generado FROM pedidos WHERE id = ?", (pedido_id,))
+    _execute(cur, "SELECT pdf_generado FROM pedidos WHERE id = ?", (pedido_id,))
     r = cur.fetchone()
     if not r:
         return False
-    return int(r["pdf_generado"] or 0) == 0
+    return int(r[0] or 0) == 0
 
 
 def add_pedido_item(pedido_id: int, producto_id: int, cantidad: float, tipo: str = "unidad") -> Dict[str, Any]:
     """Agrega o actualiza un ítem del pedido pendiente."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         if not _pedido_pendiente(cur, pedido_id):
+            con.rollback()
             return {"error": "PEDIDO_YA_GENERADO", "detail": "No se puede editar un pedido ya generado"}
 
         pedido_fk = _detalles_pedido_col(cur)
@@ -1943,60 +1865,63 @@ def add_pedido_item(pedido_id: int, producto_id: int, cantidad: float, tipo: str
         cols_det = _table_columns(cur, "detalles_pedido")
 
         # Si ya existe, actualizamos
-        cur.execute(
+        _execute(
+            cur,
             f"SELECT id FROM detalles_pedido WHERE {pedido_fk} = ? AND {prod_fk} = ? LIMIT 1",
             (pedido_id, producto_id),
         )
-        r = cur.fetchone()
+        r = _fetchone_as_dict(cur)
         if r:
             # update path
             if "tipo" in cols_det:
-                cur.execute(
+                _execute(
+                    cur,
                     f"UPDATE detalles_pedido SET cantidad = ?, tipo = ? WHERE id = ?",
                     (float(cantidad), tipo, r["id"]),
                 )
             else:
-                cur.execute(
+                _execute(
+                    cur,
                     f"UPDATE detalles_pedido SET cantidad = ? WHERE id = ?",
                     (float(cantidad), r["id"]),
                 )
         else:
             # insert path
             if "tipo" in cols_det:
-                cur.execute(
+                _execute(
+                    cur,
                     f"INSERT INTO detalles_pedido ({pedido_fk}, {prod_fk}, cantidad, tipo) VALUES (?, ?, ?, ?)",
                     (pedido_id, producto_id, float(cantidad), tipo),
                 )
             else:
-                cur.execute(
+                _execute(
+                    cur,
                     f"INSERT INTO detalles_pedido ({pedido_fk}, {prod_fk}, cantidad) VALUES (?, ?, ?)",
                     (pedido_id, producto_id, float(cantidad)),
                 )
 
-        con.commit()
         return {"status": "ok"}
-    finally:
-        con.close()
 
 
 def update_pedido_item(pedido_id: int, producto_id: int, cantidad: float, tipo: Optional[str] = None) -> Dict[str, Any]:
     """Actualiza cantidad/tipo de un ítem de pedido pendiente."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         if not _pedido_pendiente(cur, pedido_id):
+            con.rollback()
             return {"error": "PEDIDO_YA_GENERADO", "detail": "No se puede editar un pedido ya generado"}
 
         pedido_fk = _detalles_pedido_col(cur)
         prod_fk = _detalles_producto_col(cur)
         cols_det = _table_columns(cur, "detalles_pedido")
 
-        cur.execute(
+        _execute(
+            cur,
             f"SELECT id FROM detalles_pedido WHERE {pedido_fk} = ? AND {prod_fk} = ? LIMIT 1",
             (pedido_id, producto_id),
         )
-        r = cur.fetchone()
+        r = _fetchone_as_dict(cur)
         if not r:
+            con.rollback()
             return {"error": "ITEM_NO_EXISTE", "detail": "El ítem no existe en el pedido"}
 
         fields = ["cantidad = ?"]
@@ -2006,31 +1931,25 @@ def update_pedido_item(pedido_id: int, producto_id: int, cantidad: float, tipo: 
             values.append(tipo)
         values.append(r["id"])
 
-        cur.execute(f"UPDATE detalles_pedido SET {', '.join(fields)} WHERE id = ?", tuple(values))
-        con.commit()
+        _execute(cur, f"UPDATE detalles_pedido SET {', '.join(fields)} WHERE id = ?", tuple(values))
         return {"status": "ok"}
-    finally:
-        con.close()
 
 
 def delete_pedido_item(pedido_id: int, producto_id: int) -> Dict[str, Any]:
     """Elimina un ítem de un pedido pendiente."""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         if not _pedido_pendiente(cur, pedido_id):
+            con.rollback()
             return {"error": "PEDIDO_YA_GENERADO", "detail": "No se puede editar un pedido ya generado"}
 
         pedido_fk = _detalles_pedido_col(cur)
         prod_fk = _detalles_producto_col(cur)
-        cur.execute(
+        _execute(
+            cur,
             f"DELETE FROM detalles_pedido WHERE {pedido_fk} = ? AND {prod_fk} = ?",
             (pedido_id, producto_id),
         )
-        con.commit()
         return {"status": "deleted"}
-    finally:
-        con.close()
 
 
 def update_pedido_estado(pedido_id: int, estado: Any, generado_por: str = None) -> Dict[str, Any]:
@@ -2038,16 +1957,14 @@ def update_pedido_estado(pedido_id: int, estado: Any, generado_por: str = None) 
     Actualiza el estado del pedido (pdf_generado) y opcionalmente registra
     fecha_generacion y usuario que generó el PDF.
     """
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "pedidos")
         if "pdf_generado" not in cols:
-            raise Exception("La tabla pedidos no tiene columna pdf_generado")
+            raise ValueError("La tabla pedidos no tiene columna pdf_generado")
 
         # Construir query dinámicamente según columnas disponibles
         updates = ["pdf_generado = ?"]
-        values = [int(bool(estado))]
+        values: List[Any] = [int(bool(estado))]
         
         # Si se está marcando como generado, agregar timestamp y usuario
         if estado and "fecha_generacion" in cols:
@@ -2060,11 +1977,8 @@ def update_pedido_estado(pedido_id: int, estado: Any, generado_por: str = None) 
         
         values.append(pedido_id)
         
-        cur.execute(f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
-        con.commit()
+        _execute(cur, f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
         return {"id": pedido_id, "pdf_generado": bool(estado)}
-    finally:
-        con.close()
 
 
 # === ESTADOS DE PEDIDO WORKFLOW ===
@@ -2081,16 +1995,14 @@ def update_pedido_workflow(pedido_id: int, nuevo_estado: str, repartidor: str = 
     if nuevo_estado not in ESTADOS_PEDIDO_VALIDOS:
         raise ValueError(f"Estado inválido: {nuevo_estado}. Válidos: {ESTADOS_PEDIDO_VALIDOS}")
     
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "pedidos")
         
         if "estado" not in cols:
-            raise Exception("La tabla pedidos no tiene columna estado")
+            raise ValueError("La tabla pedidos no tiene columna estado")
         
         updates = ["estado = ?"]
-        values = [nuevo_estado]
+        values: List[Any] = [nuevo_estado]
         
         # Si se asigna repartidor
         if repartidor and "repartidor" in cols:
@@ -2111,20 +2023,16 @@ def update_pedido_workflow(pedido_id: int, nuevo_estado: str, repartidor: str = 
             values.append(_now_uruguay())
         
         values.append(pedido_id)
-        cur.execute(f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
+        _execute(cur, f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
         
         # Registrar en historial si existe la tabla
-        tables = [r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
-        if "historial_pedidos" in tables:
-            cur.execute("""
+        if _table_exists(cur, "historial_pedidos"):
+            _execute(cur, """
                 INSERT INTO historial_pedidos (pedido_id, accion, usuario, fecha, detalles)
                 VALUES (?, ?, ?, ?, ?)
             """, (pedido_id, "cambio_estado", usuario or "sistema", _now_uruguay(), f"Estado cambiado a: {nuevo_estado}"))
         
-        con.commit()
         return {"id": pedido_id, "estado": nuevo_estado, "repartidor": repartidor}
-    finally:
-        con.close()
 
 
 def get_pedidos_por_estado(estado: str = None) -> List[Dict[str, Any]]:
@@ -2132,10 +2040,10 @@ def get_pedidos_por_estado(estado: str = None) -> List[Dict[str, Any]]:
     Obtiene pedidos filtrados por estado.
     Si estado es None, devuelve todos.
     """
-    pedidos = get_pedidos()
-    if estado is None:
-        return pedidos
-    return [p for p in pedidos if p.get("estado", "tomado") == estado]
+    # Esta función ahora puede usar el filtro directo de get_pedidos
+    # Se mantiene por compatibilidad, pero podría delegar
+    pedidos_data = get_pedidos(page=None, estado=estado)
+    return pedidos_data if isinstance(pedidos_data, list) else pedidos_data.get("data", [])
 
 
 def get_pedidos_por_repartidor(repartidor: str) -> List[Dict[str, Any]]:
@@ -2143,27 +2051,27 @@ def get_pedidos_por_repartidor(repartidor: str) -> List[Dict[str, Any]]:
     Obtiene pedidos asignados a un repartidor específico.
     Útil para la hoja de ruta.
     """
-    pedidos = get_pedidos()
-    return [p for p in pedidos if p.get("repartidor") == repartidor]
+    with get_db_connection() as con:
+        cur = con.cursor()
+        # Asumimos que get_pedidos es la forma principal y esto es un helper específico
+        # Para no re-implementar toda la lógica de join, filtramos post-fetch
+        # Una implementación más optimizada haría un query directo
+        pedidos_data = get_pedidos(page=None)
+        all_pedidos = pedidos_data if isinstance(pedidos_data, list) else pedidos_data.get("data", [])
+        return [p for p in all_pedidos if p.get("repartidor") == repartidor]
 
 
 def update_pedido_cliente(pedido_id: int, cliente_id: int) -> Dict[str, Any]:
     """Actualizar el cliente de un pedido existente"""
-    con = conectar()
-    try:
-        cur = con.cursor()
+    with get_db_transaction() as (con, cur):
         cliente_col = _pedidos_cliente_col(cur)
-        cur.execute(f"UPDATE pedidos SET {cliente_col} = ? WHERE id = ?", (cliente_id, pedido_id))
-        con.commit()
+        _execute(cur, f"UPDATE pedidos SET {cliente_col} = ? WHERE id = ?", (cliente_id, pedido_id))
         return {"id": pedido_id, "cliente_id": cliente_id}
-    finally:
-        con.close()
 
 
 def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None) -> str:
     """Exporta pedidos a formato CSV (Excel compatible) con filtro de fechas opcional"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         cliente_col = _pedidos_cliente_col(cur)
         
@@ -2184,8 +2092,8 @@ def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None)
             params.append(hasta + "T23:59:59")
         
         query += " ORDER BY p.fecha DESC"
-        cur.execute(query, tuple(params))
-        rows = cur.fetchall()
+        _execute(cur, query, tuple(params))
+        rows = _fetchall_as_dict(cur)
         
         d = CSV_DELIMITER
         lines = [f"id{d}cliente_id{d}cliente_nombre{d}fecha{d}pdf_generado{d}productos"]
@@ -2195,1011 +2103,751 @@ def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None)
         
         for r in rows:
             pid = r["id"]
-            cliente_nombre = _sanitize_csv_field(r["cliente_nombre"] or "Sin cliente")
-            fecha = r["fecha"] or ""
-            generado = "Si" if r["pdf_generado"] else "No"
+            cliente_nombre = _sanitize_csv_field(r.get("cliente_nombre") or "Sin cliente")
+            fecha = r.get("fecha") or ""
+            generado = "Si" if r.get("pdf_generado") else "No"
             
-            # Obtener productos del pedido
-            cur.execute(f"""
-                SELECT pr.nombre, dp.cantidad
-                FROM detalles_pedido dp
-                JOIN productos pr ON dp.{prod_fk} = pr.id
-                WHERE dp.{pedido_fk} = ?
-            """, (pid,))
-            prods = [f"{rp['nombre']}x{rp['cantidad']}" for rp in cur.fetchall()]
-            prods_str = _sanitize_csv_field(", ".join(prods))
-            
-            lines.append(f'{pid}{d}{r["cliente_id"] or ""}{d}"{cliente_nombre}"{d}"{fecha}"{d}{generado}{d}"{prods_str}"')
+            # Fetch productos para este pedido
+            _execute(
+                cur,
+                f"""SELECT pr.nombre, dp.cantidad, dp.tipo 
+                    FROM detalles_pedido dp
+                    JOIN productos pr ON dp.{prod_fk} = pr.id
+                    WHERE dp.{pedido_fk} = ?""",
+                (pid,)
+            )
+            productos_rows = _fetchall_as_dict(cur)
+            productos_str = ", ".join([f"{p['cantidad']} x {p['nombre']}" for p in productos_rows])
+            productos_str = _sanitize_csv_field(productos_str)
+
+            lines.append(f'{pid}{d}{r.get("cliente_id")}{d}"{cliente_nombre}"{d}"{fecha}"{d}{generado}{d}"{productos_str}"')
         
         return CSV_BOM + "\n".join(lines)
-    finally:
-        con.close()
 
 
 # -----------------------------------------------------------------------------
 # Usuarios
 # -----------------------------------------------------------------------------
-def _usuarios_user_col(cur: sqlite3.Cursor) -> str:
+def _usuarios_username_col(cur: Union[sqlite3.Cursor, Any]) -> str:
     cols = _table_columns(cur, "usuarios")
     return "username" if "username" in cols else "nombre_usuario"
 
 
-def add_usuario(username: str, password_hash: str, rol: str = "usuario") -> bool:
-    con = conectar()
-    try:
+def get_user(username: str) -> Optional[Dict[str, Any]]:
+    """Obtiene un usuario por su username (o nombre_usuario por compatibilidad)"""
+    with get_db_connection() as con:
         cur = con.cursor()
-        user_col = _usuarios_user_col(cur)
+        username_col = _usuarios_username_col(cur)
         cols = _table_columns(cur, "usuarios")
-
-        # Ya existe?
-        cur.execute(f"SELECT id FROM usuarios WHERE {user_col} = ? COLLATE NOCASE LIMIT 1", (username,))
-        if cur.fetchone():
-            return False
-
-        # Activo: si existe columna activo -> primer usuario admin/activo=1, resto activo=0
-        activo_val: Optional[int] = None
+        
+        sel = ["id", username_col, "password_hash", "rol"]
         if "activo" in cols:
-            cur.execute("SELECT COUNT(*) AS c FROM usuarios")
-            count = int(cur.fetchone()["c"])
-            if count == 0:
-                rol = "admin"
-                activo_val = 1
-            else:
-                activo_val = 0
-
-        fields = [user_col, "password_hash", "rol"]
-        values: List[Any] = [username, password_hash, rol]
-
-        if "activo" in cols:
-            fields.append("activo")
-            values.append(activo_val if activo_val is not None else 1)
-
+            sel.append("activo")
         if "last_login" in cols:
-            fields.append("last_login")
-            values.append(None)
-
-        cur.execute(
-            f"INSERT INTO usuarios ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})",
-            tuple(values),
-        )
-        con.commit()
-        return True
-    finally:
-        con.close()
+            sel.append("last_login")
+            
+        _execute(cur, f"SELECT {', '.join(sel)} FROM usuarios WHERE {username_col} = ?", (username,))
+        row = _fetchone_as_dict(cur)
+        
+        if row:
+            # Normalizar a 'username'
+            row['username'] = row.pop(username_col, None)
+        return row
 
 
-# === TOKEN REVOCATION (Logout) ===
-
-def revoke_token(jti: str, expires_at: str, username: str) -> bool:
-    """Add a token to the revocation list (logout)"""
-    con = conectar()
-    try:
+def get_users() -> List[Dict[str, Any]]:
+    """Obtiene todos los usuarios (sin password hash)"""
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("""
-            INSERT OR IGNORE INTO revoked_tokens (jti, revoked_at, expires_at, username)
-            VALUES (?, ?, ?, ?)
-        """, (jti, _now_iso(), expires_at, username))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
+        username_col = _usuarios_username_col(cur)
+        cols = _table_columns(cur, "usuarios")
+        
+        sel = ["id", username_col, "rol"]
+        if "activo" in cols:
+            sel.append("activo")
+        if "last_login" in cols:
+            sel.append("last_login")
+            
+        _execute(cur, f"SELECT {', '.join(sel)} FROM usuarios ORDER BY {username_col}")
+        rows = _fetchall_as_dict(cur)
+        
+        # Normalizar a 'username'
+        for row in rows:
+            row['username'] = row.pop(username_col, None)
+        return rows
+
+
+def add_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    """Agrega un nuevo usuario"""
+    with get_db_transaction() as (con, cur):
+        username_col = _usuarios_username_col(cur)
+        
+        # Check for duplicates
+        _execute(cur, f"SELECT id FROM usuarios WHERE {username_col} = ?", (user["username"],))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": "USER_EXISTS", "detail": "El nombre de usuario ya existe"}
+            
+        _execute(
+            cur,
+            f"INSERT INTO usuarios ({username_col}, password_hash, rol, activo) VALUES (?, ?, ?, ?)",
+            (user["username"], user["password_hash"], user["rol"], 1),
+        )
+        return {"id": cur.lastrowid, "username": user["username"], "rol": user["rol"]}
+
+
+def update_user(username: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza rol, activo o password de un usuario"""
+    with get_db_transaction() as (con, cur):
+        username_col = _usuarios_username_col(cur)
+        
+        fields = []
+        values: List[Any] = []
+        
+        if "rol" in updates:
+            fields.append("rol = ?")
+            values.append(updates["rol"])
+        if "activo" in updates:
+            fields.append("activo = ?")
+            values.append(int(bool(updates["activo"])))
+        if "password_hash" in updates:
+            fields.append("password_hash = ?")
+            values.append(updates["password_hash"])
+            
+        if not fields:
+            return {"status": "no_changes"}
+            
+        values.append(username)
+        _execute(cur, f"UPDATE usuarios SET {', '.join(fields)} WHERE {username_col} = ?", tuple(values))
+        
+        return {"status": "updated", "username": username}
+
+
+def delete_user(username: str) -> Dict[str, Any]:
+    """Elimina un usuario"""
+    with get_db_transaction() as (con, cur):
+        username_col = _usuarios_username_col(cur)
+        _execute(cur, f"DELETE FROM usuarios WHERE {username_col} = ?", (username,))
+        return {"status": "deleted"}
+
+
+def record_login(username: str) -> None:
+    """Registra el timestamp del último login"""
+    with get_db_transaction() as (con, cur):
+        cols = _table_columns(cur, "usuarios")
+        if "last_login" in cols:
+            _execute(cur, f"UPDATE usuarios SET last_login = ? WHERE {username_col} = ?", (_now_uruguay_iso(), username))
+
+
+# -----------------------------------------------------------------------------
+# Token Revocation List (Blacklist)
+# -----------------------------------------------------------------------------
+def revoke_token(jti: str, expires_at, username: str) -> bool:
+    """Agrega un JTI a la lista de revocación.
+    
+    Args:
+        jti: Token identifier
+        expires_at: Expiration time - can be datetime object or ISO string
+        username: Username associated with the token
+    
+    Returns:
+        True on success (new token revoked), False if already revoked
+    """
+    with get_db_transaction() as (con, cur):
+        # Check if already revoked
+        _execute(cur, "SELECT 1 FROM revoked_tokens WHERE jti = ? LIMIT 1", (jti,))
+        if cur.fetchone() is not None:
+            return False  # Already revoked, skip silently
+        
+        # Handle both datetime objects and strings
+        if isinstance(expires_at, str):
+            expires_at_str = expires_at
+        else:
+            # Convert aware datetime to naive UTC string for storage
+            expires_at_str = expires_at.astimezone(timezone.utc).replace(tzinfo=None).isoformat()
+        
+        _execute(
+            cur,
+            "INSERT INTO revoked_tokens (jti, revoked_at, expires_at, username) VALUES (?, ?, ?, ?)",
+            (jti, _now_iso(), expires_at_str, username)
+        )
+        return True
 
 
 def is_token_revoked(jti: str) -> bool:
-    """Check if a token has been revoked"""
-    con = conectar()
-    try:
+    """Verifica si un JTI está en la lista de revocación."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("SELECT 1 FROM revoked_tokens WHERE jti = ? LIMIT 1", (jti,))
+        _execute(cur, "SELECT 1 FROM revoked_tokens WHERE jti = ? LIMIT 1", (jti,))
         return cur.fetchone() is not None
-    finally:
-        con.close()
 
 
 def get_active_user_if_token_valid(username: str, jti: str) -> Optional[Dict[str, Any]]:
     """
-    Atomically check if user is active AND token is not revoked.
-    Returns user dict if valid, None if user inactive or token revoked.
-    Eliminates TOCTOU race condition between token check and user check.
+    Atomic check: returns user if active AND token is not revoked.
+    Returns None if user is inactive or token is revoked.
     """
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        user_col = _usuarios_user_col(cur)
-        cols = _table_columns(cur, "usuarios")
+        
+        # Check if token is revoked
+        _execute(cur, "SELECT 1 FROM revoked_tokens WHERE jti = ? LIMIT 1", (jti,))
+        if cur.fetchone() is not None:
+            return None
+        
+        # Get user and check if active
+        user = get_user(username)
+        if user is None or not user.get("activo"):
+            return None
+        
+        # Convert activo to boolean for consistency
+        user["activo"] = bool(user.get("activo"))
+        return user
 
-        sel = ["id", user_col, "password_hash", "rol"]
-        if "activo" in cols:
-            sel.append("activo")
-        if "last_login" in cols:
-            sel.append("last_login")
+def cleanup_revoked_tokens() -> int:
+    """Elimina tokens expirados de la lista de revocación."""
+    with get_db_transaction() as (con, cur):
+        now_str = _now_iso()
+        
+        # Contar cuántos se van a borrar
+        _execute(cur, "SELECT COUNT(*) FROM revoked_tokens WHERE expires_at < ?", (now_str,))
+        count = cur.fetchone()[0]
+        
+        if count > 0:
+            _execute(cur, "DELETE FROM revoked_tokens WHERE expires_at < ?", (now_str,))
+        
+        return count
 
-        # Single atomic query: user active AND token not revoked
-        cur.execute(
-            f"""
-            SELECT {', '.join(sel)}
-            FROM usuarios
-            WHERE {user_col} = ? COLLATE NOCASE
-            AND activo = 1
-            AND NOT EXISTS (
-                SELECT 1 FROM revoked_tokens WHERE jti = ?
+
+# Alias for backward compatibility with tests
+cleanup_expired_tokens = cleanup_revoked_tokens
+
+
+# -----------------------------------------------------------------------------
+# Listas de Precios
+# -----------------------------------------------------------------------------
+def get_listas_precios(incluir_inactivas: bool = False) -> List[Dict[str, Any]]:
+    """Obtiene todas las listas de precios."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        query = "SELECT id, nombre, descripcion, multiplicador, activa, fecha_creacion FROM listas_precios"
+        if not incluir_inactivas:
+            query += " WHERE activa = 1"
+        query += " ORDER BY nombre"
+        _execute(cur, query)
+        return _fetchall_as_dict(cur)
+
+
+def get_lista_precios_by_id(lista_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene una lista de precios por ID."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT * FROM listas_precios WHERE id = ?", (lista_id,))
+        return _fetchone_as_dict(cur)
+
+
+def add_lista_precios(lista: Dict[str, Any]) -> Dict[str, Any]:
+    """Crea una nueva lista de precios."""
+    with get_db_transaction() as (con, cur):
+        nombre = (lista.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre de la lista es requerido"}
+        
+        _execute(cur, "SELECT id FROM listas_precios WHERE LOWER(nombre) = LOWER(?)", (nombre,))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe una lista con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "INSERT INTO listas_precios (nombre, descripcion, multiplicador, activa, fecha_creacion) VALUES (?, ?, ?, 1, ?)",
+            (nombre, lista.get("descripcion", ""), float(lista.get("multiplicador", 1.0)), _now_uruguay_iso())
+        )
+        lista["id"] = cur.lastrowid
+        return lista
+
+
+def update_lista_precios(lista_id: int, lista: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza una lista de precios."""
+    with get_db_transaction() as (con, cur):
+        nombre = (lista.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre de la lista es requerido"}
+        
+        _execute(cur, "SELECT id FROM listas_precios WHERE LOWER(nombre) = LOWER(?) AND id != ?", (nombre, lista_id))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe otra lista con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "UPDATE listas_precios SET nombre = ?, descripcion = ?, multiplicador = ?, activa = ? WHERE id = ?",
+            (
+                nombre,
+                lista.get("descripcion", ""),
+                float(lista.get("multiplicador", 1.0)),
+                1 if lista.get("activa", True) else 0,
+                lista_id
             )
-            LIMIT 1
-            """,
-            (username, jti),
         )
-        row = cur.fetchone()
-        if not row:
-            return None
-
-        d = dict(row)
-        d["username"] = d.get("username") or d.get("user")
-        d["activo"] = bool(d.get("activo", 1))
-        return d
-    finally:
-        con.close()
+        return {"id": lista_id, **lista}
 
 
-def cleanup_expired_tokens() -> int:
-    """Remove expired tokens from the revocation list (run periodically)"""
-    con = conectar()
-    try:
+def delete_lista_precios(lista_id: int) -> Dict[str, Any]:
+    """Elimina una lista de precios."""
+    with get_db_transaction() as (con, cur):
+        # Des-asignar de clientes
+        _execute(cur, "UPDATE clientes SET lista_precio_id = NULL WHERE lista_precio_id = ?", (lista_id,))
+        # Eliminar precios especiales (trigger debería hacerlo, pero por seguridad)
+        _execute(cur, "DELETE FROM precios_lista WHERE lista_id = ?", (lista_id,))
+        # Eliminar lista
+        _execute(cur, "DELETE FROM listas_precios WHERE id = ?", (lista_id,))
+        return {"status": "deleted"}
+
+
+def get_precios_de_lista(lista_id: int) -> List[Dict[str, Any]]:
+    """Obtiene los precios especiales de una lista."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        # Delete tokens that have expired (no longer need to track them)
-        cur.execute("DELETE FROM revoked_tokens WHERE expires_at < ?", (_now_iso(),))
-        con.commit()
-        return cur.rowcount
-    finally:
-        con.close()
-
-
-def get_usuario(username: str) -> Optional[Dict[str, Any]]:
-    con = conectar()
-    try:
-        cur = con.cursor()
-        user_col = _usuarios_user_col(cur)
-        cols = _table_columns(cur, "usuarios")
-
-        # armamos SELECT según columnas existentes
-        sel = ["id", user_col, "password_hash", "rol"]
-        if "activo" in cols:
-            sel.append("activo")
-        if "last_login" in cols:
-            sel.append("last_login")
-
-        cur.execute(
-            f"""
-            SELECT {', '.join(sel)}
-            FROM usuarios
-            WHERE {user_col} = ? COLLATE NOCASE
-            LIMIT 1
-            """,
-            (username,),
+        _execute(
+            cur,
+            """SELECT pl.producto_id, p.nombre as producto_nombre, pl.precio_especial
+               FROM precios_lista pl
+               JOIN productos p ON pl.producto_id = p.id
+               WHERE pl.lista_id = ?
+               ORDER BY p.nombre""",
+            (lista_id,)
         )
-        row = cur.fetchone()
-        if not row:
-            return None
-
-        d = dict(row)
-        # Normalizamos key a "username" para que main.py/auth.py estén felices
-        if user_col != "username":
-            d["username"] = d.get(user_col)
-        if "activo" not in d:
-            d["activo"] = 1  # fallback si la columna no existe
-        return d
-    finally:
-        con.close()
+        return _fetchall_as_dict(cur)
 
 
-def set_usuario_activo(user_id: int, activo: int) -> None:
-    con = conectar()
-    try:
-        cur = con.cursor()
-        if not _has_column(cur, "usuarios", "activo"):
-            return
-        cur.execute("UPDATE usuarios SET activo = ? WHERE id = ?", (int(bool(activo)), user_id))
-        con.commit()
-    finally:
-        con.close()
-
-
-def get_all_usuarios() -> List[Dict[str, Any]]:
-    """Lista todos los usuarios del sistema"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        user_col = _usuarios_user_col(cur)
-        cols = _table_columns(cur, "usuarios")
-        
-        sel = ["id", f"{user_col} as username", "rol"]
-        if "activo" in cols:
-            sel.append("activo")
-        if "last_login" in cols:
-            sel.append("last_login")
-        
-        cur.execute(f"SELECT {', '.join(sel)} FROM usuarios ORDER BY id")
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def get_pedidos_creators() -> List[str]:
-    """Obtiene lista de usuarios únicos que han creado pedidos (para filtro)"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            SELECT DISTINCT creado_por 
-            FROM pedidos 
-            WHERE creado_por IS NOT NULL AND creado_por != ''
-            ORDER BY creado_por
-        """)
-        return [r[0] for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def update_usuario_rol(user_id: int, rol: str) -> bool:
-    """Actualiza el rol de un usuario"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("UPDATE usuarios SET rol = ? WHERE id = ?", (rol, user_id))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def update_usuario_password(username: str, password_hash: str) -> bool:
-    """Actualiza la contraseña de un usuario"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("UPDATE usuarios SET password_hash = ? WHERE username = ?", (password_hash, username))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def delete_usuario(user_id: int) -> bool:
-    """Elimina un usuario"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def touch_last_login(user_id: int) -> None:
-    con = conectar()
-    try:
-        cur = con.cursor()
-        if not _has_column(cur, "usuarios", "last_login"):
-            return
-        cur.execute("UPDATE usuarios SET last_login = ? WHERE id = ?", (_now_iso(), user_id))
-        con.commit()
-    finally:
-        con.close()
-
-
-# === Ofertas ===
-def get_ofertas_activas():
-    """Obtener ofertas activas con sus productos"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        # Verificar si existen las tablas
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ofertas'")
-        if not cur.fetchone():
-            return []
-        
-        hoy = _now_iso()[:10]  # YYYY-MM-DD
-        cur.execute("""
-            SELECT id, titulo, descripcion, desde, hasta, descuento_porcentaje
-            FROM ofertas
-            WHERE activa = 1 AND desde <= ? AND hasta >= ?
-            ORDER BY desde DESC
-        """, (hoy, hoy))
-        ofertas = []
-        for row in cur.fetchall():
-            oferta_id, titulo, descripcion, desde, hasta, descuento = row
-            cur.execute("SELECT producto_id, cantidad FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
-            productos = [{"producto_id": r[0], "cantidad": r[1] or 1} for r in cur.fetchall()]
-            ofertas.append({
-                "id": oferta_id,
-                "titulo": titulo,
-                "descripcion": descripcion,
-                "desde": desde,
-                "hasta": hasta,
-                "descuento_porcentaje": descuento or 10,
-                "productos": productos
-            })
-        return ofertas
-    finally:
-        con.close()
-
-
-def get_todas_ofertas():
-    """Obtener todas las ofertas (activas e inactivas)"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ofertas'")
-        if not cur.fetchone():
-            return []
-        
-        cur.execute("""
-            SELECT id, titulo, descripcion, desde, hasta, activa, descuento_porcentaje
-            FROM ofertas
-            ORDER BY desde DESC
-        """)
-        ofertas = []
-        for row in cur.fetchall():
-            oferta_id, titulo, descripcion, desde, hasta, activa, descuento = row
-            cur.execute("SELECT producto_id, cantidad FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
-            productos = [{"producto_id": r[0], "cantidad": r[1] or 1} for r in cur.fetchall()]
-            ofertas.append({
-                "id": oferta_id,
-                "titulo": titulo,
-                "descripcion": descripcion,
-                "desde": desde,
-                "hasta": hasta,
-                "activa": activa,
-                "descuento_porcentaje": descuento or 10,
-                "productos": productos
-            })
-        return ofertas
-    finally:
-        con.close()
-
-def crear_oferta(titulo: str, descripcion: str, desde: str, hasta: str, productos: list, descuento_porcentaje: float = 10):
-    """Crear una nueva oferta con productos y cantidades"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            INSERT INTO ofertas (titulo, descripcion, desde, hasta, activa, descuento_porcentaje)
-            VALUES (?, ?, ?, ?, 1, ?)
-        """, (titulo, descripcion, desde, hasta, descuento_porcentaje))
-        oferta_id = cur.lastrowid
-        for prod in productos:
-            producto_id = prod.get('producto_id') if isinstance(prod, dict) else prod
-            cantidad = prod.get('cantidad', 1) if isinstance(prod, dict) else 1
-            cur.execute("INSERT INTO oferta_productos (oferta_id, producto_id, cantidad) VALUES (?, ?, ?)", 
-                       (oferta_id, producto_id, cantidad))
-        con.commit()
-        return {"id": oferta_id, "titulo": titulo}
-    finally:
-        con.close()
-
-def actualizar_oferta(oferta_id: int, titulo: str, descripcion: str, desde: str, hasta: str, productos: list, descuento_porcentaje: float = 10):
-    """Actualizar una oferta existente con productos y cantidades"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            UPDATE ofertas 
-            SET titulo = ?, descripcion = ?, desde = ?, hasta = ?, descuento_porcentaje = ?
-            WHERE id = ?
-        """, (titulo, descripcion, desde, hasta, descuento_porcentaje, oferta_id))
-        
-        # Eliminar productos viejos y agregar nuevos
-        cur.execute("DELETE FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
-        for prod in productos:
-            producto_id = prod.get('producto_id') if isinstance(prod, dict) else prod
-            cantidad = prod.get('cantidad', 1) if isinstance(prod, dict) else 1
-            cur.execute("INSERT INTO oferta_productos (oferta_id, producto_id, cantidad) VALUES (?, ?, ?)", 
-                       (oferta_id, producto_id, cantidad))
-        con.commit()
-        return {"id": oferta_id, "titulo": titulo}
-    finally:
-        con.close()
-
-def eliminar_oferta(oferta_id: int):
-    """Eliminar una oferta"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("DELETE FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
-        cur.execute("DELETE FROM ofertas WHERE id = ?", (oferta_id,))
-        con.commit()
-    finally:
-        con.close()
-
-def toggle_oferta(oferta_id: int):
-    """Alternar estado activo/inactivo de una oferta. Si se activa una oferta vencida, actualiza las fechas."""
-    from datetime import datetime, timedelta
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT activa, desde, hasta FROM ofertas WHERE id = ?", (oferta_id,))
-        row = cur.fetchone()
-        if not row:
-            return {"error": "Oferta no encontrada"}
-        
-        activa_actual, desde, hasta = row
-        nuevo_estado = 0 if activa_actual == 1 else 1
-        
-        # Si estamos activando la oferta y está vencida, actualizar las fechas
-        hoy = datetime.now(URUGUAY_TZ).strftime('%Y-%m-%d')
-        nuevas_fechas = {}
-        
-        if nuevo_estado == 1 and hasta < hoy:
-            # La oferta está vencida, calcular nuevas fechas basadas en la duración original
-            try:
-                fecha_desde = datetime.strptime(desde, '%Y-%m-%d')
-                fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d')
-                duracion = (fecha_hasta - fecha_desde).days
-                if duracion < 1:
-                    duracion = 7  # Default 1 semana
-                
-                nuevo_desde = datetime.now(URUGUAY_TZ).strftime('%Y-%m-%d')
-                nuevo_hasta = (datetime.now(URUGUAY_TZ) + timedelta(days=duracion)).strftime('%Y-%m-%d')
-                
-                cur.execute("UPDATE ofertas SET activa = ?, desde = ?, hasta = ? WHERE id = ?", 
-                           (nuevo_estado, nuevo_desde, nuevo_hasta, oferta_id))
-                nuevas_fechas = {"desde": nuevo_desde, "hasta": nuevo_hasta, "fechas_actualizadas": True}
-            except:
-                cur.execute("UPDATE ofertas SET activa = ? WHERE id = ?", (nuevo_estado, oferta_id))
+def set_precio_en_lista(lista_id: int, producto_id: int, precio: float) -> Dict[str, Any]:
+    """Establece o actualiza un precio especial en una lista."""
+    with get_db_transaction() as (con, cur):
+        # Upsert
+        _execute(cur, "SELECT id FROM precios_lista WHERE lista_id = ? AND producto_id = ?", (lista_id, producto_id))
+        if cur.fetchone():
+            _execute(
+                cur,
+                "UPDATE precios_lista SET precio_especial = ? WHERE lista_id = ? AND producto_id = ?",
+                (precio, lista_id, producto_id)
+            )
         else:
-            cur.execute("UPDATE ofertas SET activa = ? WHERE id = ?", (nuevo_estado, oferta_id))
-        
-        con.commit()
-        return {"id": oferta_id, "activa": nuevo_estado, **nuevas_fechas}
-    finally:
-        con.close()
-
-
-def seed_ofertas_demo():
-    """Crear ofertas demo si no existen"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        # Crear tablas si no existen
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS ofertas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                titulo TEXT NOT NULL,
-                descripcion TEXT,
-                desde TEXT NOT NULL,
-                hasta TEXT NOT NULL,
-                activa INTEGER DEFAULT 1,
-                descuento_porcentaje REAL DEFAULT 10
+            _execute(
+                cur,
+                "INSERT INTO precios_lista (lista_id, producto_id, precio_especial) VALUES (?, ?, ?)",
+                (lista_id, producto_id, precio)
             )
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS oferta_productos (
-                oferta_id INTEGER NOT NULL,
-                producto_id INTEGER NOT NULL,
-                cantidad REAL DEFAULT 1,
-                PRIMARY KEY (oferta_id, producto_id),
-                FOREIGN KEY (oferta_id) REFERENCES ofertas(id),
-                FOREIGN KEY (producto_id) REFERENCES productos(id)
-            )
-        """)
-        con.commit()
-        
-        # Verificar si ya hay ofertas
-        cur.execute("SELECT COUNT(*) FROM ofertas")
-        if cur.fetchone()[0] > 0:
-            return  # Ya hay ofertas, no crear demo
-        
-        # Obtener algunos productos para demo
-        cur.execute("SELECT id FROM productos LIMIT 5")
-        productos = [r[0] for r in cur.fetchall()]
-        if len(productos) < 3:
-            return  # No hay suficientes productos
-        
-        # Crear ofertas demo
-        hoy = _now_iso()[:10]
-        # Oferta válida por 30 días
-        desde_date = hoy
-        hasta_date = f"{int(hoy[:4])}-{int(hoy[5:7])+1:02d}-{hoy[8:10]}" if int(hoy[5:7]) < 12 else f"{int(hoy[:4])+1}-01-{hoy[8:10]}"
-        
-        cur.execute("""
-            INSERT INTO ofertas (titulo, descripcion, desde, hasta, activa)
-            VALUES (?, ?, ?, ?, 1)
-        """, ("🔥 Oferta de la semana", "Descuentos especiales en productos seleccionados", desde_date, hasta_date))
-        oferta1_id = cur.lastrowid
-        for prod_id in productos[:3]:
-            cur.execute("INSERT INTO oferta_productos (oferta_id, producto_id) VALUES (?, ?)", 
-                       (oferta1_id, prod_id))
-        
-        cur.execute("""
-            INSERT INTO ofertas (titulo, descripcion, desde, hasta, activa)
-            VALUES (?, ?, ?, ?, 1)
-        """, ("🎉 Promo del mes", "Llevá más, pagá menos", desde_date, hasta_date))
-        oferta2_id = cur.lastrowid
-        for prod_id in productos[2:5]:
-            cur.execute("INSERT INTO oferta_productos (oferta_id, producto_id) VALUES (?, ?)", 
-                       (oferta2_id, prod_id))
-        
-        con.commit()
-        print("Ofertas demo creadas correctamente")
-    finally:
-        con.close()
+        return {"status": "ok"}
 
 
-def seed_categorias_default():
-    """Crear categorías por defecto si no existen"""
-    con = conectar()
-    try:
+def delete_precio_de_lista(lista_id: int, producto_id: int) -> Dict[str, Any]:
+    """Elimina un precio especial de una lista."""
+    with get_db_transaction() as (con, cur):
+        _execute("DELETE FROM precios_lista WHERE lista_id = ? AND producto_id = ?", (lista_id, producto_id))
+        return {"status": "deleted"}
+
+
+def get_productos_con_precios_lista(cliente_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Obtiene todos los productos con su precio final, aplicando la lista de precios
+    del cliente si corresponde.
+    """
+    with get_db_connection() as con:
         cur = con.cursor()
         
-        # Verificar si ya hay categorías
-        cur.execute("SELECT COUNT(*) FROM categorias")
-        if cur.fetchone()[0] > 0:
-            return  # Ya hay categorías
+        lista_id = None
+        multiplicador = 1.0
         
-        # Categorías por defecto para una carnicería
-        categorias = [
-            ("🥩 Carnes Vacunas", "Cortes de res, bifes, asado", "#ef4444", 1),
-            ("🐷 Cerdo", "Cortes de cerdo, bondiola, costillas", "#f97316", 2),
-            ("🐔 Pollo", "Pollo entero, pechuga, muslos", "#eab308", 3),
-            ("🌭 Embutidos", "Chorizos, morcillas, salchichas", "#84cc16", 4),
-            ("🧀 Lácteos", "Quesos, manteca, crema", "#06b6d4", 5),
-            ("🥚 Otros", "Huevos, aceite, condimentos", "#8b5cf6", 6),
-            ("❄️ Congelados", "Productos congelados", "#3b82f6", 7),
-            ("📦 Mayorista", "Productos por caja/bulto", "#6366f1", 8),
-        ]
+        if cliente_id:
+            _execute(cur, "SELECT lista_precio_id FROM clientes WHERE id = ?", (cliente_id,))
+            row = cur.fetchone()
+            if row and row[0]:
+                lista_id = row[0]
+                _execute(cur, "SELECT multiplicador FROM listas_precios WHERE id = ?", (lista_id,))
+                row_lista = cur.fetchone()
+                if row_lista:
+                    multiplicador = row_lista[0]
+
+        # 1. Get all products
+        _execute(cur, "SELECT id, nombre, precio, categoria_id, imagen_url, stock FROM productos ORDER BY nombre")
+        productos = _fetchall_as_dict(cur)
         
-        for nombre, descripcion, color, orden in categorias:
-            cur.execute(
-                "INSERT INTO categorias (nombre, descripcion, color, orden, activa, fecha_creacion) VALUES (?, ?, ?, ?, 1, ?)",
-                (nombre, descripcion, color, orden, _now_uruguay_iso())
-            )
+        # 2. Get special prices if a list is active
+        precios_especiales = {}
+        if lista_id:
+            _execute(cur, "SELECT producto_id, precio_especial FROM precios_lista WHERE lista_id = ?", (lista_id,))
+            for row in cur.fetchall():
+                precios_especiales[row[0]] = row[1]
         
-        con.commit()
-        print("Categorías por defecto creadas correctamente")
-    finally:
-        con.close()
+        # 3. Calculate final prices
+        for p in productos:
+            producto_id = p['id']
+            if producto_id in precios_especiales:
+                p['precio_final'] = precios_especiales[producto_id]
+                p['en_lista'] = True
+            else:
+                p['precio_final'] = p['precio'] * multiplicador
+                p['en_lista'] = False
+        
+        return productos
 
 
 # -----------------------------------------------------------------------------
-# Historial de modificaciones
+# Pedidos Template (Recurrentes)
 # -----------------------------------------------------------------------------
-def add_historial(pedido_id: int, accion: str, usuario: str, detalles: str = None) -> None:
-    """Registra una acción en el historial de modificaciones del pedido"""
-    con = conectar()
-    try:
+def get_pedidos_templates(cliente_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Obtiene todos los templates de pedidos, opcionalmente filtrados por cliente."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("""
-            INSERT INTO historial_pedidos (pedido_id, accion, usuario, fecha, detalles)
-            VALUES (?, ?, ?, ?, ?)
-        """, (pedido_id, accion, usuario, _now_uruguay(), detalles))
-        con.commit()
-    finally:
-        con.close()
+        query = "SELECT * FROM pedidos_template"
+        params = []
+        if cliente_id:
+            query += " WHERE cliente_id = ?"
+            params.append(cliente_id)
+        query += " ORDER BY nombre"
+        _execute(cur, query, tuple(params))
+        return _fetchall_as_dict(cur)
 
 
-def get_historial_pedido(pedido_id: int) -> List[Dict[str, Any]]:
-    """Obtiene el historial de modificaciones de un pedido"""
-    con = conectar()
-    try:
+def get_pedido_template_by_id(template_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un template de pedido por ID, incluyendo sus detalles."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("""
-            SELECT id, pedido_id, accion, usuario, fecha, detalles
-            FROM historial_pedidos
-            WHERE pedido_id = ?
-            ORDER BY id DESC
-        """, (pedido_id,))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-# -----------------------------------------------------------------------------
-# Estadísticas por usuario
-# -----------------------------------------------------------------------------
-def get_estadisticas_usuarios() -> Dict[str, Any]:
-    """Obtiene estadísticas de actividad por usuario"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cols = _table_columns(cur, "pedidos")
-        
-        resultado = {
-            "por_vendedor": [],
-            "por_hora": [],
-            "por_dia": [],
-            "dispositivos": []
-        }
-        
-        # Pedidos creados por vendedor
-        if "creado_por" in cols:
-            cur.execute("""
-                SELECT creado_por as usuario, COUNT(*) as total,
-                       SUM(CASE WHEN pdf_generado = 1 THEN 1 ELSE 0 END) as generados,
-                       SUM(CASE WHEN pdf_generado = 0 THEN 1 ELSE 0 END) as pendientes
-                FROM pedidos
-                WHERE creado_por IS NOT NULL
-                GROUP BY creado_por
-                ORDER BY total DESC
-            """)
-            resultado["por_vendedor"] = [dict(r) for r in cur.fetchall()]
-        
-        # Pedidos por hora del día (últimos 7 días)
-        if "fecha_creacion" in cols:
-            cur.execute("""
-                SELECT 
-                    CASE 
-                        WHEN fecha_creacion LIKE '%/%' THEN substr(fecha_creacion, 12, 2)
-                        ELSE '00'
-                    END as hora,
-                    COUNT(*) as total
-                FROM pedidos
-                WHERE fecha_creacion IS NOT NULL
-                  AND fecha >= date('now', '-7 days')
-                GROUP BY hora
-                ORDER BY hora
-            """)
-            resultado["por_hora"] = [dict(r) for r in cur.fetchall()]
-        
-        # Pedidos por día de la semana (últimos 30 días)
-        cur.execute("""
-            SELECT 
-                CASE strftime('%w', fecha)
-                    WHEN '0' THEN 'Domingo'
-                    WHEN '1' THEN 'Lunes'
-                    WHEN '2' THEN 'Martes'
-                    WHEN '3' THEN 'Miércoles'
-                    WHEN '4' THEN 'Jueves'
-                    WHEN '5' THEN 'Viernes'
-                    WHEN '6' THEN 'Sábado'
-                END as dia,
-                COUNT(*) as total
-            FROM pedidos
-            WHERE fecha >= date('now', '-30 days')
-            GROUP BY strftime('%w', fecha)
-            ORDER BY strftime('%w', fecha)
-        """)
-        resultado["por_dia"] = [dict(r) for r in cur.fetchall()]
-        
-        # Estadísticas por dispositivo
-        if "dispositivo" in cols:
-            cur.execute("""
-                SELECT 
-                    COALESCE(dispositivo, 'desconocido') as dispositivo,
-                    COUNT(*) as total
-                FROM pedidos
-                GROUP BY dispositivo
-                ORDER BY total DESC
-            """)
-            resultado["dispositivos"] = [dict(r) for r in cur.fetchall()]
-        
-        return resultado
-    finally:
-        con.close()
-
-
-def get_pedidos_antiguos(horas: int = 24) -> List[Dict[str, Any]]:
-    """Obtiene pedidos pendientes con más de X horas de antigüedad"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cliente_col = _pedidos_cliente_col(cur)
-        
-        # Calcular fecha límite
-        limite = datetime.now(URUGUAY_TZ) - timedelta(hours=horas)
-        limite_iso = limite.isoformat()
-        
-        cur.execute(f"""
-            SELECT p.id, p.{cliente_col} as cliente_id, c.nombre as cliente_nombre,
-                   p.fecha, p.fecha_creacion, p.creado_por
-            FROM pedidos p
-            LEFT JOIN clientes c ON p.{cliente_col} = c.id
-            WHERE p.pdf_generado = 0
-              AND p.fecha < ?
-            ORDER BY p.fecha ASC
-        """, (limite_iso,))
-        
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def update_pedido_dispositivo(pedido_id: int, dispositivo: str, user_agent: str) -> None:
-    """Actualiza información del dispositivo del pedido"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cols = _table_columns(cur, "pedidos")
-        
-        updates = []
-        values = []
-        
-        if "dispositivo" in cols:
-            updates.append("dispositivo = ?")
-            values.append(dispositivo)
-        if "user_agent" in cols:
-            updates.append("user_agent = ?")
-            values.append(user_agent[:500] if user_agent else None)  # Limitar tamaño
-        
-        if updates:
-            values.append(pedido_id)
-            cur.execute(f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
-            con.commit()
-    finally:
-        con.close()
-
-
-def update_pedido_ultima_edicion(pedido_id: int, usuario: str) -> None:
-    """Actualiza información de última edición del pedido"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cols = _table_columns(cur, "pedidos")
-        
-        updates = []
-        values = []
-        
-        if "ultimo_editor" in cols:
-            updates.append("ultimo_editor = ?")
-            values.append(usuario)
-        if "fecha_ultima_edicion" in cols:
-            updates.append("fecha_ultima_edicion = ?")
-            values.append(_now_uruguay())
-        
-        if updates:
-            values.append(pedido_id)
-            cur.execute(f"UPDATE pedidos SET {', '.join(updates)} WHERE id = ?", tuple(values))
-            con.commit()
-    finally:
-        con.close()
-
-
-def update_pedido_notas(pedido_id: int, notas: str) -> Dict[str, Any]:
-    """Actualiza las notas de un pedido"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cols = _table_columns(cur, "pedidos")
-        
-        if "notas" not in cols:
-            return {"error": "notas column not found"}
-        
-        cur.execute("UPDATE pedidos SET notas = ? WHERE id = ?", (notas, pedido_id))
-        con.commit()
-        return {"status": "ok", "pedido_id": pedido_id, "notas": notas}
-    finally:
-        con.close()
-
-
-# -----------------------------------------------------------------------------
-# LISTAS DE PRECIOS
-# -----------------------------------------------------------------------------
-def get_listas_precios() -> List[Dict[str, Any]]:
-    """Obtiene todas las listas de precios con conteo de productos"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            SELECT lp.*, 
-                   (SELECT COUNT(*) FROM precios_lista pl WHERE pl.lista_id = lp.id) as productos_count,
-                   (SELECT COUNT(*) FROM clientes c WHERE c.lista_precio_id = lp.id) as clientes_count
-            FROM listas_precios lp
-            ORDER BY lp.nombre
-        """)
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def get_lista_precio(lista_id: int) -> Optional[Dict[str, Any]]:
-    """Obtiene una lista de precios con sus precios especiales"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT * FROM listas_precios WHERE id = ?", (lista_id,))
-        lista = cur.fetchone()
-        if not lista:
+        _execute(cur, "SELECT * FROM pedidos_template WHERE id = ?", (template_id,))
+        template = _fetchone_as_dict(cur)
+        if not template:
             return None
         
-        result = dict(lista)
-        
-        # Obtener precios especiales
-        cur.execute("""
-            SELECT pl.*, p.nombre as producto_nombre, p.precio as precio_base
-            FROM precios_lista pl
-            JOIN productos p ON pl.producto_id = p.id
-            WHERE pl.lista_id = ?
-            ORDER BY p.nombre
-        """, (lista_id,))
-        result["precios"] = [dict(r) for r in cur.fetchall()]
-        
-        return result
-    finally:
-        con.close()
-
-
-def add_lista_precio(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Crea una nueva lista de precios"""
-    # Validaciones
-    nombre = data.get("nombre", "").strip()
-    if not nombre:
-        raise ValueError("El nombre de la lista es requerido")
-    
-    multiplicador = data.get("multiplicador", 1.0)
-    if multiplicador <= 0:
-        raise ValueError("El multiplicador debe ser mayor a 0")
-    
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            INSERT INTO listas_precios (nombre, descripcion, multiplicador, activa, fecha_creacion)
-            VALUES (?, ?, ?, 1, ?)
-        """, (
-            nombre,
-            data.get("descripcion", ""),
-            multiplicador,
-            _now_uruguay()
-        ))
-        con.commit()
-        return {"id": cur.lastrowid, **data}
-    except sqlite3.IntegrityError:
-        return {"error": "LISTA_DUPLICADA", "detail": "Ya existe una lista con ese nombre"}
-    finally:
-        con.close()
-
-
-def update_lista_precio(lista_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-    """Actualiza una lista de precios"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            UPDATE listas_precios 
-            SET nombre = ?, descripcion = ?, multiplicador = ?, activa = ?
-            WHERE id = ?
-        """, (
-            data.get("nombre"),
-            data.get("descripcion", ""),
-            data.get("multiplicador", 1.0),
-            1 if data.get("activa", True) else 0,
-            lista_id
-        ))
-        con.commit()
-        return {"id": lista_id, **data}
-    finally:
-        con.close()
-
-
-def delete_lista_precio(lista_id: int) -> bool:
-    """Elimina una lista de precios"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("UPDATE clientes SET lista_precio_id = NULL WHERE lista_precio_id = ?", (lista_id,))
-        cur.execute("DELETE FROM precios_lista WHERE lista_id = ?", (lista_id,))
-        cur.execute("DELETE FROM listas_precios WHERE id = ?", (lista_id,))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def get_precios_lista(lista_id: int) -> List[Dict[str, Any]]:
-    """Obtiene todos los precios especiales de una lista"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            SELECT pl.producto_id, pl.precio_especial, p.nombre, p.precio as precio_base
-            FROM precios_lista pl
-            JOIN productos p ON pl.producto_id = p.id
-            WHERE pl.lista_id = ?
-            ORDER BY p.nombre
-        """, (lista_id,))
-        return [
-            {
-                "producto_id": row[0],
-                "precio_especial": row[1],
-                "producto_nombre": row[2],
-                "precio_base": row[3]
-            }
-            for row in cur.fetchall()
-        ]
-    finally:
-        con.close()
-
-
-def set_precio_especial(lista_id: int, producto_id: int, precio: float) -> Dict[str, Any]:
-    """Establece un precio especial para un producto en una lista"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            INSERT OR REPLACE INTO precios_lista (lista_id, producto_id, precio_especial)
-            VALUES (?, ?, ?)
-        """, (lista_id, producto_id, precio))
-        con.commit()
-        return {"lista_id": lista_id, "producto_id": producto_id, "precio_especial": precio}
-    finally:
-        con.close()
-
-
-def remove_precio_especial(lista_id: int, producto_id: int) -> bool:
-    """Elimina un precio especial"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("DELETE FROM precios_lista WHERE lista_id = ? AND producto_id = ?", (lista_id, producto_id))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def asignar_lista_cliente(cliente_id: int, lista_id: Optional[int]) -> bool:
-    """Asigna una lista de precios a un cliente"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("UPDATE clientes SET lista_precio_id = ? WHERE id = ?", (lista_id, cliente_id))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
-
-
-def get_precio_cliente(cliente_id: int, producto_id: int) -> float:
-    """
-    Obtiene el precio de un producto para un cliente específico.
-    Orden de prioridad:
-    1. Precio especial en lista (si existe)
-    2. Precio base * multiplicador de lista (si cliente tiene lista)
-    3. Precio base (si cliente no tiene lista)
-    """
-    con = conectar()
-    try:
-        cur = con.cursor()
-        
-        # Obtener precio base del producto
-        cur.execute("SELECT precio FROM productos WHERE id = ?", (producto_id,))
-        prod = cur.fetchone()
-        if not prod:
-            return 0.0
-        precio_base = float(prod[0])
-        
-        # Obtener lista de precios asignada al cliente
-        cur.execute("SELECT lista_precio_id FROM clientes WHERE id = ?", (cliente_id,))
-        cliente = cur.fetchone()
-        
-        # Si cliente no tiene lista asignada, retornar precio base
-        if not cliente or not cliente[0]:
-            return precio_base
-        
-        lista_id = cliente[0]
-        
-        # Verificar si existe precio especial para este producto en la lista
-        cur.execute(
-            "SELECT precio_especial FROM precios_lista WHERE lista_id = ? AND producto_id = ?",
-            (lista_id, producto_id)
+        _execute(
+            cur,
+            """SELECT dt.producto_id, p.nombre, dt.cantidad, dt.tipo
+               FROM detalles_template dt
+               JOIN productos p ON dt.producto_id = p.id
+               WHERE dt.template_id = ?""",
+            (template_id,)
         )
-        especial = cur.fetchone()
+        template['productos'] = _fetchall_as_dict(cur)
+        return template
+
+
+def add_pedido_template(template: Dict[str, Any], creado_por: str) -> Dict[str, Any]:
+    """Crea un nuevo template de pedido."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            """INSERT INTO pedidos_template 
+               (nombre, cliente_id, frecuencia, activo, creado_por, fecha_creacion)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                template['nombre'],
+                template.get('cliente_id'),
+                template.get('frecuencia'),
+                1,
+                creado_por,
+                _now_uruguay_iso()
+            )
+        )
+        template_id = cur.lastrowid
         
-        # Si hay precio especial, usarlo
-        if especial and especial[0]:
-            return float(especial[0])
+        for prod in template.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
+                (template_id, prod['producto_id'], prod['cantidad'], prod.get('tipo', 'unidad'))
+            )
+            
+        template['id'] = template_id
+        return template
+
+
+def update_pedido_template(template_id: int, template: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza un template de pedido."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            "UPDATE pedidos_template SET nombre = ?, cliente_id = ?, frecuencia = ?, activo = ? WHERE id = ?",
+            (
+                template['nombre'],
+                template.get('cliente_id'),
+                template.get('frecuencia'),
+                1 if template.get('activo', True) else 0,
+                template_id
+            )
+        )
         
-        # Si no hay precio especial, aplicar multiplicador
-        cur.execute("SELECT multiplicador FROM listas_precios WHERE id = ?", (lista_id,))
-        lista = cur.fetchone()
+        # Reemplazar detalles
+        _execute(cur, "DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
+        for prod in template.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
+                (template_id, prod['producto_id'], prod['cantidad'], prod.get('tipo', 'unidad'))
+            )
+            
+        return {"id": template_id, **template}
+
+
+def delete_pedido_template(template_id: int) -> Dict[str, Any]:
+    """Elimina un template de pedido."""
+    with get_db_transaction() as (con, cur):
+        # Trigger debería encargarse de los detalles, pero por si acaso
+        _execute(cur, "DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
+        _execute(cur, "DELETE FROM pedidos_template WHERE id = ?", (template_id,))
+        return {"status": "deleted"}
+
+
+# -----------------------------------------------------------------------------
+# Ofertas
+# -----------------------------------------------------------------------------
+def get_ofertas(solo_activas: bool = True) -> List[Dict[str, Any]]:
+    """Obtiene ofertas, con opción de ver solo las activas y vigentes."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        query = "SELECT * FROM ofertas"
+        params = []
+        if solo_activas:
+            now_str = datetime.now(URUGUAY_TZ).isoformat()
+            query += " WHERE activa = 1 AND desde <= ? AND hasta >= ?"
+            params.extend([now_str, now_str])
+        query += " ORDER BY hasta DESC"
+        _execute(cur, query, tuple(params))
+        return _fetchall_as_dict(cur)
+
+
+def get_oferta_by_id(oferta_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene una oferta por ID, incluyendo sus productos."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT * FROM ofertas WHERE id = ?", (oferta_id,))
+        oferta = _fetchone_as_dict(cur)
+        if not oferta:
+            return None
         
-        if lista and lista[0]:
-            multiplicador = float(lista[0])
-            return round(precio_base * multiplicador, 2)
+        _execute(
+            cur,
+            """SELECT op.producto_id, p.nombre, op.cantidad
+               FROM oferta_productos op
+               JOIN productos p ON op.producto_id = p.id
+               WHERE op.oferta_id = ?""",
+            (oferta_id,)
+        )
+        oferta['productos'] = _fetchall_as_dict(cur)
+        return oferta
+
+
+def add_oferta(oferta: Dict[str, Any]) -> Dict[str, Any]:
+    """Crea una nueva oferta."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            "INSERT INTO ofertas (titulo, descripcion, desde, hasta, activa, descuento_porcentaje) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                oferta['titulo'],
+                oferta.get('descripcion'),
+                oferta['desde'],
+                oferta['hasta'],
+                1 if oferta.get('activa', True) else 0,
+                float(oferta.get('descuento_porcentaje', 10.0))
+            )
+        )
+        oferta_id = cur.lastrowid
         
-        # Fallback: retornar precio base
-        return precio_base
-    finally:
-        con.close()
+        for prod in oferta.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO oferta_productos (oferta_id, producto_id, cantidad) VALUES (?, ?, ?)",
+                (oferta_id, prod['producto_id'], prod.get('cantidad', 1))
+            )
+            
+        oferta['id'] = oferta_id
+        return oferta
+
+
+def update_oferta(oferta_id: int, oferta: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza una oferta."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            "UPDATE ofertas SET titulo = ?, descripcion = ?, desde = ?, hasta = ?, activa = ?, descuento_porcentaje = ? WHERE id = ?",
+            (
+                oferta['titulo'],
+                oferta.get('descripcion'),
+                oferta['desde'],
+                oferta['hasta'],
+                1 if oferta.get('activa', True) else 0,
+                float(oferta.get('descuento_porcentaje', 10.0)),
+                oferta_id
+            )
+        )
+        
+        # Reemplazar productos
+        _execute(cur, "DELETE FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
+        for prod in oferta.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO oferta_productos (oferta_id, producto_id, cantidad) VALUES (?, ?, ?)",
+                (oferta_id, prod['producto_id'], prod.get('cantidad', 1))
+            )
+            
+        return {"id": oferta_id, **oferta}
+
+
+def delete_oferta(oferta_id: int) -> Dict[str, Any]:
+    """Elimina una oferta."""
+    with get_db_transaction() as (con, cur):
+        # Trigger debería encargarse de oferta_productos, pero por si acaso
+        _execute(cur, "DELETE FROM oferta_productos WHERE oferta_id = ?", (oferta_id,))
+        _execute(cur, "DELETE FROM ofertas WHERE id = ?", (oferta_id,))
+        return {"status": "deleted"}
+
+
+# -----------------------------------------------------------------------------
+# Tags
+# -----------------------------------------------------------------------------
+def get_tags() -> List[Dict[str, Any]]:
+    """Obtiene todos los tags."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT id, nombre, color, icono, tipo FROM tags ORDER BY nombre")
+        return _fetchall_as_dict(cur)
+
+
+def add_tag(tag: Dict[str, Any]) -> Dict[str, Any]:
+    """Crea un nuevo tag."""
+    with get_db_transaction() as (con, cur):
+        nombre = (tag.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre es requerido"}
+        
+        _execute(cur, "SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?)", (nombre,))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe un tag con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "INSERT INTO tags (nombre, color, icono, tipo) VALUES (?, ?, ?, ?)",
+            (nombre, tag.get('color', '#6366f1'), tag.get('icono', '🏷️'), tag.get('tipo', 'general'))
+        )
+        tag['id'] = cur.lastrowid
+        return tag
+
+
+def update_tag(tag_id: int, tag: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza un tag."""
+    with get_db_transaction() as (con, cur):
+        nombre = (tag.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre es requerido"}
+        
+        _execute(cur, "SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) AND id != ?", (nombre, tag_id))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe otro tag con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "UPDATE tags SET nombre = ?, color = ?, icono = ?, tipo = ? WHERE id = ?",
+            (nombre, tag.get('color'), tag.get('icono'), tag.get('tipo'), tag_id)
+        )
+        return {"id": tag_id, **tag}
+
+
+def delete_tag(tag_id: int) -> Dict[str, Any]:
+    """Elimina un tag."""
+    with get_db_transaction() as (con, cur):
+        # Trigger debería encargarse de productos_tags, pero por si acaso
+        _execute(cur, "DELETE FROM productos_tags WHERE tag_id = ?", (tag_id,))
+        _execute(cur, "DELETE FROM tags WHERE id = ?", (tag_id,))
+        return {"status": "deleted"}
+
+
+def get_tags_for_producto(producto_id: int) -> List[Dict[str, Any]]:
+    """Obtiene los tags de un producto específico."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(
+            cur,
+            """SELECT t.id, t.nombre, t.color, t.icono, t.tipo
+               FROM tags t
+               JOIN productos_tags pt ON t.id = pt.tag_id
+               WHERE pt.producto_id = ?""",
+            (producto_id,)
+        )
+        return _fetchall_as_dict(cur)
+
+
+def set_tags_for_producto(producto_id: int, tag_ids: List[int]) -> Dict[str, Any]:
+    """Establece los tags para un producto, reemplazando los existentes."""
+    with get_db_transaction() as (con, cur):
+        # Borrar tags existentes para este producto
+        _execute(cur, "DELETE FROM productos_tags WHERE producto_id = ?", (producto_id,))
+        
+        # Añadir nuevos tags
+        if tag_ids:
+            for tag_id in tag_ids:
+                _execute(
+                    cur,
+                    "INSERT INTO productos_tags (producto_id, tag_id) VALUES (?, ?)",
+                    (producto_id, tag_id)
+                )
+        
+        return {"status": "ok", "producto_id": producto_id, "tag_ids": tag_ids}
+
+
+def get_productos_by_tag(tag_id: int) -> List[Dict[str, Any]]:
+    """Obtiene productos que tienen un tag específico."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(
+            cur,
+            """SELECT p.id, p.nombre, p.precio, p.stock, p.imagen_url
+               FROM productos p
+               JOIN productos_tags pt ON p.id = pt.producto_id
+               WHERE pt.tag_id = ?
+               ORDER BY p.nombre""",
+            (tag_id,)
+        )
+        return _fetchall_as_dict(cur)
+
+
+def get_productos_with_tags() -> List[Dict[str, Any]]:
+    """Obtiene todos los productos con sus tags incluidos."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        
+        # Primero obtener todos los productos
+        _execute(cur, "SELECT * FROM productos ORDER BY nombre")
+        productos = _fetchall_as_dict(cur)
+        
+        # Luego obtener todos los tags de productos en una sola query
+        _execute(
+            cur,
+            """SELECT pt.producto_id, t.id, t.nombre, t.color, t.icono, t.tipo
+               FROM productos_tags pt
+               JOIN tags t ON pt.tag_id = t.id
+            """
+        )
+        tags_by_product = {}
+        for row in cur.fetchall():
+            pid = row[0]
+            if pid not in tags_by_product:
+                tags_by_product[pid] = []
+            tags_by_product[pid].append({
+                "id": row[1], "nombre": row[2], "color": row[3],
+                "icono": row[4], "tipo": row[5]
+            })
+        
+        # Añadir tags a cada producto
+        for producto in productos:
+            producto["tags"] = tags_by_product.get(producto["id"], [])
+        
+        return productos
 
 
 # -----------------------------------------------------------------------------
@@ -3590,297 +3238,269 @@ def get_reporte_comparativo() -> Dict[str, Any]:
 # -----------------------------------------------------------------------------
 # PEDIDOS RECURRENTES (Templates)
 # -----------------------------------------------------------------------------
-def get_templates_pedido(cliente_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Obtiene templates de pedidos"""
-    con = conectar()
-    try:
+def get_pedidos_templates(cliente_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Obtiene todos los templates de pedidos, opcionalmente filtrados por cliente."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        query = """
-            SELECT pt.*, c.nombre as cliente_nombre,
-                   (SELECT COUNT(*) FROM detalles_template dt WHERE dt.template_id = pt.id) as productos_count
-            FROM pedidos_template pt LEFT JOIN clientes c ON pt.cliente_id = c.id
-        """
+        query = "SELECT * FROM pedidos_template"
         params = []
         if cliente_id:
-            query += " WHERE pt.cliente_id = ?"
+            query += " WHERE cliente_id = ?"
             params.append(cliente_id)
-        query += " ORDER BY pt.nombre"
-        cur.execute(query, tuple(params))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
+        query += " ORDER BY nombre"
+        _execute(cur, query, tuple(params))
+        return _fetchall_as_dict(cur)
 
 
-def get_template_pedido(template_id: int) -> Optional[Dict[str, Any]]:
-    """Obtiene un template con sus detalles"""
-    con = conectar()
-    try:
+def get_pedido_template_by_id(template_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un template de pedido por ID, incluyendo sus detalles."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("""
-            SELECT pt.*, c.nombre as cliente_nombre FROM pedidos_template pt
-            LEFT JOIN clientes c ON pt.cliente_id = c.id WHERE pt.id = ?
-        """, (template_id,))
-        template = cur.fetchone()
+        _execute(cur, "SELECT * FROM pedidos_template WHERE id = ?", (template_id,))
+        template = _fetchone_as_dict(cur)
         if not template:
             return None
-        result = dict(template)
-        cur.execute("""
-            SELECT dt.*, p.nombre as producto_nombre, p.precio
-            FROM detalles_template dt JOIN productos p ON dt.producto_id = p.id
-            WHERE dt.template_id = ? ORDER BY p.nombre
-        """, (template_id,))
-        result["productos"] = [dict(r) for r in cur.fetchall()]
-        return result
-    finally:
-        con.close()
+        
+        _execute(
+            cur,
+            """SELECT dt.producto_id, p.nombre, dt.cantidad, dt.tipo
+               FROM detalles_template dt
+               JOIN productos p ON dt.producto_id = p.id
+               WHERE dt.template_id = ?""",
+            (template_id,)
+        )
+        template['productos'] = _fetchall_as_dict(cur)
+        return template
 
 
-def add_template_pedido(data: Dict[str, Any], usuario: str) -> Dict[str, Any]:
-    """Crea un nuevo template de pedido"""
-    # Validaciones
-    productos = data.get("productos", [])
-    if not productos:
-        raise ValueError("El template debe tener al menos un producto")
-    
-    for p in productos:
-        cantidad = p.get("cantidad", 1)
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a 0")
-    
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            INSERT INTO pedidos_template (nombre, cliente_id, frecuencia, activo, creado_por, fecha_creacion)
-            VALUES (?, ?, ?, 1, ?, ?)
-        """, (data.get("nombre"), data.get("cliente_id"), data.get("frecuencia"), usuario, _now_uruguay()))
+def add_pedido_template(template: Dict[str, Any], creado_por: str) -> Dict[str, Any]:
+    """Crea un nuevo template de pedido."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            """INSERT INTO pedidos_template 
+               (nombre, cliente_id, frecuencia, activo, creado_por, fecha_creacion)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                template['nombre'],
+                template.get('cliente_id'),
+                template.get('frecuencia'),
+                1,
+                creado_por,
+                _now_uruguay_iso()
+            )
+        )
         template_id = cur.lastrowid
-        for p in productos:
-            cur.execute("""
-                INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo)
-                VALUES (?, ?, ?, ?)
-            """, (template_id, p.get("producto_id"), p.get("cantidad", 1), p.get("tipo", "unidad")))
-        con.commit()
-        return {"id": template_id, **data}
-    finally:
-        con.close()
+        
+        for prod in template.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
+                (template_id, prod['producto_id'], prod['cantidad'], prod.get('tipo', 'unidad'))
+            )
+            
+        template['id'] = template_id
+        return template
 
 
-def update_template_pedido(template_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-    """Actualiza un template de pedido"""
-    # Validaciones
-    productos = data.get("productos", [])
-    if not productos:
-        raise ValueError("El template debe tener al menos un producto")
-    
-    for p in productos:
-        cantidad = p.get("cantidad", 1)
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a 0")
-    
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            UPDATE pedidos_template SET nombre = ?, cliente_id = ?, frecuencia = ?, activo = ?
-            WHERE id = ?
-        """, (data.get("nombre"), data.get("cliente_id"), data.get("frecuencia"),
-              1 if data.get("activo", True) else 0, template_id))
-        if "productos" in data:
-            cur.execute("DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
-            for p in data.get("productos", []):
-                cur.execute("""
-                    INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo)
-                    VALUES (?, ?, ?, ?)
-                """, (template_id, p.get("producto_id"), p.get("cantidad", 1), p.get("tipo", "unidad")))
-        con.commit()
-        return {"id": template_id, **data}
-    finally:
-        con.close()
+def update_pedido_template(template_id: int, template: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza un template de pedido."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            "UPDATE pedidos_template SET nombre = ?, cliente_id = ?, frecuencia = ?, activo = ? WHERE id = ?",
+            (
+                template['nombre'],
+                template.get('cliente_id'),
+                template.get('frecuencia'),
+                1 if template.get('activo', True) else 0,
+                template_id
+            )
+        )
+        
+        # Reemplazar detalles
+        _execute(cur, "DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
+        for prod in template.get('productos', []):
+            _execute(
+                cur,
+                "INSERT INTO detalles_template (template_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
+                (template_id, prod['producto_id'], prod['cantidad'], prod.get('tipo', 'unidad'))
+            )
+            
+        return {"id": template_id, **template}
 
 
-def delete_template_pedido(template_id: int) -> bool:
-    """Elimina un template de pedido"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
-        cur.execute("DELETE FROM pedidos_template WHERE id = ?", (template_id,))
-        con.commit()
-        return cur.rowcount > 0
-    finally:
-        con.close()
+def delete_pedido_template(template_id: int) -> Dict[str, Any]:
+    """Elimina un template de pedido."""
+    with get_db_transaction() as (con, cur):
+        # Trigger debería encargarse de los detalles, pero por si acaso
+        _execute(cur, "DELETE FROM detalles_template WHERE template_id = ?", (template_id,))
+        _execute(cur, "DELETE FROM pedidos_template WHERE id = ?", (template_id,))
+        return {"status": "deleted"}
 
 
 def crear_pedido_desde_template(template_id: int, usuario: str) -> Optional[int]:
     """Crea un pedido real desde un template"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT * FROM pedidos_template WHERE id = ?", (template_id,))
-        template = cur.fetchone()
+    with get_db_transaction() as (con, cur):
+        _execute(cur, "SELECT * FROM pedidos_template WHERE id = ?", (template_id,))
+        template = _fetchone_as_dict(cur)
         if not template:
             return None
         template = dict(template)
         
-        cur.execute("""
-            INSERT INTO pedidos (cliente_id, fecha, pdf_generado, fecha_creacion, creado_por)
-            VALUES (?, ?, 0, ?, ?)
-        """, (template.get("cliente_id"), datetime.now().strftime("%Y-%m-%d"), _now_uruguay(), usuario))
+        _execute(
+            cur,
+            """INSERT INTO pedidos (cliente_id, fecha, pdf_generado, fecha_creacion, creado_por)
+               VALUES (?, ?, 0, ?, ?)""",
+            (template.get("cliente_id"), datetime.now().strftime("%Y-%m-%d"), _now_uruguay(), usuario)
+        )
         pedido_id = cur.lastrowid
         
-        cur.execute("""
-            INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo)
-            SELECT ?, producto_id, cantidad, tipo FROM detalles_template WHERE template_id = ?
-        """, (pedido_id, template_id))
+        _execute(
+            cur,
+            """INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo)
+               SELECT ?, producto_id, cantidad, tipo FROM detalles_template WHERE template_id = ?""",
+            (pedido_id, template_id)
+        )
         
-        cur.execute("UPDATE pedidos_template SET ultima_ejecucion = ? WHERE id = ?", (_now_uruguay(), template_id))
-        con.commit()
+        _execute(cur, "UPDATE pedidos_template SET ultima_ejecucion = ? WHERE id = ?", (_now_uruguay(), template_id))
         return pedido_id
-    finally:
-        con.close()
 
 
 def get_ultimo_pedido_cliente(cliente_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene el último pedido de un cliente para poder repetirlo"""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
         cols = _table_columns(cur, "pedidos")
         cliente_col = "cliente_id" if "cliente_id" in cols else "id_cliente"
         
-        cur.execute(f"""
-            SELECT id, fecha FROM pedidos WHERE {cliente_col} = ?
-            ORDER BY fecha DESC, id DESC LIMIT 1
-        """, (cliente_id,))
+        _execute(
+            cur,
+            f"SELECT id, fecha FROM pedidos WHERE {cliente_col} = ? ORDER BY fecha DESC, id DESC LIMIT 1",
+            (cliente_id,)
+        )
         pedido = cur.fetchone()
         if not pedido:
             return None
         
-        cur.execute("""
-            SELECT dp.producto_id, dp.cantidad, dp.tipo, p.nombre, p.precio
-            FROM detalles_pedido dp JOIN productos p ON dp.producto_id = p.id
-            WHERE dp.pedido_id = ?
-        """, (pedido[0],))
+        _execute(
+            cur,
+            """SELECT dp.producto_id, dp.cantidad, dp.tipo, p.nombre, p.precio
+               FROM detalles_pedido dp JOIN productos p ON dp.producto_id = p.id
+               WHERE dp.pedido_id = ?""",
+            (pedido[0],)
+        )
+        productos = _fetchall_as_dict(cur)
+        return {"pedido_id": pedido[0], "fecha": pedido[1], "productos": productos}
+
+
+# -----------------------------------------------------------------------------
+# Tags
+# -----------------------------------------------------------------------------
+def get_tags() -> List[Dict[str, Any]]:
+    """Obtiene todos los tags."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT id, nombre, color, icono, tipo FROM tags ORDER BY nombre")
+        return _fetchall_as_dict(cur)
+
+
+def add_tag(tag: Dict[str, Any]) -> Dict[str, Any]:
+    """Crea un nuevo tag."""
+    with get_db_transaction() as (con, cur):
+        nombre = (tag.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre es requerido"}
         
-        return {"pedido_id": pedido[0], "fecha": pedido[1], "productos": [dict(r) for r in cur.fetchall()]}
-    finally:
-        con.close()
+        _execute(cur, "SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?)", (nombre,))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe un tag con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "INSERT INTO tags (nombre, color, icono, tipo) VALUES (?, ?, ?, ?)",
+            (nombre, tag.get('color', '#6366f1'), tag.get('icono', '🏷️'), tag.get('tipo', 'general'))
+        )
+        tag['id'] = cur.lastrowid
+        return tag
 
 
-# ============================================================================
-# Tags (Multi-tag system for products)
-# ============================================================================
-def get_tags(tipo: Optional[str] = None) -> List[Dict[str, Any]]:
-    """
-    Obtiene todos los tags del sistema.
-    - tipo: 'conservacion' | 'tipo' para filtrar
-    """
-    con = conectar()
-    try:
+def update_tag(tag_id: int, tag: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualiza un tag."""
+    with get_db_transaction() as (con, cur):
+        nombre = (tag.get("nombre") or "").strip()
+        if not nombre:
+            con.rollback()
+            return {"error": "El nombre es requerido"}
+        
+        _execute(cur, "SELECT id FROM tags WHERE LOWER(nombre) = LOWER(?) AND id != ?", (nombre, tag_id))
+        if cur.fetchone():
+            con.rollback()
+            return {"error": f"Ya existe otro tag con el nombre '{nombre}'"}
+        
+        _execute(
+            cur,
+            "UPDATE tags SET nombre = ?, color = ?, icono = ?, tipo = ? WHERE id = ?",
+            (nombre, tag.get('color'), tag.get('icono'), tag.get('tipo'), tag_id)
+        )
+        return {"id": tag_id, **tag}
+
+
+def delete_tag(tag_id: int) -> Dict[str, Any]:
+    """Elimina un tag."""
+    with get_db_transaction() as (con, cur):
+        # Trigger debería encargarse de productos_tags, pero por si acaso
+        _execute(cur, "DELETE FROM productos_tags WHERE tag_id = ?", (tag_id,))
+        _execute(cur, "DELETE FROM tags WHERE id = ?", (tag_id,))
+        return {"status": "deleted"}
+
+
+def get_tags_for_producto(producto_id: int) -> List[Dict[str, Any]]:
+    """Obtiene los tags de un producto específico."""
+    with get_db_connection() as con:
         cur = con.cursor()
-        if tipo:
-            cur.execute("SELECT * FROM tags WHERE tipo = ? ORDER BY nombre", (tipo,))
-        else:
-            cur.execute("SELECT * FROM tags ORDER BY tipo, nombre")
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
+        _execute(
+            cur,
+            """SELECT t.id, t.nombre, t.color, t.icono, t.tipo
+               FROM tags t
+               JOIN productos_tags pt ON t.id = pt.tag_id
+               WHERE pt.producto_id = ?""",
+            (producto_id,)
+        )
+        return _fetchall_as_dict(cur)
 
 
-def get_producto_tags(producto_id: int) -> List[Dict[str, Any]]:
-    """Obtiene los tags asignados a un producto."""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        cur.execute("""
-            SELECT t.* FROM tags t
-            JOIN productos_tags pt ON t.id = pt.tag_id
-            WHERE pt.producto_id = ?
-            ORDER BY t.tipo, t.nombre
-        """, (producto_id,))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def update_producto_tags(producto_id: int, tag_ids: List[int]) -> Dict[str, Any]:
-    """Actualiza los tags de un producto (reemplaza todos)."""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        # Verificar que todos los tag_ids existen
+def set_tags_for_producto(producto_id: int, tag_ids: List[int]) -> Dict[str, Any]:
+    """Establece los tags para un producto, reemplazando los existentes."""
+    with get_db_transaction() as (con, cur):
+        # Borrar tags existentes para este producto
+        _execute(cur, "DELETE FROM productos_tags WHERE producto_id = ?", (producto_id,))
+        
+        # Añadir nuevos tags
         if tag_ids:
-            placeholders = ','.join('?' * len(tag_ids))
-            cur.execute(f"SELECT COUNT(*) FROM tags WHERE id IN ({placeholders})", tag_ids)
-            count = cur.fetchone()[0]
-            if count != len(tag_ids):
-                return {"error": "Uno o más tags no existen"}
+            for tag_id in tag_ids:
+                _execute(
+                    cur,
+                    "INSERT INTO productos_tags (producto_id, tag_id) VALUES (?, ?)",
+                    (producto_id, tag_id)
+                )
         
-        # Eliminar tags existentes
-        cur.execute("DELETE FROM productos_tags WHERE producto_id = ?", (producto_id,))
-        
-        # Insertar nuevos tags
-        for tag_id in tag_ids:
-            cur.execute(
-                "INSERT INTO productos_tags (producto_id, tag_id) VALUES (?, ?)",
-                (producto_id, tag_id)
-            )
-        
-        con.commit()
-        return {"status": "ok", "tags_count": len(tag_ids)}
-    except sqlite3.Error as e:
-        return {"error": str(e)}
-    finally:
-        con.close()
+        return {"status": "ok", "producto_id": producto_id, "tag_ids": tag_ids}
 
 
-def get_productos_por_tag(tag_id: int) -> List[Dict[str, Any]]:
+def get_productos_by_tag(tag_id: int) -> List[Dict[str, Any]]:
     """Obtiene productos que tienen un tag específico."""
-    con = conectar()
-    try:
+    with get_db_connection() as con:
         cur = con.cursor()
-        cur.execute("""
-            SELECT p.* FROM productos p
-            JOIN productos_tags pt ON p.id = pt.producto_id
-            WHERE pt.tag_id = ?
-            ORDER BY p.nombre
-        """, (tag_id,))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        con.close()
-
-
-def get_productos_with_tags() -> List[Dict[str, Any]]:
-    """Obtiene todos los productos con sus tags incluidos."""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        
-        # Primero obtener todos los productos
-        cur.execute("SELECT * FROM productos ORDER BY nombre")
-        productos = [dict(r) for r in cur.fetchall()]
-        
-        # Luego obtener todos los tags de productos en una sola query
-        cur.execute("""
-            SELECT pt.producto_id, t.id, t.nombre, t.color, t.icono, t.tipo
-            FROM productos_tags pt
-            JOIN tags t ON pt.tag_id = t.id
-        """)
-        tags_by_product = {}
-        for row in cur.fetchall():
-            pid = row[0]
-            if pid not in tags_by_product:
-                tags_by_product[pid] = []
-            tags_by_product[pid].append({
-                "id": row[1], "nombre": row[2], "color": row[3],
-                "icono": row[4], "tipo": row[5]
-            })
-        
-        # Añadir tags a cada producto
-        for producto in productos:
-            producto["tags"] = tags_by_product.get(producto["id"], [])
-        
-        return productos
-    finally:
-        con.close()
+        _execute(
+            cur,
+            """SELECT p.id, p.nombre, p.precio, p.stock, p.imagen_url
+               FROM productos p
+               JOIN productos_tags pt ON p.id = pt.producto_id
+               WHERE pt.tag_id = ?
+               ORDER BY p.nombre""",
+            (tag_id,)
+        )
+        return _fetchall_as_dict(cur)
