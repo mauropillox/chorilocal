@@ -1,10 +1,20 @@
 // vite.config.js - optimized for performance & code-splitting
 
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    css: true,
+    include: ['src/**/*.test.{js,jsx,ts,tsx}'],
+    exclude: ['tests/**', 'node_modules/**']
+  },
 
   build: {
     // Code-splitting for better caching

@@ -1217,7 +1217,7 @@ def update_pedido_estado(pedido_id: int, user=Depends(get_current_user)):
 
 # === ESTADOS DE PEDIDO WORKFLOW ===
 class EstadoPedidoUpdate(BaseModel):
-    estado: str  # tomado, preparando, listo, entregado, cancelado
+    estado: str  # pendiente, preparando, entregado, cancelado
     repartidor: Optional[str] = None
 
 
@@ -1225,7 +1225,7 @@ class EstadoPedidoUpdate(BaseModel):
 def update_pedido_workflow(pedido_id: int, data: EstadoPedidoUpdate, user=Depends(get_current_user)):
     """
     Actualiza el estado del workflow del pedido.
-    Estados: tomado → preparando → listo → entregado (o cancelado)
+    Estados SIMPLIFICADOS: pendiente → preparando → entregado (o cancelado)
     """
     try:
         result = db.update_pedido_workflow(

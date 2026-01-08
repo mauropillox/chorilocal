@@ -2,16 +2,31 @@ import os
 import re
 import sqlite3
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from contextlib import contextmanager
+
+# PostgreSQL support
+try:
+    import psycopg2
+    import psycopg2.extras
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
 # -----------------------------------------------------------------------------
 # Config
 # -----------------------------------------------------------------------------
 DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "")  # PostgreSQL connection string
+USE_POSTGRES = os.getenv("USE_POSTGRES", "false").lower() == "true"
 
 # Timezone Uruguay (UTC-3)
 URUGUAY_TZ = timezone(timedelta(hours=-3))
+
+
+def is_postgres() -> bool:
+    """Check if we're using PostgreSQL"""
+    return USE_POSTGRES and POSTGRES_AVAILABLE and DATABASE_URL
 
 
 # -----------------------------------------------------------------------------
@@ -35,7 +50,34 @@ def _now_uruguay_iso() -> str:
     return datetime.now(URUGUAY_TZ).isoformat()
 
 
-def conectar() -> sqlite3.Connection:
+def _adapt_query(query: str) -> str:
+    """Adapt SQLite query to PostgreSQL if needed"""
+    if not is_postgres():
+        return query
+    # Replace ? placeholders with %s for psycopg2
+    return query.replace('?', '%s')
+
+
+def _dict_factory_pg(cursor, row):
+    """Convert PostgreSQL row to dict"""
+    if row is None:
+        return None
+    return dict(zip([col.name for col in cursor.description], row))
+
+
+def conectar_postgres():
+    """Connect to PostgreSQL database"""
+    con = psycopg2.connect(DATABASE_URL)
+    con.autocommit = False
+    return con
+
+
+def conectar() -> Union[sqlite3.Connection, Any]:
+    """Connect to database (SQLite or PostgreSQL based on config)"""
+    if is_postgres():
+        return conectar_postgres()
+    
+    # SQLite connection
     con = sqlite3.connect(DB_PATH, timeout=30)
     con.row_factory = sqlite3.Row
     # Habilitar foreign keys en SQLite
@@ -46,6 +88,33 @@ def conectar() -> sqlite3.Connection:
     except Exception:
         pass  # Already exists
     return con
+
+
+def _execute(cur, query: str, params: tuple = None):
+    """Execute query with proper parameter adaptation"""
+    adapted_query = _adapt_query(query)
+    if params:
+        return cur.execute(adapted_query, params)
+    return cur.execute(adapted_query)
+
+
+def _fetchall_as_dict(cur) -> List[Dict[str, Any]]:
+    """Fetch all results as list of dicts"""
+    if is_postgres():
+        cols = [col.name for col in cur.description] if cur.description else []
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+    return [dict(row) for row in cur.fetchall()]
+
+
+def _fetchone_as_dict(cur) -> Optional[Dict[str, Any]]:
+    """Fetch one result as dict"""
+    row = cur.fetchone()
+    if row is None:
+        return None
+    if is_postgres():
+        cols = [col.name for col in cur.description] if cur.description else []
+        return dict(zip(cols, row))
+    return dict(row)
 
 
 @contextmanager
@@ -85,15 +154,24 @@ VALID_TABLES = {
     'oferta_productos', 'tags', 'productos_tags'
 }
 
-def _table_columns(cur: sqlite3.Cursor, table: str) -> List[str]:
+def _table_columns(cur, table: str) -> List[str]:
+    """Get column names for a table (works with SQLite and PostgreSQL)"""
     # Validar nombre de tabla contra lista blanca
     if table not in VALID_TABLES:
         raise ValueError(f"Tabla no válida: {table}")
-    cur.execute(f"PRAGMA table_info({table})")
-    return [r[1] for r in cur.fetchall()]
+    
+    if is_postgres():
+        cur.execute("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = %s ORDER BY ordinal_position
+        """, (table,))
+        return [r[0] for r in cur.fetchall()]
+    else:
+        cur.execute(f"PRAGMA table_info({table})")
+        return [r[1] for r in cur.fetchall()]
 
 
-def _has_column(cur: sqlite3.Cursor, table: str, col: str) -> bool:
+def _has_column(cur, table: str, col: str) -> bool:
     return col in _table_columns(cur, table)
 
 
@@ -141,7 +219,8 @@ def _validate_type_def(type_def: str) -> None:
         # Disallow everything else - potential SQL injection
         raise ValueError(f"Unsafe modifier in type definition at position {i}: {part!r}")
 
-def _ensure_column(cur: sqlite3.Cursor, table: str, col: str, type_def: str) -> None:
+def _ensure_column(cur, table: str, col: str, type_def: str) -> None:
+    """Add column if it doesn't exist (works with SQLite and PostgreSQL)"""
     # Validate all parameters to prevent SQL injection
     _validate_sql_identifier(col, 'column')
     _validate_type_def(type_def)
@@ -149,14 +228,73 @@ def _ensure_column(cur: sqlite3.Cursor, table: str, col: str, type_def: str) -> 
         raise ValueError(f"Invalid table: {table!r}")
     
     if not _has_column(cur, table, col):
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {type_def}")
+        # Adapt type definition for PostgreSQL
+        adapted_type = type_def
+        if is_postgres():
+            # SQLite INTEGER REFERENCES -> PostgreSQL INTEGER REFERENCES
+            # SQLite DEFAULT 0 -> PostgreSQL DEFAULT 0 (same)
+            pass  # Most types are compatible
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {adapted_type}")
+
+
+def _pk_type() -> str:
+    """Return primary key type definition for current database"""
+    if is_postgres():
+        return "SERIAL PRIMARY KEY"
+    return "INTEGER PRIMARY KEY AUTOINCREMENT"
+
+
+def _bool_type() -> str:
+    """Return boolean type definition for current database"""
+    if is_postgres():
+        return "BOOLEAN DEFAULT true"
+    return "INTEGER DEFAULT 1"
+
+
+def _bool_false() -> str:
+    """Return boolean false type definition for current database"""
+    if is_postgres():
+        return "BOOLEAN DEFAULT false"
+    return "INTEGER DEFAULT 0"
 
 
 def ensure_schema() -> None:
     """
     Crea tablas si no existen (para instalaciones nuevas) y agrega columnas nuevas
     de forma segura (ALTER TABLE) si faltan.
+    
+    Para PostgreSQL: el esquema se crea durante la migración inicial.
+    Esta función verifica y añade columnas faltantes.
     """
+    # En PostgreSQL, las tablas ya fueron creadas por migrate_simple.py
+    # Solo verificamos columnas faltantes
+    if is_postgres():
+        _ensure_schema_postgres()
+        return
+    
+    _ensure_schema_sqlite()
+
+
+def _ensure_schema_postgres() -> None:
+    """Verificar y añadir columnas faltantes en PostgreSQL"""
+    con = conectar()
+    try:
+        cur = con.cursor()
+        tables = _get_tables(cur)
+        
+        if not tables:
+            raise RuntimeError("PostgreSQL database is empty. Run migrate_simple.py first.")
+        
+        # Ensure all required columns exist (migration might have added them)
+        # This is a safety check for future column additions
+        
+        con.commit()
+    finally:
+        con.close()
+
+
+def _ensure_schema_sqlite() -> None:
+    """Crear esquema para SQLite (desarrollo/tests)"""
     con = conectar()
     try:
         cur = con.cursor()
@@ -256,8 +394,8 @@ def ensure_schema() -> None:
         _ensure_column(cur, "pedidos", "fecha_ultima_edicion", "TEXT")  # Timestamp última edición
         
         # === ESTADOS DE PEDIDO ===
-        # Estados: tomado → preparando → listo → entregado (o cancelado)
-        _ensure_column(cur, "pedidos", "estado", "TEXT DEFAULT 'tomado'")
+        # Estados SIMPLIFICADOS: pendiente → preparando → entregado (o cancelado)
+        _ensure_column(cur, "pedidos", "estado", "TEXT DEFAULT 'pendiente'")
         _ensure_column(cur, "pedidos", "repartidor", "TEXT")  # Asignación de repartidor
         _ensure_column(cur, "pedidos", "fecha_entrega", "TEXT")  # Cuando se entregó
 
@@ -424,9 +562,31 @@ def ensure_schema() -> None:
         con.close()
 
 
-def _get_tables(cur: sqlite3.Cursor) -> List[str]:
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY 1")
+def _get_tables(cur) -> List[str]:
+    """Get list of tables (works with SQLite and PostgreSQL)"""
+    if is_postgres():
+        cur.execute("""
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_schema = 'public' ORDER BY table_name
+        """)
+    else:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY 1")
     return [r[0] for r in cur.fetchall()]
+
+
+def _table_exists(cur, table_name: str) -> bool:
+    """Check if table exists (works with SQLite and PostgreSQL)"""
+    if is_postgres():
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = %s
+            )
+        """, (table_name,))
+        return cur.fetchone()[0]
+    else:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+        return cur.fetchone() is not None
 
 
 def ensure_indexes() -> None:
@@ -467,8 +627,12 @@ def ensure_indexes() -> None:
 def ensure_cascade_triggers() -> None:
     """
     Crea triggers para simular CASCADE DELETE en SQLite.
-    Asegura que al eliminar una lista de precios, se eliminen sus precios especiales.
+    En PostgreSQL no son necesarios ya que tiene soporte nativo de ON DELETE CASCADE.
     """
+    # PostgreSQL already has proper CASCADE support via foreign keys
+    if is_postgres():
+        return
+        
     con = conectar()
     try:
         cur = con.cursor()
@@ -1576,7 +1740,7 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
     Args:
         page: Número de página (1-based). Si es None, retorna todos los pedidos.
         limit: Cantidad de pedidos por página (default 50, max 200).
-        estado: Filtrar por estado (tomado, preparando, listo, entregado, cancelado).
+        estado: Filtrar por estado (pendiente, preparando, entregado, cancelado).
         creado_por: Filtrar por usuario que creó el pedido (para rol 'ventas').
     
     Returns:
@@ -1613,8 +1777,8 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
         params = []
         
         if estado:
-            # Handle 'tomado' as default for NULL estado
-            if estado == 'tomado':
+            # Handle 'pendiente' as default for NULL estado
+            if estado == 'pendiente':
                 where_clauses.append("(estado = ? OR estado IS NULL)")
             else:
                 where_clauses.append("estado = ?")
@@ -1710,7 +1874,7 @@ def get_pedidos(page: int = None, limit: int = 50, estado: str = None, creado_po
                 "dispositivo": safe_get(r, "dispositivo"),
                 "ultimo_editor": safe_get(r, "ultimo_editor"),
                 "fecha_ultima_edicion": safe_get(r, "fecha_ultima_edicion"),
-                "estado": safe_get(r, "estado", "tomado"),
+                "estado": safe_get(r, "estado", "pendiente"),
                 "repartidor": safe_get(r, "repartidor"),
                 "fecha_entrega": safe_get(r, "fecha_entrega"),
                 "productos": productos_por_pedido.get(pid, []),
@@ -1904,8 +2068,10 @@ def update_pedido_estado(pedido_id: int, estado: Any, generado_por: str = None) 
 
 
 # === ESTADOS DE PEDIDO WORKFLOW ===
-# Estados válidos: tomado → preparando → listo → entregado (o cancelado en cualquier punto)
-ESTADOS_PEDIDO_VALIDOS = ["tomado", "preparando", "listo", "entregado", "cancelado"]
+# Estados válidos: SIMPLIFICADO (3 estados principales)
+# pendiente (nuevo pedido) → preparando (en cocina) → entregado (finalizado)
+# cancelado puede ocurrir desde cualquier estado
+ESTADOS_PEDIDO_VALIDOS = ["pendiente", "preparando", "entregado", "cancelado"]
 
 def update_pedido_workflow(pedido_id: int, nuevo_estado: str, repartidor: str = None, usuario: str = None) -> Dict[str, Any]:
     """

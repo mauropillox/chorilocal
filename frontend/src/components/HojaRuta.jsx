@@ -3,12 +3,11 @@ import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
 import HelpBanner from './HelpBanner';
 
-// Estados de pedido workflow
+// Estados de pedido workflow SIMPLIFICADOS
 const ESTADOS_PEDIDO = {
-    tomado: { label: 'Tomado', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
+    pendiente: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
     preparando: { label: 'Preparando', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
-    listo: { label: 'Listo', icon: '✅', color: '#10b981', bg: '#d1fae5' },
-    entregado: { label: 'Entregado', icon: '🚚', color: '#6b7280', bg: '#e5e7eb' },
+    entregado: { label: 'Entregado', icon: '✅', color: '#10b981', bg: '#d1fae5' },
     cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' }
 };
 
@@ -77,7 +76,7 @@ export default function HojaRuta() {
     // Filtrar pedidos (excluir entregados y cancelados por defecto)
     const pedidosFiltrados = useMemo(() => {
         return pedidos.filter(p => {
-            const estado = p.estado || 'tomado';
+            const estado = p.estado || 'pendiente';
             // Excluir entregados y cancelados por defecto
             if (!filtroEstado && (estado === 'entregado' || estado === 'cancelado')) return false;
 
@@ -122,7 +121,7 @@ export default function HojaRuta() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    estado: pedidos.find(p => p.id === pedidoId)?.estado || 'tomado',
+                    estado: pedidos.find(p => p.id === pedidoId)?.estado || 'pendiente',
                     repartidor
                 })
             });
@@ -208,15 +207,15 @@ export default function HojaRuta() {
 
     // Contadores
     const contadores = {
-        tomado: pedidos.filter(p => (p.estado || 'tomado') === 'tomado').length,
+        pendiente: pedidos.filter(p => (p.estado || 'pendiente') === 'pendiente').length,
         preparando: pedidos.filter(p => p.estado === 'preparando').length,
-        listo: pedidos.filter(p => p.estado === 'listo').length,
+
         entregado: pedidos.filter(p => p.estado === 'entregado').length,
     };
 
     // Siguiente estado en el workflow
     const getSiguienteEstado = (estadoActual) => {
-        const flujo = { 'tomado': 'preparando', 'preparando': 'listo', 'listo': 'entregado' };
+        const flujo = { 'pendiente': 'preparando', 'preparando': 'entregado' };
         return flujo[estadoActual] || null;
     };
 
@@ -248,9 +247,9 @@ export default function HojaRuta() {
                 title="¿Cómo usar la Hoja de Ruta?"
                 icon="🚚"
                 items={[
-                    { label: 'Filtrar por estado', text: 'Clickeá las tarjetas de colores (Tomado, Preparando, etc.) para ver solo esos pedidos. Los números muestran cuántos hay en cada estado.' },
+                    { label: 'Filtrar por estado', text: 'Clickeá las tarjetas de colores (Pendiente, Preparando, etc.) para ver solo esos pedidos. Los números muestran cuántos hay en cada estado.' },
                     { label: 'Asignar repartidores', text: 'Cada pedido tiene un selector "👤 Asignar Repartidor". Elegí el nombre y se guarda automáticamente. Los pedidos sin asignar aparecen primero.' },
-                    { label: 'Cambiar estados', text: 'Usá los botones de cada pedido para avanzar: Tomar → Preparar → Listo → Entregar. También podés cancelar si es necesario.' },
+                    { label: 'Cambiar estados', text: 'Usá los botones de cada pedido para avanzar: Pendiente → Preparar → Entregar. También podés cancelar si es necesario.' },
                     { label: 'Generar PDF', text: 'Seleccioná un repartidor y hacé clic en "📄 Generar PDF" para crear una hoja de ruta imprimible con todos sus pedidos, agrupados por zona.' },
                     { label: 'Organización', text: 'Los pedidos están agrupados por zona para optimizar la ruta de entrega.' }
                 ]}
@@ -258,7 +257,7 @@ export default function HojaRuta() {
 
             {/* Stats Cards - Clickeables como filtros */}
             <div className="grid grid-cols-4 gap-2 mb-4">
-                {['tomado', 'preparando', 'listo', 'entregado'].map(estado => {
+                {['pendiente', 'preparando', 'entregado'].map(estado => {
                     const info = ESTADOS_PEDIDO[estado];
                     const isActive = filtroEstado === estado;
                     return (
@@ -390,7 +389,7 @@ export default function HojaRuta() {
                                 // Vista COMPACTA - Más pedidos visibles
                                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                     {pedidosZona.map((p) => {
-                                        const estado = p.estado || 'tomado';
+                                        const estado = p.estado || 'pendiente';
                                         const estadoInfo = ESTADOS_PEDIDO[estado];
                                         const siguiente = getSiguienteEstado(estado);
                                         const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
@@ -467,7 +466,7 @@ export default function HojaRuta() {
                             ) : (
                                 // Vista EXPANDIDA - Más detalles
                                 pedidosZona.map((p) => {
-                                    const estado = p.estado || 'tomado';
+                                    const estado = p.estado || 'pendiente';
                                     const estadoInfo = ESTADOS_PEDIDO[estado];
                                     const siguiente = getSiguienteEstado(estado);
 

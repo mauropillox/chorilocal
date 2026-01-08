@@ -285,7 +285,7 @@ export default function Pedidos() {
           { label: 'Paso 2 - Buscar productos', text: 'Presioná "/" para activar el buscador rápido o escribí directamente en la barra. Los productos aparecen con foto, precio y stock.' },
           { label: 'Paso 3 - Agregar al pedido', text: 'Clickeá el producto para agregarlo. Ajustá la cantidad con los botones + / - o escribí directo en el campo.' },
           { label: 'Paso 4 - Revisar total', text: 'El resumen de la derecha muestra subtotal, descuentos y total final. Podés aplicar descuentos o elegir método de pago.' },
-          { label: 'Paso 5 - Guardar', text: 'Presioná Ctrl+S o clickeá "💾 Guardar Pedido". El pedido aparecerá en el Historial con estado "Tomado".' },
+          { label: 'Paso 5 - Guardar', text: 'Presioná Ctrl+S o clickeá "💾 Guardar Pedido". El pedido aparecerá en el Historial con estado "Pendiente".' },
           { label: 'Tips', text: 'Usá las categorías para filtrar productos. Los productos en oferta se marcan con 🎁. El stock bajo aparece en naranja.' }
         ]}
       />

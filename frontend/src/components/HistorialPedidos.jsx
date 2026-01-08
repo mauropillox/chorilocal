@@ -662,23 +662,6 @@ export default function HistorialPedidos() {
                             ) : (
                               <span className="badge badge-pending">⏳ Pendiente</span>
                             )}
-                            {/* Estado Workflow Badge */}
-                            {(() => {
-                              const estado = p.estado || 'tomado';
-                              const estadoInfo = ESTADOS_PEDIDO[estado];
-                              return (
-                                <span
-                                  className="badge"
-                                  style={{
-                                    background: estadoInfo.bg,
-                                    color: estadoInfo.color,
-                                    border: `1px solid ${estadoInfo.color}`
-                                  }}
-                                >
-                                  {estadoInfo.label}
-                                </span>
-                              );
-                            })()}
                             {p.repartidor && (
                               <span className="badge" style={{ background: '#e0e7ff', color: '#3730a3', border: '1px solid #6366f1' }}>
                                 🚚 {p.repartidor}
