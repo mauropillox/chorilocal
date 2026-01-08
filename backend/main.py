@@ -280,6 +280,7 @@ def root():
 
 # --- Health Check ---
 @app.get("/health")
+@app.get("/api/health")  # Frontend uses /api/health
 def health_check():
     request_id = get_request_id()
     try:

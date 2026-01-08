@@ -223,6 +223,83 @@ async def get_pedidos(
         
         return result
 
+
+# --- Static routes MUST come before dynamic /{pedido_id} routes ---
+
+@router.get("/pedidos/creators")
+@limiter.limit(RATE_LIMIT_READ)
+async def get_pedidos_creators(request: Request, current_user: dict = Depends(get_current_user)):
+    """Get list of unique users who created pedidos (for filtering in admin)"""
+    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta información")
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT creado_por FROM pedidos 
+            WHERE creado_por IS NOT NULL AND creado_por != ''
+            ORDER BY creado_por
+        """)
+        creators = cursor.fetchall()
+        return [{"username": c[0]} for c in creators]
+
+
+@router.get("/pedidos/export/csv")
+@limiter.limit(RATE_LIMIT_READ)
+async def export_pedidos_csv(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    desde: Optional[str] = None,
+    hasta: Optional[str] = None
+):
+    """Export pedidos to CSV format"""
+    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
+        raise HTTPException(status_code=403, detail="No tienes permiso para exportar")
+    
+    query = """
+        SELECT p.id, c.nombre as cliente, p.fecha, p.estado, p.notas, p.creado_por
+        FROM pedidos p
+        JOIN clientes c ON p.cliente_id = c.id
+    """
+    params = []
+    conditions = []
+    
+    if desde:
+        conditions.append("p.fecha >= ?")
+        params.append(desde)
+    if hasta:
+        conditions.append("p.fecha <= ?")
+        params.append(hasta)
+    
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    
+    query += " ORDER BY p.fecha DESC"
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        pedidos = cursor.fetchall()
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["ID", "Cliente", "Fecha", "Estado", "Notas", "Creado Por"])
+        
+        for p in pedidos:
+            writer.writerow(p)
+        
+        output.seek(0)
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=pedidos_{datetime.now().strftime('%Y%m%d')}.csv"}
+        )
+
+
+# --- Dynamic routes with {pedido_id} ---
+
 @router.get("/pedidos/{pedido_id}", response_model=models.PedidoDetalle)
 async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_current_user)):
     with db.get_db_connection() as conn:
@@ -301,79 +378,7 @@ async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin
     return
 
 
-# --- Additional endpoints needed by frontend ---
-
-@router.get("/pedidos/creators")
-@limiter.limit(RATE_LIMIT_READ)
-async def get_pedidos_creators(request: Request, current_user: dict = Depends(get_current_user)):
-    """Get list of unique users who created pedidos (for filtering in admin)"""
-    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
-        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta información")
-    
-    with db.get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT DISTINCT creado_por FROM pedidos 
-            WHERE creado_por IS NOT NULL AND creado_por != ''
-            ORDER BY creado_por
-        """)
-        creators = cursor.fetchall()
-        return [{"username": c[0]} for c in creators]
-
-
-@router.get("/pedidos/export/csv")
-@limiter.limit(RATE_LIMIT_READ)
-async def export_pedidos_csv(
-    request: Request,
-    current_user: dict = Depends(get_current_user),
-    desde: Optional[str] = None,
-    hasta: Optional[str] = None
-):
-    """Export pedidos to CSV format"""
-    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
-        raise HTTPException(status_code=403, detail="No tienes permiso para exportar")
-    
-    query = """
-        SELECT p.id, c.nombre as cliente, p.fecha, p.estado, p.notas, p.creado_por
-        FROM pedidos p
-        JOIN clientes c ON p.cliente_id = c.id
-    """
-    params = []
-    conditions = []
-    
-    if desde:
-        conditions.append("p.fecha >= ?")
-        params.append(desde)
-    if hasta:
-        conditions.append("p.fecha <= ?")
-        params.append(hasta)
-    
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-    
-    query += " ORDER BY p.fecha DESC"
-    
-    with db.get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        pedidos = cursor.fetchall()
-        
-        # Create CSV in memory
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["ID", "Cliente", "Fecha", "Estado", "Notas", "Creado Por"])
-        
-        for p in pedidos:
-            writer.writerow(p)
-        
-        output.seek(0)
-        
-        return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=pedidos_{datetime.now().strftime('%Y%m%d')}.csv"}
-        )
-
+# --- Pedido modification endpoints ---
 
 @router.put("/pedidos/{pedido_id}/notas")
 @limiter.limit(RATE_LIMIT_WRITE)
