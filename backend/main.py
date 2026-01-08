@@ -9,24 +9,27 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 from datetime import datetime, timezone
 import os
-import logging
+import time
 import traceback
 
 import db
 import models
 from deps import limiter
 from routers import pedidos, clientes, productos, auth, categorias, ofertas
+from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
-# --- Basic Setup ---
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-API_VERSION = "1.1.0"
+# --- Structured Logging Setup ---
+setup_logging()
+logger = get_logger(__name__)
+API_VERSION = "1.2.0"
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # --- Validate Production Configuration ---
 if ENVIRONMENT == "production":
     db.validate_production_config()
-    logger.info("Starting in PRODUCTION mode with PostgreSQL")
+    logger.info("startup", message="Starting in PRODUCTION mode with PostgreSQL")
+else:
+    logger.info("startup", message="Starting in DEVELOPMENT mode", environment=ENVIRONMENT)
 
 # --- App Initialization ---
 app = FastAPI(
@@ -105,7 +108,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions with standardized format"""
-    logger.error(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
+    request_id = get_request_id()
+    logger.error(
+        "unhandled_exception",
+        error=str(exc),
+        exception_type=type(exc).__name__,
+        path=request.url.path,
+        request_id=request_id
+    )
     
     # In development, include stack trace
     details = None
@@ -118,6 +128,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             "error": "Internal server error",
             "code": models.ErrorCodes.INTERNAL_ERROR,
             "details": details,
+            "request_id": request_id,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
@@ -134,6 +145,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    """Add request ID and log all requests with timing"""
+    # Get or generate request ID
+    request_id = request.headers.get("X-Request-ID") or set_request_id()
+    set_request_id(request_id)
+    
+    # Start timing
+    start_time = time.time()
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Calculate duration
+    duration_ms = (time.time() - start_time) * 1000
+    
+    # Log request (skip health checks for noise reduction)
+    if request.url.path not in ["/health", "/favicon.ico"]:
+        log_level = "warning" if duration_ms > 500 else "info"
+        getattr(logger, log_level)(
+            "http_request",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=round(duration_ms, 2),
+            request_id=request_id
+        )
+    
+    # Add request ID to response headers
+    response.headers["X-Request-ID"] = request_id
+    
+    return response
 
 
 @app.middleware("http")
@@ -173,12 +218,15 @@ def root():
 # --- Health Check ---
 @app.get("/health")
 def health_check():
+    request_id = get_request_id()
     try:
-        with db.get_db_connection() as conn:
-            conn.cursor().execute("SELECT 1")
+        with Timer("health_db_check", logger, threshold_ms=50):
+            with db.get_db_connection() as conn:
+                conn.cursor().execute("SELECT 1")
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
+        logger.error("health_check_failed", error=str(e), request_id=request_id)
     
     db_info = db.get_database_info()
     
@@ -188,5 +236,6 @@ def health_check():
         "database_type": db_info["type"],
         "environment": ENVIRONMENT,
         "version": API_VERSION,
+        "request_id": request_id,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }

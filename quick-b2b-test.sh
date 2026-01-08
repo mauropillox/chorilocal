@@ -18,7 +18,7 @@ echo -e "${BLUE}===========================================${NC}"
 
 # Get admin token
 echo -n "🔑 Getting admin token... "
-LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=admin&password=admin123" "$API_URL/login")
+LOGIN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=admin&password=admin123" "$API_URL/api/login")
 TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 
 if [ -n "$TOKEN" ]; then
@@ -41,7 +41,7 @@ PEDIDO_RESPONSE=$(curl -s -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$PEDIDO_JSON" \
-    "$API_URL/pedidos")
+    "$API_URL/api/pedidos")
 
 PEDIDO_ID=$(echo "$PEDIDO_RESPONSE" | grep -o '"id":[0-9]*' | cut -d':' -f2)
 
@@ -68,7 +68,7 @@ for i in "${!ESTADOS[@]}"; do
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "{\"estado\": \"$estado\", \"repartidor\": \"$repartidor\"}" \
-        "$API_URL/pedidos/$PEDIDO_ID/estado")
+        "$API_URL/api/pedidos/$PEDIDO_ID/estado")
     
     if [[ "$UPDATE_RESPONSE" == *"$estado"* ]]; then
         echo -e "${GREEN}✅ SUCCESS${NC}"
@@ -85,7 +85,7 @@ echo -e "${YELLOW}🔍 Testing new filter endpoints...${NC}"
 
 # Test filter by estado
 echo -n "   GET /pedidos/por-estado/entregado... "
-FILTER_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/pedidos/por-estado/entregado")
+FILTER_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/api/pedidos/por-estado/entregado")
 
 if [[ "$FILTER_RESPONSE" == *"entregado"* ]] || [[ "$FILTER_RESPONSE" == "[]" ]]; then
     echo -e "${GREEN}✅ SUCCESS${NC}"
@@ -95,7 +95,7 @@ fi
 
 # Test filter by repartidor
 echo -n "   GET /pedidos/por-repartidor/Carlos López... "
-REPARTIDOR_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/pedidos/por-repartidor/Carlos%20López")
+REPARTIDOR_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/api/pedidos/por-repartidor/Carlos%20López")
 
 if [[ "$REPARTIDOR_RESPONSE" == *"Carlos López"* ]] || [[ "$REPARTIDOR_RESPONSE" == "[]" ]]; then
     echo -e "${GREEN}✅ SUCCESS${NC}"
@@ -111,7 +111,7 @@ INVALID_RESPONSE=$(curl -s -w "%{http_code}" -X PUT \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"estado": "invalid_estado", "repartidor": "Test"}' \
-    "$API_URL/pedidos/$PEDIDO_ID/estado")
+    "$API_URL/api/pedidos/$PEDIDO_ID/estado")
 
 HTTP_CODE="${INVALID_RESPONSE: -3}"
 if [ "$HTTP_CODE" -ge 400 ]; then
@@ -133,7 +133,7 @@ ZERO_RESPONSE=$(curl -s -w "%{http_code}" -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$ZERO_QTY_JSON" \
-    "$API_URL/pedidos")
+    "$API_URL/api/pedidos")
 
 ZERO_HTTP_CODE="${ZERO_RESPONSE: -3}"
 if [ "$ZERO_HTTP_CODE" -ge 400 ] || [[ "$ZERO_RESPONSE" == *"id"* ]]; then
@@ -182,7 +182,7 @@ for i in {1..3}; do
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "$PERF_JSON" \
-        "$API_URL/pedidos")
+        "$API_URL/api/pedidos")
     
     if [[ "$PERF_RESPONSE" == *"id"* ]]; then
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))

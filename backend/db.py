@@ -670,38 +670,73 @@ def _table_exists(cur, table_name: str) -> bool:
 
 
 def ensure_indexes() -> None:
-    """Create performance indexes on key columns."""
+    """Create performance indexes on key columns for query optimization."""
     con = conectar()
     try:
         cur = con.cursor()
-        # Index on usuarios.username for auth lookups
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)")
-        # Index on pedidos.cliente_id for filtering
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos(cliente_id)")
-        # Index on detalles_pedido.pedido_id for joins
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_detalles_pedido_pedido_id ON detalles_pedido(pedido_id)")
-        # Index on detalles_pedido.producto_id for joins
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_detalles_pedido_producto_id ON detalles_pedido(producto_id)")
         
-        # NEW: Performance indexes for searches (Semana 1)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_nombre ON productos(nombre)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_stock ON productos(stock)")
+        # === USER/AUTH INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_activo ON usuarios(activo)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_jti ON revoked_tokens(jti)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at)")
+        
+        # === PEDIDOS INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos(cliente_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_fecha_creacion ON pedidos(fecha_creacion)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_creado_por ON pedidos(creado_por)")
+        # Composite index for common query: pedidos by estado and fecha
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_estado_fecha ON pedidos(estado, fecha)")
+        # Composite index for filtering by client and date
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_fecha ON pedidos(cliente_id, fecha)")
         
-        # Indexes for categorías
+        # === DETALLES_PEDIDO INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_detalles_pedido_pedido_id ON detalles_pedido(pedido_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_detalles_pedido_producto_id ON detalles_pedido(producto_id)")
+        # Composite for join optimization
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_detalles_pedido_join ON detalles_pedido(pedido_id, producto_id)")
+        
+        # === CLIENTES INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_clientes_zona ON clientes(zona)")
+        
+        # === PRODUCTOS INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_nombre ON productos(nombre)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_stock ON productos(stock)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_categoria_id ON productos(categoria_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_categorias_nombre ON categorias(nombre)")
+        # Low stock alert query optimization
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_productos_stock_alert ON productos(stock, stock_minimo)")
         
-        # Indexes for audit_log
+        # === CATEGORIAS INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_categorias_nombre ON categorias(nombre)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_categorias_activa ON categorias(activa)")
+        
+        # === OFERTAS INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ofertas_activa ON ofertas(activa)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ofertas_fechas ON ofertas(desde, hasta)")
+        
+        # === AUDIT LOG INDEXES ===
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_usuario ON audit_log(usuario)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_tabla ON audit_log(tabla)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_registro ON audit_log(tabla, registro_id)")
+        
+        # === HISTORIAL PEDIDOS INDEXES ===
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_historial_pedido_id ON historial_pedidos(pedido_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_historial_fecha ON historial_pedidos(fecha)")
         
         con.commit()
+        logger.info("indexes_ensured", message="All database indexes created/verified")
+    except Exception as e:
+        logger.error("indexes_failed", error=str(e))
+        raise
     finally:
-        con.close()
+        if is_postgres():
+            release_pg_connection(con)
+        else:
+            con.close()
 
 
 def ensure_cascade_triggers() -> None:
