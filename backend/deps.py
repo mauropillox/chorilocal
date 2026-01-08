@@ -134,11 +134,15 @@ def get_oficina_or_admin(user: dict = Depends(get_current_user)) -> dict:
 def validate_production_secrets():
     """Validate that all required secrets are set for production"""
     from os import getenv
+    import db
     
     required_vars = {
         "SECRET_KEY": "JWT signing key",
-        "DATABASE_URL": "PostgreSQL connection string",
     }
+    
+    # Only require DATABASE_URL if using PostgreSQL
+    if db.USE_POSTGRES:
+        required_vars["DATABASE_URL"] = "PostgreSQL connection string"
     
     missing = []
     weak_secrets = []
