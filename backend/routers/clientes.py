@@ -12,7 +12,7 @@ from deps import (
 router = APIRouter()
 
 
-@router.post("/clientes/", response_model=models.Cliente)
+@router.post("/clientes", response_model=models.Cliente)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def crear_cliente(request: Request, cliente: models.ClienteCreate, current_user: dict = Depends(get_current_user)):
     with db.get_db_transaction() as (conn, cursor):
@@ -28,7 +28,7 @@ async def crear_cliente(request: Request, cliente: models.ClienteCreate, current
     return {**cliente.model_dump(), "id": cliente_id}
 
 
-@router.get("/clientes/", response_model=List[models.Cliente])
+@router.get("/clientes", response_model=List[models.Cliente])
 async def get_clientes(current_user: dict = Depends(get_current_user)):
     with db.get_db_connection() as conn:
         cursor = conn.cursor()

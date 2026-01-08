@@ -29,7 +29,7 @@ class CategoriaCreate(BaseModel):
 
 
 @router.get("/categorias", response_model=List[Categoria])
-@router.get("/categorias/", response_model=List[Categoria])
+@router.get("/categorias", response_model=List[Categoria])
 async def get_categorias(current_user: dict = Depends(get_current_user)):
     categorias = db.get_categorias(incluir_inactivas=current_user["rol"] == "admin")
     return categorias
@@ -44,7 +44,7 @@ async def get_categoria(categoria_id: int, current_user: dict = Depends(get_curr
 
 
 @router.post("/categorias", response_model=Categoria)
-@router.post("/categorias/", response_model=Categoria)
+@router.post("/categorias", response_model=Categoria)
 async def crear_categoria(categoria: CategoriaCreate, current_user: dict = Depends(get_admin_user)):
     result = db.add_categoria(categoria.model_dump())
     if "error" in result:

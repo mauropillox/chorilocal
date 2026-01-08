@@ -40,7 +40,7 @@ class OfertaCreate(BaseModel):
 
 
 @router.get("/ofertas", response_model=List[Oferta])
-@router.get("/ofertas/", response_model=List[Oferta])
+@router.get("/ofertas", response_model=List[Oferta])
 async def get_ofertas(current_user: dict = Depends(get_current_user)):
     ofertas = db.get_ofertas(solo_activas=current_user["rol"] != "admin")
     return ofertas
@@ -55,7 +55,7 @@ async def get_oferta(oferta_id: int, current_user: dict = Depends(get_current_us
 
 
 @router.post("/ofertas", response_model=Oferta)
-@router.post("/ofertas/", response_model=Oferta)
+@router.post("/ofertas", response_model=Oferta)
 async def crear_oferta(
     current_user: dict = Depends(get_admin_user),
     titulo: str = Form(...),

@@ -12,7 +12,7 @@ from deps import (
 router = APIRouter()
 
 
-@router.post("/productos/", response_model=models.Producto)
+@router.post("/productos", response_model=models.Producto)
 @router.post("/productos", response_model=models.Producto)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def crear_producto(request: Request, producto: models.ProductoCreate, current_user: dict = Depends(get_admin_user)):
@@ -31,7 +31,7 @@ async def crear_producto(request: Request, producto: models.ProductoCreate, curr
     return {**producto.model_dump(), "id": producto_id}
 
 
-@router.get("/productos/", response_model=List[models.Producto])
+@router.get("/productos", response_model=List[models.Producto])
 @router.get("/productos", response_model=List[models.Producto])
 async def get_productos(
     current_user: dict = Depends(get_current_user),
