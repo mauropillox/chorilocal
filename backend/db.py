@@ -255,6 +255,11 @@ def conectar() -> Union[sqlite3.Connection, Any]:
     con.execute("PRAGMA busy_timeout=30000")  # 30 seconds
     # foreign_keys: Enforce referential integrity
     con.execute("PRAGMA foreign_keys=ON")
+    # query_timeout: Prevent runaway queries from hanging (requires SQLite 3.41+)
+    try:
+        con.execute("PRAGMA query_timeout=10000")  # 10 seconds max per query
+    except Exception:
+        pass  # Older SQLite versions don't support this
     
     # Ensure 'zona' column exists in 'clientes' (migration)
     try:

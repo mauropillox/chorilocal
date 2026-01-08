@@ -68,7 +68,7 @@ export default function LayoutApp({ onLogout }) {
           setOfertasCount(data.length);
         }
       } catch (e) {
-        console.error('Error loading ofertas count:', e);
+        if (import.meta.env.MODE === 'development') console.error('Error loading ofertas count:', e);
       }
     };
     loadOfertasCount();
@@ -114,7 +114,7 @@ export default function LayoutApp({ onLogout }) {
         setSearchResults({ clientes: filteredClientes, productos: filteredProductos });
       } catch (e) {
         // Ignore abort errors
-        if (e.name !== 'AbortError') {
+        if (e.name !== 'AbortError' && import.meta.env.MODE === 'development') {
           console.error('Search error:', e);
         }
       } finally {
@@ -190,7 +190,7 @@ export default function LayoutApp({ onLogout }) {
       }
     } catch (e) {
       // Ignore errors - we're logging out anyway
-      console.warn('Logout API call failed:', e);
+      if (import.meta.env.MODE === 'development') console.warn('Logout API call failed:', e);
     }
     borrarToken();
     if (onLogout) onLogout();
