@@ -198,8 +198,9 @@ async def add_security_headers(request, call_next):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        # Remove server header for security
-        response.headers.pop("server", None)
+        # Remove server header for security (use del instead of pop)
+        if "server" in response.headers:
+            del response.headers["server"]
     return response
 
 
