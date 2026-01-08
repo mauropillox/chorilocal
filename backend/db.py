@@ -53,37 +53,36 @@ def _get_pg_pool():
 def validate_production_config():
     """Validate that production environment has proper configuration"""
     if ENVIRONMENT == "production":
-        if not USE_POSTGRES:
-            raise RuntimeError(
-                "CRITICAL: PostgreSQL is required in production. "
-                "Set USE_POSTGRES=true and provide DATABASE_URL"
+        # Allow SQLite in production if USE_POSTGRES is false
+        if USE_POSTGRES:
+            if not DATABASE_URL:
+                raise RuntimeError(
+                    "CRITICAL: DATABASE_URL must be set when USE_POSTGRES=true"
+                )
+            if not POSTGRES_AVAILABLE:
+                raise RuntimeError(
+                    "CRITICAL: psycopg2 not installed but required for PostgreSQL"
+                )
+            
+            # Validate database URL format
+            if not DATABASE_URL.startswith(('postgresql://', 'postgres://')):
+                raise RuntimeError(
+                    "CRITICAL: DATABASE_URL must be a valid PostgreSQL connection string"
+                )
+            
+            # Validate connection pool settings
+            if PG_POOL_MIN_CONN < 1 or PG_POOL_MAX_CONN < PG_POOL_MIN_CONN:
+                raise RuntimeError(
+                    f"CRITICAL: Invalid connection pool settings - "
+                    f"min={PG_POOL_MIN_CONN}, max={PG_POOL_MAX_CONN}"
+                )
+            
+            logger.info(
+                f"Production configuration validated: PostgreSQL enabled - "
+                f"pool_min={PG_POOL_MIN_CONN}, pool_max={PG_POOL_MAX_CONN}"
             )
-        if not DATABASE_URL:
-            raise RuntimeError(
-                "CRITICAL: DATABASE_URL must be set in production"
-            )
-        if not POSTGRES_AVAILABLE:
-            raise RuntimeError(
-                "CRITICAL: psycopg2 not installed but required for production"
-            )
-        
-        # Validate database URL format
-        if not DATABASE_URL.startswith(('postgresql://', 'postgres://')):
-            raise RuntimeError(
-                "CRITICAL: DATABASE_URL must be a valid PostgreSQL connection string"
-            )
-        
-        # Validate connection pool settings
-        if PG_POOL_MIN_CONN < 1 or PG_POOL_MAX_CONN < PG_POOL_MIN_CONN:
-            raise RuntimeError(
-                f"CRITICAL: Invalid connection pool settings - "
-                f"min={PG_POOL_MIN_CONN}, max={PG_POOL_MAX_CONN}"
-            )
-        
-        logger.info(
-            f"Production configuration validated: PostgreSQL enabled - "
-            f"pool_min={PG_POOL_MIN_CONN}, pool_max={PG_POOL_MAX_CONN}"
-        )
+        else:
+            logger.info("Production configuration: Using SQLite")
 
 # Timezone Uruguay (UTC-3)
 URUGUAY_TZ = timezone(timedelta(hours=-3))
