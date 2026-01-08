@@ -9,7 +9,7 @@ ENV NODE_ENV=production
 
 # Build-time argument for API URL - pass during build with:
 # docker build --build-arg VITE_API_URL=https://your-backend.onrender.com .
-ARG VITE_API_URL=https://chorilocal-backend.onrender.com
+ARG VITE_API_URL=https://api.pedidosfriosur.com
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build -- --mode production
@@ -23,7 +23,7 @@ COPY nginx.local.conf /tmp/nginx.local.conf
 COPY nginx.conf /tmp/nginx.conf
 
 # Use appropriate config based on build arg - only copy the one we need
-ARG VITE_API_URL=https://chorilocal-backend.onrender.com
+ARG VITE_API_URL=https://api.pedidosfriosur.com
 RUN if echo "$VITE_API_URL" | grep -q "localhost"; then \
     cp /tmp/nginx.local.conf /etc/nginx/conf.d/default.conf; \
     else \
