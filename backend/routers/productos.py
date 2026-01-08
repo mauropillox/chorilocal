@@ -1,17 +1,21 @@
 """Productos (Products) Router"""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List, Optional
 
 import db
 import models
-from deps import get_current_user, get_admin_user
+from deps import (
+    get_current_user, get_admin_user, limiter,
+    RATE_LIMIT_READ, RATE_LIMIT_WRITE
+)
 
 router = APIRouter()
 
 
 @router.post("/productos/", response_model=models.Producto)
 @router.post("/productos", response_model=models.Producto)
-async def crear_producto(producto: models.ProductoCreate, current_user: dict = Depends(get_admin_user)):
+@limiter.limit(RATE_LIMIT_WRITE)
+async def crear_producto(request: Request, producto: models.ProductoCreate, current_user: dict = Depends(get_admin_user)):
     with db.get_db_transaction() as (conn, cursor):
         cursor.execute("SELECT id FROM productos WHERE nombre = ?", (producto.nombre,))
         if cursor.fetchone():

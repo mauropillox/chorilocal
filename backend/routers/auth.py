@@ -9,14 +9,15 @@ import models
 from deps import (
     hash_password, create_access_token, get_current_user, 
     get_admin_user, verify_password, validate_password_strength,
-    ACCESS_TOKEN_EXPIRE_MINUTES, limiter
+    ACCESS_TOKEN_EXPIRE_MINUTES, limiter,
+    RATE_LIMIT_AUTH, RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
 
 router = APIRouter()
 
 
 @router.post("/login", response_model=models.Token)
-@limiter.limit("10/minute")
+@limiter.limit(RATE_LIMIT_AUTH)
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = db.get_user(form_data.username)
     

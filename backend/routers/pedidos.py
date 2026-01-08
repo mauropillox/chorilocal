@@ -1,18 +1,22 @@
 """Pedidos (Orders) Router"""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List, Optional, Dict, Any
 import datetime
 
 import db
 import models
-from deps import get_current_user, get_admin_user
+from deps import (
+    get_current_user, get_admin_user, limiter,
+    RATE_LIMIT_READ, RATE_LIMIT_WRITE
+)
 
 router = APIRouter()
 
 
 @router.post("/pedidos/", response_model=models.Pedido)
 @router.post("/pedidos", response_model=models.Pedido)
-async def crear_pedido(pedido: models.PedidoCreate, current_user: dict = Depends(get_current_user)):
+@limiter.limit(RATE_LIMIT_WRITE)
+async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_user: dict = Depends(get_current_user)):
     if current_user["rol"] not in ["admin", "vendedor"]:
         raise HTTPException(status_code=403, detail="No tienes permiso para crear pedidos")
 

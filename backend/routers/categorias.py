@@ -1,10 +1,13 @@
 """Categorias Router"""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 import db
-from deps import get_current_user, get_admin_user
+from deps import (
+    get_current_user, get_admin_user, limiter,
+    RATE_LIMIT_READ, RATE_LIMIT_WRITE
+)
 
 router = APIRouter()
 

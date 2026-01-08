@@ -5,7 +5,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Use automatic JSX runtime
+      jsxRuntime: 'automatic',
+      // Faster builds in dev
+      fastRefresh: true,
+    })
+  ],
 
   test: {
     globals: true,
@@ -13,7 +20,15 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.js'],
     css: true,
     include: ['src/**/*.test.{js,jsx,ts,tsx}'],
-    exclude: ['tests/**', 'node_modules/**']
+    exclude: ['tests/**', 'node_modules/**'],
+    // Ensure proper JSX handling in tests
+    deps: {
+      optimizer: {
+        web: {
+          include: ['react', 'react-dom']
+        }
+      }
+    }
   },
 
   build: {

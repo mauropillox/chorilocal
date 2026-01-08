@@ -1,73 +1,31 @@
-// AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL;
+// AuthContext.jsx - Legacy compatibility wrapper using Zustand store
+import { createContext, useContext, useEffect } from "react";
+import { useAppStore, useAuth as useAuthStore, useAuthActions } from "../store";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const auth = useAuthStore();
+  const { login, logout, initAuth } = useAuthActions();
 
+  // Initialize auth on mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUser({
-          token,
-          id: payload.sub,
-          rol: payload.rol,
-          activo: payload.activo,
-          exp: payload.exp,
-        });
-      } catch {
-        localStorage.removeItem("token");
-      }
-    }
-  }, []);
+    initAuth();
 
-  const login = async (username, password) => {
-    const params = new URLSearchParams();
-    params.append("username", username);
-    params.append("password", password);
+    // Listen for logout events from authFetch
+    const handleLogout = () => logout();
+    window.addEventListener('auth:logout', handleLogout);
+    return () => window.removeEventListener('auth:logout', handleLogout);
+  }, [initAuth, logout]);
 
-    const res = await fetch(`${API_URL}/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params,
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.detail || "Credenciales inválidas");
-    }
-
-    const data = await res.json();
-    const token = data.access_token;
-
-    localStorage.setItem("token", token);
-
-    const payload = JSON.parse(atob(token.split(".")[1]));
-
-    const userData = {
-      token,
-      id: payload.sub,
-      rol: payload.rol,
-      activo: payload.activo,
-      exp: payload.exp,
-    };
-
-    setUser(userData);
-    return userData;
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
+  // Build user object for backward compatibility
+  const user = auth.user ? {
+    token: auth.token,
+    id: auth.user.id,
+    rol: auth.user.rol,
+    activo: true,
+    exp: auth.user.exp,
+  } : null;
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

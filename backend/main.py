@@ -1,23 +1,32 @@
 """
 Chorizaurio API - Main Application Entry Point
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 from datetime import datetime, timezone
 import os
 import logging
+import traceback
 
 import db
+import models
 from deps import limiter
 from routers import pedidos, clientes, productos, auth, categorias, ofertas
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-API_VERSION = "1.0.0"
+API_VERSION = "1.1.0"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+# --- Validate Production Configuration ---
+if ENVIRONMENT == "production":
+    db.validate_production_config()
+    logger.info("Starting in PRODUCTION mode with PostgreSQL")
 
 # --- App Initialization ---
 app = FastAPI(
@@ -37,7 +46,80 @@ app.state.limiter = limiter
 async def rate_limit_handler(request, exc):
     return JSONResponse(
         status_code=429,
-        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+        content={
+            "error": f"Rate limit exceeded: {exc.detail}",
+            "code": models.ErrorCodes.RATE_LIMITED,
+            "details": {"limit": str(exc.detail)},
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors with standardized format"""
+    errors = []
+    for error in exc.errors():
+        field = ".".join(str(loc) for loc in error["loc"])
+        errors.append({
+            "field": field,
+            "message": error["msg"],
+            "value": error.get("input")
+        })
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "Validation failed",
+            "code": models.ErrorCodes.VALIDATION_ERROR,
+            "details": errors,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions with standardized format"""
+    # Map status codes to error codes
+    code_map = {
+        401: models.ErrorCodes.UNAUTHORIZED,
+        403: models.ErrorCodes.FORBIDDEN,
+        404: models.ErrorCodes.NOT_FOUND,
+        409: models.ErrorCodes.CONFLICT,
+        429: models.ErrorCodes.RATE_LIMITED
+    }
+    
+    error_code = code_map.get(exc.status_code, "HTTP_ERROR")
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "code": error_code,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle unexpected exceptions with standardized format"""
+    logger.error(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
+    
+    # In development, include stack trace
+    details = None
+    if ENVIRONMENT != "production":
+        details = {"traceback": traceback.format_exc()}
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "code": models.ErrorCodes.INTERNAL_ERROR,
+            "details": details,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
     )
 
 
@@ -98,9 +180,13 @@ def health_check():
     except Exception as e:
         db_status = f"error: {e}"
     
+    db_info = db.get_database_info()
+    
     return {
         "status": "healthy" if db_status == "ok" else "degraded",
         "database": db_status,
+        "database_type": db_info["type"],
+        "environment": ENVIRONMENT,
         "version": API_VERSION,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }

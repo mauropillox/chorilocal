@@ -1,5 +1,10 @@
 # Docker Compose for Production with PostgreSQL
 # Usage: docker-compose -f docker-compose.prod.yml up -d
+#
+# IMPORTANT: Create secrets before starting:
+#   echo "your_db_password" | docker secret create db_password -
+#   echo "your_secret_key" | docker secret create secret_key -
+#   echo "your_sentry_dsn" | docker secret create sentry_dsn -
 
 services:
   postgres:
@@ -8,7 +13,9 @@ services:
     environment:
       POSTGRES_DB: chorizaurio_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -42,33 +49,43 @@ services:
       - ENVIRONMENT=production
       - USE_POSTGRES=true
       - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/chorizaurio_db
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY_FILE=/run/secrets/secret_key
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - CORS_ORIGINS=${CORS_ORIGINS}
-      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_DSN_FILE=/run/secrets/sentry_dsn
+      - PG_POOL_MIN_CONN=5
+      - PG_POOL_MAX_CONN=20
+    secrets:
+      - secret_key
+      - sentry_dsn
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ./data:/data
-      - ./backups:/backups
+      - ./data:/data:rw
+      - ./backups:/backups:rw
     restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '2.0'
-          memory: 1G
+          memory: 2G
         reservations:
           cpus: '0.5'
-          memory: 256M
+          memory: 512M
     healthcheck:
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
       - chorizaurio-internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     container_name: chorizaurio-frontend
@@ -98,6 +115,11 @@ services:
       retries: 3
     networks:
       - chorizaurio-internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   chorizaurio-internal:
@@ -106,3 +128,13 @@ networks:
 volumes:
   postgres_data:
     driver: local
+
+# Docker Swarm secrets (for docker stack deploy)
+# For docker-compose, use external secrets or .env file
+secrets:
+  db_password:
+    external: true
+  secret_key:
+    external: true
+  sentry_dsn:
+    external: true

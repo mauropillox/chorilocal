@@ -1,16 +1,20 @@
 """Clientes (Customers) Router"""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List
 
 import db
 import models
-from deps import get_current_user, get_admin_user
+from deps import (
+    get_current_user, get_admin_user, limiter,
+    RATE_LIMIT_READ, RATE_LIMIT_WRITE
+)
 
 router = APIRouter()
 
 
 @router.post("/clientes/", response_model=models.Cliente)
-async def crear_cliente(cliente: models.ClienteCreate, current_user: dict = Depends(get_current_user)):
+@limiter.limit(RATE_LIMIT_WRITE)
+async def crear_cliente(request: Request, cliente: models.ClienteCreate, current_user: dict = Depends(get_current_user)):
     with db.get_db_transaction() as (conn, cursor):
         cursor.execute("SELECT id FROM clientes WHERE nombre = ?", (cliente.nombre,))
         if cursor.fetchone():

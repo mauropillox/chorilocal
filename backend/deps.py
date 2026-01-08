@@ -18,11 +18,33 @@ import db
 
 logger = logging.getLogger(__name__)
 
+
+def _read_secret(env_var: str, file_env_var: str, default: str) -> str:
+    """Read secret from environment or Docker secrets file"""
+    # First try direct environment variable
+    if os.getenv(env_var):
+        return os.getenv(env_var)
+    # Then try Docker secrets file
+    file_path = os.getenv(file_env_var)
+    if file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, 'r') as f:
+                return f.read().strip()
+        except Exception as e:
+            logger.warning(f"Failed to read secret from {file_path}: {e}")
+    return default
+
+
 # --- Configuration ---
-SECRET_KEY = os.getenv("SECRET_KEY", "a_random_secret_key_for_development")
+SECRET_KEY = _read_secret("SECRET_KEY", "SECRET_KEY_FILE", "a_random_secret_key_for_development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+# --- Rate Limiting Configuration ---
 RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
+RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "5/minute")
+RATE_LIMIT_READ = os.getenv("RATE_LIMIT_READ", "100/minute")
+RATE_LIMIT_WRITE = os.getenv("RATE_LIMIT_WRITE", "30/minute")
 
 # --- Rate Limiting ---
 limiter = Limiter(key_func=get_remote_address)

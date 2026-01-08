@@ -1,17 +1,21 @@
 import os
 import re
 import sqlite3
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 from contextlib import contextmanager
 
-# PostgreSQL support
+# PostgreSQL support with connection pooling
 try:
     import psycopg2
     import psycopg2.extras
+    import psycopg2.pool
     POSTGRES_AVAILABLE = True
 except ImportError:
     POSTGRES_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # Config
@@ -19,6 +23,50 @@ except ImportError:
 DB_PATH = os.getenv("DB_PATH", "/data/ventas.db")
 DATABASE_URL = os.getenv("DATABASE_URL", "")  # PostgreSQL connection string
 USE_POSTGRES = os.getenv("USE_POSTGRES", "false").lower() == "true"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+# Connection pool settings
+PG_POOL_MIN_CONN = int(os.getenv("PG_POOL_MIN_CONN", "2"))
+PG_POOL_MAX_CONN = int(os.getenv("PG_POOL_MAX_CONN", "20"))
+
+# Global connection pool (initialized lazily)
+_pg_pool: Optional["psycopg2.pool.ThreadedConnectionPool"] = None
+
+
+def _get_pg_pool():
+    """Get or create the PostgreSQL connection pool"""
+    global _pg_pool
+    if _pg_pool is None and POSTGRES_AVAILABLE and DATABASE_URL:
+        try:
+            _pg_pool = psycopg2.pool.ThreadedConnectionPool(
+                PG_POOL_MIN_CONN,
+                PG_POOL_MAX_CONN,
+                DATABASE_URL
+            )
+            logger.info(f"PostgreSQL connection pool initialized (min={PG_POOL_MIN_CONN}, max={PG_POOL_MAX_CONN})")
+        except Exception as e:
+            logger.error(f"Failed to create PostgreSQL connection pool: {e}")
+            raise
+    return _pg_pool
+
+
+def validate_production_config():
+    """Validate that production environment has proper configuration"""
+    if ENVIRONMENT == "production":
+        if not USE_POSTGRES:
+            raise RuntimeError(
+                "CRITICAL: PostgreSQL is required in production. "
+                "Set USE_POSTGRES=true and provide DATABASE_URL"
+            )
+        if not DATABASE_URL:
+            raise RuntimeError(
+                "CRITICAL: DATABASE_URL must be set in production"
+            )
+        if not POSTGRES_AVAILABLE:
+            raise RuntimeError(
+                "CRITICAL: psycopg2 not installed but required for production"
+            )
+        logger.info("Production configuration validated: PostgreSQL enabled")
 
 # Timezone Uruguay (UTC-3)
 URUGUAY_TZ = timezone(timedelta(hours=-3))
@@ -27,6 +75,17 @@ URUGUAY_TZ = timezone(timedelta(hours=-3))
 def is_postgres() -> bool:
     """Check if we're using PostgreSQL"""
     return USE_POSTGRES and POSTGRES_AVAILABLE and DATABASE_URL
+
+
+def get_database_info() -> Dict[str, Any]:
+    """Return information about the current database configuration"""
+    return {
+        "type": "postgresql" if is_postgres() else "sqlite",
+        "environment": ENVIRONMENT,
+        "pool_min": PG_POOL_MIN_CONN if is_postgres() else None,
+        "pool_max": PG_POOL_MAX_CONN if is_postgres() else None,
+        "database_path": DATABASE_URL if is_postgres() else DB_PATH
+    }
 
 
 # -----------------------------------------------------------------------------
@@ -66,10 +125,22 @@ def _dict_factory_pg(cursor, row):
 
 
 def conectar_postgres():
-    """Connect to PostgreSQL database"""
-    con = psycopg2.connect(DATABASE_URL)
+    """Connect to PostgreSQL database using connection pool"""
+    pool = _get_pg_pool()
+    if pool is None:
+        raise RuntimeError("PostgreSQL connection pool not available")
+    con = pool.getconn()
     con.autocommit = False
     return con
+
+
+def release_pg_connection(con):
+    """Return a PostgreSQL connection to the pool"""
+    if _pg_pool is not None and con is not None:
+        try:
+            _pg_pool.putconn(con)
+        except Exception as e:
+            logger.warning(f"Error returning connection to pool: {e}")
 
 
 def conectar() -> Union[sqlite3.Connection, Any]:
@@ -129,7 +200,10 @@ def get_db_connection():
         raise e
     finally:
         if con:
-            con.close()
+            if is_postgres():
+                release_pg_connection(con)
+            else:
+                con.close()
 
 
 @contextmanager
@@ -138,14 +212,18 @@ def get_db_transaction():
     con = conectar()
     try:
         cur = con.cursor()
-        cur.execute("BEGIN TRANSACTION")
+        if not is_postgres():
+            cur.execute("BEGIN TRANSACTION")
         yield con, cur
         con.commit()
     except Exception:
         con.rollback()
         raise
     finally:
-        con.close()
+        if is_postgres():
+            release_pg_connection(con)
+        else:
+            con.close()
 
 
 # Lista blanca de tablas válidas para prevenir SQL injection

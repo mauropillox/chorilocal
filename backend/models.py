@@ -1,6 +1,54 @@
 from pydantic import BaseModel, field_validator, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import date
+
+# === Standardized API Error Models ===
+
+class APIError(BaseModel):
+    """Standardized API error response"""
+    error: str
+    code: str
+    details: Optional[Dict[str, Any]] = None
+    timestamp: Optional[str] = None
+
+class ValidationErrorDetail(BaseModel):
+    """Detail for validation errors"""
+    field: str
+    message: str
+    value: Optional[Any] = None
+
+class APIValidationError(BaseModel):
+    """Validation error response with multiple field errors"""
+    error: str = "Validation failed"
+    code: str = "VALIDATION_ERROR"
+    details: List[ValidationErrorDetail]
+
+# Error codes for consistency
+class ErrorCodes:
+    # Auth errors
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+    TOKEN_REVOKED = "TOKEN_REVOKED"
+    USER_INACTIVE = "USER_INACTIVE"
+    
+    # Validation errors
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+    INVALID_INPUT = "INVALID_INPUT"
+    
+    # Resource errors
+    NOT_FOUND = "NOT_FOUND"
+    ALREADY_EXISTS = "ALREADY_EXISTS"
+    CONFLICT = "CONFLICT"
+    
+    # Server errors
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+    DATABASE_ERROR = "DATABASE_ERROR"
+    
+    # Rate limiting
+    RATE_LIMITED = "RATE_LIMITED"
+
 
 # === User & Auth Models ===
 
