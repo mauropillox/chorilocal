@@ -2,6 +2,8 @@ import os
 import re
 import sqlite3
 import logging
+import base64
+import gzip
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 from contextlib import contextmanager
@@ -31,6 +33,75 @@ PG_POOL_MAX_CONN = int(os.getenv("PG_POOL_MAX_CONN", "20"))
 
 # Global connection pool (initialized lazily)
 _pg_pool: Optional["psycopg2.pool.ThreadedConnectionPool"] = None
+
+
+def _init_sqlite_from_base64():
+    """
+    Initialize SQLite database from base64-encoded secret file if available.
+    Supports both plain base64 (.b64) and gzip-compressed base64 (.gz.b64).
+    This is used in Render where we can't upload binary files directly.
+    """
+    # Try compressed version first (smaller)
+    gz_b64_path = "/etc/secrets/ventas.db.gz.b64"
+    b64_path = "/etc/secrets/ventas.db.b64"
+    
+    source_path = None
+    is_gzipped = False
+    
+    if os.path.exists(gz_b64_path):
+        source_path = gz_b64_path
+        is_gzipped = True
+    elif os.path.exists(b64_path):
+        source_path = b64_path
+        is_gzipped = False
+    else:
+        logger.info("No base64 database file found in /etc/secrets/, using default DB_PATH")
+        return
+    
+    if os.path.exists(DB_PATH):
+        # Check if DB already exists and is valid
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.execute("SELECT COUNT(*) FROM usuarios")
+            count = cursor.fetchone()[0]
+            conn.close()
+            if count > 0:
+                logger.info(f"SQLite database already exists and is valid at {DB_PATH} ({count} users)")
+                return
+        except Exception as e:
+            logger.warning(f"Existing database at {DB_PATH} is invalid ({e}), will recreate from base64")
+    
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        
+        # Read base64 file
+        with open(source_path, 'r') as f:
+            b64_content = f.read().strip()
+        
+        # Decode base64
+        compressed_or_raw = base64.b64decode(b64_content)
+        
+        # Decompress if gzipped
+        if is_gzipped:
+            db_bytes = gzip.decompress(compressed_or_raw)
+            logger.info(f"Decompressed gzip data: {len(compressed_or_raw)} -> {len(db_bytes)} bytes")
+        else:
+            db_bytes = compressed_or_raw
+        
+        # Write to DB_PATH
+        with open(DB_PATH, 'wb') as f:
+            f.write(db_bytes)
+        
+        logger.info(f"Successfully decoded database from {source_path} to {DB_PATH} ({len(db_bytes)} bytes)")
+    except Exception as e:
+        logger.error(f"Failed to decode base64 database: {e}")
+        raise
+
+
+# Initialize SQLite from base64 if available (runs on module load)
+if not USE_POSTGRES:
+    _init_sqlite_from_base64()
 
 
 def _get_pg_pool():
