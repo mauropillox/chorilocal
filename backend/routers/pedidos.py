@@ -1,7 +1,11 @@
 """Pedidos (Orders) Router"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+from pydantic import BaseModel
+import io
+import csv
 
 import db
 import models
@@ -11,6 +15,30 @@ from deps import (
 )
 
 router = APIRouter()
+
+
+class NotasUpdate(BaseModel):
+    notas: Optional[str] = None
+
+
+class ItemUpdate(BaseModel):
+    producto_id: int
+    cantidad: float
+    tipo: str = "unidad"
+
+
+class ItemCreate(BaseModel):
+    producto_id: int
+    cantidad: float
+    tipo: str = "unidad"
+
+
+class GenerarPDFsRequest(BaseModel):
+    pedido_ids: List[int]
+
+
+class PreviewStockRequest(BaseModel):
+    pedido_ids: List[int]
 
 
 @router.get("/pedidos/antiguos")
@@ -271,3 +299,369 @@ async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin
         cursor.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
 
     return
+
+
+# --- Additional endpoints needed by frontend ---
+
+@router.get("/pedidos/creators")
+@limiter.limit(RATE_LIMIT_READ)
+async def get_pedidos_creators(request: Request, current_user: dict = Depends(get_current_user)):
+    """Get list of unique users who created pedidos (for filtering in admin)"""
+    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta información")
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT creado_por FROM pedidos 
+            WHERE creado_por IS NOT NULL AND creado_por != ''
+            ORDER BY creado_por
+        """)
+        creators = cursor.fetchall()
+        return [{"username": c[0]} for c in creators]
+
+
+@router.get("/pedidos/export/csv")
+@limiter.limit(RATE_LIMIT_READ)
+async def export_pedidos_csv(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    desde: Optional[str] = None,
+    hasta: Optional[str] = None
+):
+    """Export pedidos to CSV format"""
+    if current_user["rol"] not in ["admin", "oficina", "administrador"]:
+        raise HTTPException(status_code=403, detail="No tienes permiso para exportar")
+    
+    query = """
+        SELECT p.id, c.nombre as cliente, p.fecha, p.estado, p.notas, p.creado_por
+        FROM pedidos p
+        JOIN clientes c ON p.cliente_id = c.id
+    """
+    params = []
+    conditions = []
+    
+    if desde:
+        conditions.append("p.fecha >= ?")
+        params.append(desde)
+    if hasta:
+        conditions.append("p.fecha <= ?")
+        params.append(hasta)
+    
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    
+    query += " ORDER BY p.fecha DESC"
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        pedidos = cursor.fetchall()
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["ID", "Cliente", "Fecha", "Estado", "Notas", "Creado Por"])
+        
+        for p in pedidos:
+            writer.writerow(p)
+        
+        output.seek(0)
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=pedidos_{datetime.now().strftime('%Y%m%d')}.csv"}
+        )
+
+
+@router.put("/pedidos/{pedido_id}/notas")
+@limiter.limit(RATE_LIMIT_WRITE)
+async def update_pedido_notas(
+    request: Request,
+    pedido_id: int,
+    notas_data: NotasUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update notes for a pedido"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id, creado_por FROM pedidos WHERE id = ?", (pedido_id,))
+        pedido = cursor.fetchone()
+        
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        # Vendedor can only update their own pedidos
+        if current_user["rol"] == "vendedor" and pedido[1] != current_user["username"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para editar este pedido")
+        
+        cursor.execute("UPDATE pedidos SET notas = ? WHERE id = ?", (notas_data.notas, pedido_id))
+        
+        return {"message": "Notas actualizadas"}
+
+
+@router.put("/pedidos/{pedido_id}/cliente")
+@limiter.limit(RATE_LIMIT_WRITE)
+async def update_pedido_cliente(
+    request: Request,
+    pedido_id: int,
+    cliente_id: int = Query(...),
+    current_user: dict = Depends(get_admin_user)
+):
+    """Assign/change cliente for a pedido"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id FROM pedidos WHERE id = ?", (pedido_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        cursor.execute("SELECT id FROM clientes WHERE id = ?", (cliente_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        
+        cursor.execute("UPDATE pedidos SET cliente_id = ? WHERE id = ?", (cliente_id, pedido_id))
+        
+        return {"message": "Cliente asignado"}
+
+
+@router.put("/pedidos/{pedido_id}/items/{producto_id}")
+@limiter.limit(RATE_LIMIT_WRITE)
+async def update_pedido_item(
+    request: Request,
+    pedido_id: int,
+    producto_id: int,
+    item: ItemUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an item in a pedido"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id, creado_por FROM pedidos WHERE id = ?", (pedido_id,))
+        pedido = cursor.fetchone()
+        
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        if current_user["rol"] == "vendedor" and pedido[1] != current_user["username"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para editar este pedido")
+        
+        cursor.execute(
+            "UPDATE detalles_pedido SET cantidad = ?, tipo = ? WHERE pedido_id = ? AND producto_id = ?",
+            (item.cantidad, item.tipo, pedido_id, producto_id)
+        )
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item no encontrado en este pedido")
+        
+        return {"message": "Item actualizado"}
+
+
+@router.delete("/pedidos/{pedido_id}/items/{producto_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
+async def delete_pedido_item(
+    request: Request,
+    pedido_id: int,
+    producto_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove an item from a pedido"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id, creado_por FROM pedidos WHERE id = ?", (pedido_id,))
+        pedido = cursor.fetchone()
+        
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        if current_user["rol"] == "vendedor" and pedido[1] != current_user["username"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para editar este pedido")
+        
+        cursor.execute(
+            "DELETE FROM detalles_pedido WHERE pedido_id = ? AND producto_id = ?",
+            (pedido_id, producto_id)
+        )
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item no encontrado en este pedido")
+    
+    return
+
+
+@router.post("/pedidos/{pedido_id}/items")
+@limiter.limit(RATE_LIMIT_WRITE)
+async def add_pedido_item(
+    request: Request,
+    pedido_id: int,
+    item: ItemCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add an item to a pedido"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id, creado_por FROM pedidos WHERE id = ?", (pedido_id,))
+        pedido = cursor.fetchone()
+        
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        if current_user["rol"] == "vendedor" and pedido[1] != current_user["username"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para editar este pedido")
+        
+        # Check if producto exists
+        cursor.execute("SELECT id FROM productos WHERE id = ?", (item.producto_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+        # Check if item already exists
+        cursor.execute(
+            "SELECT id FROM detalles_pedido WHERE pedido_id = ? AND producto_id = ?",
+            (pedido_id, item.producto_id)
+        )
+        if cursor.fetchone():
+            # Update instead of insert
+            cursor.execute(
+                "UPDATE detalles_pedido SET cantidad = cantidad + ?, tipo = ? WHERE pedido_id = ? AND producto_id = ?",
+                (item.cantidad, item.tipo, pedido_id, item.producto_id)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, tipo) VALUES (?, ?, ?, ?)",
+                (pedido_id, item.producto_id, item.cantidad, item.tipo)
+            )
+        
+        return {"message": "Item agregado"}
+
+
+@router.post("/pedidos/preview_stock")
+@limiter.limit(RATE_LIMIT_READ)
+async def preview_stock_impact(
+    request: Request,
+    data: PreviewStockRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Preview stock impact before generating PDFs"""
+    if not data.pedido_ids:
+        return {"productos": []}
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Get total quantities needed for all selected pedidos
+        placeholders = ",".join("?" * len(data.pedido_ids))
+        cursor.execute(f"""
+            SELECT p.id, p.nombre, p.stock, p.stock_tipo, 
+                   SUM(dp.cantidad) as cantidad_total, dp.tipo
+            FROM detalles_pedido dp
+            JOIN productos p ON dp.producto_id = p.id
+            WHERE dp.pedido_id IN ({placeholders})
+            GROUP BY dp.producto_id
+        """, data.pedido_ids)
+        
+        productos = []
+        for row in cursor.fetchall():
+            stock_actual = row[2] or 0
+            cantidad_necesaria = row[4] or 0
+            stock_despues = stock_actual - cantidad_necesaria
+            
+            productos.append({
+                "id": row[0],
+                "nombre": row[1],
+                "stock_actual": stock_actual,
+                "stock_tipo": row[3],
+                "cantidad_necesaria": cantidad_necesaria,
+                "tipo_pedido": row[5],
+                "stock_despues": stock_despues,
+                "insuficiente": stock_despues < 0
+            })
+        
+        return {"productos": productos}
+
+
+@router.post("/pedidos/generar_pdfs")
+@limiter.limit(RATE_LIMIT_WRITE)
+async def generar_pdfs(
+    request: Request,
+    data: GenerarPDFsRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate PDFs for multiple pedidos and mark them as generated"""
+    if not data.pedido_ids:
+        raise HTTPException(status_code=400, detail="No se seleccionaron pedidos")
+    
+    try:
+        from pdf_utils import generate_pedidos_pdf
+        
+        with db.get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Fetch pedidos with their items
+            placeholders = ",".join("?" * len(data.pedido_ids))
+            cursor.execute(f"""
+                SELECT p.id, p.cliente_id, c.nombre as cliente_nombre, c.direccion, c.telefono,
+                       p.fecha, p.estado, p.notas, p.creado_por
+                FROM pedidos p
+                JOIN clientes c ON p.cliente_id = c.id
+                WHERE p.id IN ({placeholders})
+                ORDER BY c.nombre
+            """, data.pedido_ids)
+            
+            pedidos_data = []
+            for row in cursor.fetchall():
+                pedido_id = row[0]
+                
+                # Get items for this pedido
+                cursor.execute("""
+                    SELECT dp.producto_id, pr.nombre, dp.cantidad, pr.precio, dp.tipo
+                    FROM detalles_pedido dp
+                    JOIN productos pr ON dp.producto_id = pr.id
+                    WHERE dp.pedido_id = ?
+                """, (pedido_id,))
+                items = cursor.fetchall()
+                
+                pedidos_data.append({
+                    "id": pedido_id,
+                    "cliente_id": row[1],
+                    "cliente_nombre": row[2],
+                    "cliente_direccion": row[3],
+                    "cliente_telefono": row[4],
+                    "fecha": row[5],
+                    "estado": row[6],
+                    "notas": row[7],
+                    "creado_por": row[8],
+                    "items": [{
+                        "producto_id": i[0],
+                        "producto_nombre": i[1],
+                        "cantidad": i[2],
+                        "precio": i[3],
+                        "tipo": i[4]
+                    } for i in items]
+                })
+            
+            if not pedidos_data:
+                raise HTTPException(status_code=404, detail="No se encontraron pedidos")
+            
+            # Generate PDF
+            pdf_content = generate_pedidos_pdf(pedidos_data)
+            
+            # Mark pedidos as pdf_generado = 1
+            with db.get_db_transaction() as (conn2, cursor2):
+                cursor2.execute(
+                    f"UPDATE pedidos SET pdf_generado = 1 WHERE id IN ({placeholders})",
+                    data.pedido_ids
+                )
+            
+            return StreamingResponse(
+                io.BytesIO(pdf_content),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=pedidos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"}
+            )
+            
+    except ImportError:
+        # pdf_utils not available, return a simple response
+        with db.get_db_transaction() as (conn, cursor):
+            placeholders = ",".join("?" * len(data.pedido_ids))
+            cursor.execute(
+                f"UPDATE pedidos SET pdf_generado = 1 WHERE id IN ({placeholders})",
+                data.pedido_ids
+            )
+        
+        raise HTTPException(
+            status_code=501, 
+            detail="PDF generation not available. Pedidos marked as generated."
+        )

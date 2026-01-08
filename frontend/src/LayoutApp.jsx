@@ -184,7 +184,7 @@ export default function LayoutApp({ onLogout }) {
       const token = localStorage.getItem('token');
       if (token) {
         // Use authFetch to handle token and potential 401s gracefully
-        await authFetch(`${import.meta.env.VITE_API_URL}/api/logout`, {
+        await authFetch(`${import.meta.env.VITE_API_URL}/logout`, {
           method: 'POST',
         });
       }
