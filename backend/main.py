@@ -15,7 +15,7 @@ import traceback
 import db
 import models
 from deps import limiter
-from routers import pedidos, clientes, productos, auth, categorias, ofertas
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -211,6 +211,7 @@ app.include_router(clientes.router, prefix="/api", tags=["Clientes"])
 app.include_router(productos.router, prefix="/api", tags=["Productos"])
 app.include_router(categorias.router, prefix="/api", tags=["Categorías"])
 app.include_router(ofertas.router, prefix="/api", tags=["Ofertas"])
+app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 
 # Backward-compatible routes without /api prefix (for legacy clients/tests)
 app.include_router(auth.router, tags=["Autenticación (Legacy)"])
