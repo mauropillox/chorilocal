@@ -58,18 +58,33 @@ def _init_sqlite_from_base64():
         logger.info("No base64 database file found in /etc/secrets/, using default DB_PATH")
         return
     
+    # Force recreate if env var is set (useful after uploading new database)
+    force_recreate = os.getenv("FORCE_DB_RECREATE", "false").lower() == "true"
+    if force_recreate:
+        logger.info("FORCE_DB_RECREATE is set, will recreate database from base64")
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+            logger.info(f"Removed existing database at {DB_PATH}")
+    
+    # Check if we need to recreate
+    # The secret file is the source of truth
     if os.path.exists(DB_PATH):
-        # Check if DB already exists and is valid
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.execute("SELECT COUNT(*) FROM usuarios")
-            count = cursor.fetchone()[0]
-            conn.close()
-            if count > 0:
-                logger.info(f"SQLite database already exists and is valid at {DB_PATH} ({count} users)")
-                return
+            # Get modification times to decide if we need to update
+            secret_mtime = os.path.getmtime(source_path)
+            db_mtime = os.path.getmtime(DB_PATH)
+            
+            if db_mtime >= secret_mtime:
+                # Check if DB is valid
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.execute("SELECT COUNT(*) FROM usuarios")
+                count = cursor.fetchone()[0]
+                conn.close()
+                if count > 0:
+                    logger.info(f"SQLite database is up-to-date at {DB_PATH} ({count} users)")
+                    return
         except Exception as e:
-            logger.warning(f"Existing database at {DB_PATH} is invalid ({e}), will recreate from base64")
+            logger.warning(f"Will recreate database from base64: {e}")
     
     try:
         # Ensure directory exists
