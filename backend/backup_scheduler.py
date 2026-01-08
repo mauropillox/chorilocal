@@ -25,8 +25,6 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from contextlib import contextmanager
-import fcntl
 import hashlib
 
 logger = logging.getLogger(__name__)
@@ -43,39 +41,43 @@ LOCK_FILE = Path(os.getenv("BACKUP_LOCK_FILE", "/tmp/chorizaurio_backup.lock"))
 
 _scheduler_thread: Optional[threading.Thread] = None
 _scheduler_stop_event = threading.Event()
+_backup_lock = threading.Lock()
 
 
-@contextmanager
-def backup_lock(timeout: float = 10.0):
+def _try_acquire_file_lock(timeout: float = 10.0) -> Optional[Any]:
     """
-    Acquire exclusive lock for backup operations.
-    Prevents multiple workers from running backups simultaneously.
+    Try to acquire file lock for backup operations.
+    Returns file handle if successful, None if failed.
     """
-    lock_file = None
     try:
+        import fcntl
         LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
         lock_file = open(LOCK_FILE, 'w')
         
-        # Try to acquire lock with timeout
         start_time = time.time()
         while True:
             try:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
+                return lock_file
             except BlockingIOError:
                 if time.time() - start_time > timeout:
-                    raise TimeoutError("Could not acquire backup lock")
+                    lock_file.close()
+                    return None
                 time.sleep(0.5)
-        
-        yield lock_file
-        
-    finally:
-        if lock_file:
-            try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                lock_file.close()
-            except Exception:
-                pass
+    except Exception as e:
+        logger.warning(f"Could not acquire file lock: {e}")
+        return None
+
+
+def _release_file_lock(lock_file: Any):
+    """Release file lock."""
+    if lock_file:
+        try:
+            import fcntl
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            lock_file.close()
+        except Exception:
+            pass
 
 
 def create_backup_now(reason: str = "manual") -> Optional[Dict[str, Any]]:
@@ -83,15 +85,22 @@ def create_backup_now(reason: str = "manual") -> Optional[Dict[str, Any]]:
     Create a backup of the SQLite database using SQLite's online backup API.
     Returns backup info dict or None on failure.
     """
+    # Use thread lock as primary synchronization
+    if not _backup_lock.acquire(blocking=True, timeout=30.0):
+        logger.warning("Backup skipped: could not acquire thread lock")
+        return None
+    
+    # Also try file lock for multi-process coordination
+    file_lock = _try_acquire_file_lock(timeout=5.0)
+    
     try:
-        with backup_lock(timeout=30.0):
-            return _do_backup(reason)
-    except TimeoutError:
-        logger.warning("backup_skipped", reason="Could not acquire lock, another backup in progress")
-        return None
+        return _do_backup(reason)
     except Exception as e:
-        logger.error("backup_failed", error=str(e), reason=reason)
+        logger.error(f"Backup failed: {e}")
         return None
+    finally:
+        _release_file_lock(file_lock)
+        _backup_lock.release()
 
 
 def _do_backup(reason: str) -> Dict[str, Any]:
@@ -145,7 +154,7 @@ def _do_backup(reason: str) -> Dict[str, Any]:
             "integrity": "ok"
         }
         
-        logger.info("backup_created", **backup_info)
+        logger.info(f"Backup created: {backup_filename} ({_format_size(backup_size)})")
         
         # Rotate old backups
         _rotate_backups()
@@ -189,11 +198,11 @@ def _rotate_backups():
             for old_backup in backups_sorted[BACKUP_RETENTION_COUNT:]:
                 try:
                     Path(old_backup["path"]).unlink()
-                    logger.info("backup_rotated", filename=old_backup["filename"])
+                    logger.info(f"Rotated old backup: {old_backup['filename']}")
                 except Exception as e:
-                    logger.warning("backup_rotation_failed", filename=old_backup["filename"], error=str(e))
+                    logger.warning(f"Failed to rotate backup {old_backup['filename']}: {e}")
     except Exception as e:
-        logger.warning("backup_rotation_error", error=str(e))
+        logger.warning(f"Backup rotation error: {e}")
 
 
 def list_backups() -> List[Dict[str, Any]]:
@@ -214,7 +223,7 @@ def list_backups() -> List[Dict[str, Any]]:
                 "created_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat() + "Z",
             })
         except Exception as e:
-            logger.warning("backup_list_error", filename=backup_file.name, error=str(e))
+            logger.warning(f"Error listing backup {backup_file.name}: {e}")
     
     # Sort by created_at descending (newest first)
     return sorted(backups, key=lambda x: x["created_at"], reverse=True)
@@ -251,10 +260,7 @@ def get_backup_path(filename: str) -> Optional[Path]:
 
 def _scheduler_loop():
     """Background scheduler loop."""
-    logger.info("backup_scheduler_started", 
-                interval_hours=BACKUP_INTERVAL_HOURS,
-                retention_count=BACKUP_RETENTION_COUNT,
-                aligned_hour_utc=BACKUP_ALIGNED_HOUR_UTC)
+    logger.info(f"Backup scheduler started: interval={BACKUP_INTERVAL_HOURS}h, retention={BACKUP_RETENTION_COUNT}, aligned_hour_utc={BACKUP_ALIGNED_HOUR_UTC}")
     
     last_backup_time = None
     last_aligned_date = None
@@ -267,7 +273,7 @@ def _scheduler_loop():
             if now.hour == BACKUP_ALIGNED_HOUR_UTC:
                 today = now.date()
                 if last_aligned_date != today:
-                    logger.info("backup_aligned_triggered", hour_utc=BACKUP_ALIGNED_HOUR_UTC)
+                    logger.info(f"Triggering aligned backup at {BACKUP_ALIGNED_HOUR_UTC}:00 UTC")
                     result = create_backup_now(reason="aligned_schedule")
                     if result:
                         last_aligned_date = today
@@ -277,18 +283,18 @@ def _scheduler_loop():
             if last_backup_time is None or (now - last_backup_time) >= timedelta(hours=BACKUP_INTERVAL_HOURS):
                 # Skip if we just did an aligned backup
                 if last_backup_time is None or (now - last_backup_time) >= timedelta(minutes=30):
-                    logger.info("backup_periodic_triggered", interval_hours=BACKUP_INTERVAL_HOURS)
+                    logger.info(f"Triggering periodic backup (every {BACKUP_INTERVAL_HOURS}h)")
                     result = create_backup_now(reason="periodic")
                     if result:
                         last_backup_time = now
             
         except Exception as e:
-            logger.error("backup_scheduler_error", error=str(e))
+            logger.error(f"Backup scheduler error: {e}")
         
         # Sleep for 5 minutes between checks
         _scheduler_stop_event.wait(300)
     
-    logger.info("backup_scheduler_stopped")
+    logger.info("Backup scheduler stopped")
 
 
 def start_backup_scheduler():
@@ -296,7 +302,7 @@ def start_backup_scheduler():
     global _scheduler_thread
     
     if _scheduler_thread is not None and _scheduler_thread.is_alive():
-        logger.warning("backup_scheduler_already_running")
+        logger.warning("Backup scheduler already running")
         return
     
     _scheduler_stop_event.clear()
@@ -307,7 +313,7 @@ def start_backup_scheduler():
     try:
         create_backup_now(reason="startup")
     except Exception as e:
-        logger.warning("startup_backup_failed", error=str(e))
+        logger.warning(f"Startup backup failed: {e}")
 
 
 def stop_backup_scheduler():
