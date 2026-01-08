@@ -29,6 +29,12 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     if not user.get("activo"):
         raise HTTPException(status_code=403, detail="Tu cuenta está desactivada. Contacta al administrador.")
 
+    # Record login timestamp
+    try:
+        db.record_login(form_data.username)
+    except Exception:
+        pass  # Don't fail login if recording fails
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user["username"], "rol": user["rol"]}, expires_delta=access_token_expires

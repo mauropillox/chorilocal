@@ -271,6 +271,14 @@ async def startup_event():
         # Run one-time migration to fix localhost URLs
         from migraciones.fix_localhost_urls import migrate_localhost_urls
         migrate_localhost_urls()
+        
+        # Fix users with activo=0 (set them to active)
+        with db.get_db_transaction() as (conn, cursor):
+            cursor.execute("UPDATE usuarios SET activo = 1 WHERE activo = 0 OR activo IS NULL")
+            affected = cursor.rowcount
+            if affected > 0:
+                print(f"✅ Migration: Activated {affected} users")
+        
         logger.info("startup_migration", message="Startup migrations completed")
     except Exception as e:
         logger.error("startup_migration_failed", error=str(e), exception_type=type(e).__name__)

@@ -556,7 +556,7 @@ def _ensure_schema_sqlite() -> None:
             username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             rol TEXT NOT NULL,
-            activo INTEGER DEFAULT 0,
+            activo INTEGER DEFAULT 1,
             last_login TEXT
         );
         """)
@@ -2450,6 +2450,7 @@ def record_login(username: str) -> None:
     """Registra el timestamp del último login"""
     with get_db_transaction() as (con, cur):
         cols = _table_columns(cur, "usuarios")
+        username_col = _usuarios_username_col(cur)
         if "last_login" in cols:
             _execute(cur, f"UPDATE usuarios SET last_login = ? WHERE {username_col} = ?", (_now_uruguay_iso(), username))
 
