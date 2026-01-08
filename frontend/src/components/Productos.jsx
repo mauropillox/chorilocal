@@ -433,26 +433,66 @@ export default function Productos() {
   };
 
   const uploadFile = async (file, productoId = null) => {
+    // Validar tamaño de archivo (5MB máximo)
+    if (file.size > 5 * 1024 * 1024) {
+      toastError('La imagen es demasiado grande. Máximo: 5MB');
+      return;
+    }
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      toastError('Solo se permiten archivos de imagen');
+      return;
+    }
+
     // Clean up previous preview URL to prevent memory leak
     if (filePreview && filePreview.startsWith('blob:')) {
       URL.revokeObjectURL(filePreview);
     }
-    setFilePreview(URL.createObjectURL(file));
+    
+    // Crear preview inmediato
+    const previewUrl = URL.createObjectURL(file);
+    setFilePreview(previewUrl);
     setFileUploading(true);
+    
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/upload`, { method: 'POST', body: fd });
-      if (!res.ok) { toastError('Error al subir la imagen'); setFileUploading(false); return; }
+      
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/upload`, { 
+        method: 'POST', 
+        body: fd,
+        // No establecer Content-Type, el browser lo hace automáticamente con boundary
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.text();
+        console.error('Upload error:', errorData);
+        toastError(`Error al subir imagen: ${res.status}`);
+        return;
+      }
+      
       const data = await res.json();
       let url = data.url || data.path || '';
-      if (url.startsWith('/')) url = `${import.meta.env.VITE_API_URL}${url}`;
+      if (url.startsWith('/')) {
+        url = `${import.meta.env.VITE_API_URL}${url}`;
+      }
 
-      if (productoId) { await actualizarImagenProducto(productoId, url); toastSuccess('Imagen actualizada'); }
-      else { setImagenUrl(url); }
+      if (productoId) { 
+        await actualizarImagenProducto(productoId, url); 
+        toastSuccess('✅ Imagen actualizada correctamente'); 
+      } else { 
+        setImagenUrl(url); 
+        toastSuccess('✅ Imagen cargada correctamente');
+      }
       setUrlError('');
-    } catch (err) { toastError('Error de conexión al subir imagen'); }
-    finally { setFileUploading(false); }
+      
+    } catch (err) { 
+      console.error('Upload error:', err);
+      toastError('❌ Error de conexión al subir imagen'); 
+    } finally { 
+      setFileUploading(false); 
+    }
   };
 
   const handleDrag = (e) => {
@@ -659,16 +699,36 @@ export default function Productos() {
 
           <div className="form-group">
             <label>Imagen (Drag & Drop o Click)</label>
-            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
-              onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag}
-              onDrop={(e) => handleDrop(e)} onClick={() => fileInputRef.current?.click()}>
+            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer drag-zone ${
+              dragActive ? 'drag-active' : 'border-gray-300 hover:border-gray-400'
+            } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+              onDragEnter={handleDrag} 
+              onDragLeave={handleDrag} 
+              onDragOver={handleDrag}
+              onDrop={(e) => handleDrop(e)} 
+              onClick={() => !fileUploading && fileInputRef.current?.click()}>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-              <div className="text-4xl mb-2">📤</div>
-              <div className="text-sm text-muted">
-                {fileUploading ? '⏳ Subiendo...' : 'Arrastra una imagen o haz click'}
+              <div className="text-4xl mb-2">{dragActive ? '📤' : '📷'}</div>
+              <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                {fileUploading ? (
+                  <span className="upload-loading">⏳ Subiendo imagen...</span>
+                ) : dragActive ? (
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>✨ Suelta la imagen aquí</span>
+                ) : (
+                  'Arrastra una imagen o haz click para seleccionar'
+                )}
               </div>
+              {!fileUploading && (
+                <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                  JPG, PNG, GIF, WEBP • Máximo 5MB
+                </div>
+              )}
             </div>
-            {filePreview && <div className="mt-3 flex justify-center"><img src={filePreview} alt="preview" className="product-image" /></div>}
+            {filePreview && !fileUploading && (
+              <div className="mt-3 flex justify-center">
+                <img src={filePreview} alt="Vista previa" className="product-image" />
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -981,6 +1041,10 @@ export default function Productos() {
                             onKeyDown={(e) => e.key === 'Enter' && setEditingImage(editingImage === p.id ? null : p.id)}
                             aria-label={`Cambiar imagen de ${p?.nombre || 'producto'}`}
                             title="Click para cambiar imagen"
+                            onDragEnter={(e) => handleDrag(e)}
+                            onDragOver={(e) => handleDrag(e)}
+                            onDragLeave={(e) => handleDrag(e)}
+                            onDrop={(e) => handleDrop(e, p.id)}
                           >
                             {p?.imagen_url ? (
                               <img
@@ -988,16 +1052,39 @@ export default function Productos() {
                                 alt={p?.nombre || 'Producto'}
                                 className="product-image"
                                 loading="lazy"
-                                onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                                onError={(e) => { 
+                                  e.target.onerror = null; 
+                                  e.target.style.display = 'none'; 
+                                  if (e.target.nextElementSibling) {
+                                    e.target.nextElementSibling.style.display = 'flex';
+                                  }
+                                }}
                               />
                             ) : null}
-                            <div className="product-image-placeholder" style={{ display: p?.imagen_url ? 'none' : 'flex' }}>📦</div>
-                            <div
-                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg"
-                              style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))' }}
+                            <div 
+                              className={`product-image-placeholder ${dragActive ? 'border-primary' : ''}`} 
+                              style={{ 
+                                display: p?.imagen_url ? 'none' : 'flex',
+                                borderColor: dragActive ? 'var(--color-primary)' : undefined,
+                                backgroundColor: dragActive ? 'var(--color-bg-accent)' : undefined
+                              }}
                             >
-                              <span className="text-2xl mb-1" aria-hidden="true">📷</span>
-                              <span className="text-white text-xs font-medium">Cambiar Imagen</span>
+                              {dragActive ? '📤' : '📦'}
+                            </div>
+                            <div
+                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg ${
+                                dragActive ? 'opacity-100 bg-primary/20' : ''
+                              }`}
+                              style={{ 
+                                background: dragActive ? 
+                                  'linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1))' :
+                                  'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))'
+                              }}
+                            >
+                              <span className="text-2xl mb-1" aria-hidden="true">{dragActive ? '📤' : '📷'}</span>
+                              <span className="text-white text-xs font-medium">
+                                {dragActive ? 'Soltar imagen aquí' : 'Cambiar Imagen'}
+                              </span>
                             </div>
                           </div>
 
@@ -1143,33 +1230,40 @@ export default function Productos() {
                             </div>
 
                             <label
-                              className="flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer transition-all duration-200"
+                              className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer drag-zone ${
+                                dragActive ? 'drag-active' : ''
+                              } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
                               style={{
                                 backgroundColor: 'var(--color-bg-tertiary, var(--color-bg-secondary))',
                                 border: '2px solid var(--color-border)',
                                 minHeight: '100px'
                               }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--color-primary)';
-                                e.currentTarget.style.backgroundColor = 'var(--color-bg-hover, var(--color-bg-secondary))';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary, var(--color-bg-secondary))';
-                              }}
+                              onDragEnter={handleDrag}
+                              onDragLeave={handleDrag}
+                              onDragOver={handleDrag}
+                              onDrop={(e) => handleDrop(e, p.id)}
                             >
-                              <span className="text-3xl mb-2">📤</span>
+                              <span className="text-3xl mb-2">{dragActive ? '📤' : '📷'}</span>
                               <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                                Click para seleccionar imagen
+                                {fileUploading ? (
+                                  <span className="upload-loading">⏳ Subiendo imagen...</span>
+                                ) : dragActive ? (
+                                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>✨ Suelta la imagen aquí</span>
+                                ) : (
+                                  'Arrastra aquí o click para seleccionar'
+                                )}
                               </span>
-                              <span className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                                JPG, PNG, GIF (máx. 5MB)
-                              </span>
+                              {!fileUploading && (
+                                <span className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                                  JPG, PNG, GIF, WEBP • Máximo 5MB
+                                </span>
+                              )}
                               <input
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => handleFileChange(e, p.id)}
                                 className="hidden"
+                                disabled={fileUploading}
                               />
                             </label>
 

@@ -38,6 +38,7 @@ frontend/.eslintcache
 *.tmp
 *.temp
 *.old
+*.log
 
 # Editor/IDE configs
 .vscode/
@@ -47,6 +48,11 @@ frontend/.eslintcache
 # Docker artifacts
 *.pid
 *.sock
+
+# Build artifacts
+frontend/build.log
+frontend/dist/
+frontend/.cache/
 
 # Misc
 *.log

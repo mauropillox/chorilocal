@@ -763,6 +763,14 @@ input[type="checkbox"]:focus-visible {
   font-size: 2rem;
   flex-shrink: 0;
   border: 2px dashed var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.product-image-placeholder:hover,
+.product-image-placeholder.border-primary {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-bg-accent) 0%, var(--color-primary-light) 100%);
+  transform: scale(1.02);
 }
 
 .product-image-sm {
@@ -771,6 +779,47 @@ input[type="checkbox"]:focus-visible {
   object-fit: cover;
   border-radius: 10px;
   flex-shrink: 0;
+}
+
+/* Upload and drag & drop styles */
+.upload-feedback {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.upload-error {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.upload-loading {
+  background-color: var(--color-warning);
+  color: white;
+}
+
+.drag-active {
+  border-color: var(--color-primary) !important;
+  background-color: var(--color-bg-accent) !important;
+  transform: scale(1.02);
+}
+
+.drag-zone {
+  transition: all 0.2s ease;
+}
+
+.drag-zone:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-hover);
 }
 
 .product-image-placeholder-sm {
