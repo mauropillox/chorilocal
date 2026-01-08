@@ -18,17 +18,17 @@ RUN npm run build -- --mode production
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config - use local config if VITE_API_URL contains localhost, otherwise production
-COPY nginx.local.conf /etc/nginx/conf.d/nginx.local.conf
-COPY nginx.conf /etc/nginx/conf.d/nginx.conf
+# Copy nginx configs to temp location first
+COPY nginx.local.conf /tmp/nginx.local.conf
+COPY nginx.conf /tmp/nginx.conf
 
-# Use appropriate config based on build arg
+# Use appropriate config based on build arg - only copy the one we need
 ARG VITE_API_URL=https://chorilocal-backend.onrender.com
 RUN if echo "$VITE_API_URL" | grep -q "localhost"; then \
-    cp /etc/nginx/conf.d/nginx.local.conf /etc/nginx/conf.d/default.conf; \
+    cp /tmp/nginx.local.conf /etc/nginx/conf.d/default.conf; \
     else \
-    cp /etc/nginx/conf.d/nginx.conf /etc/nginx/conf.d/default.conf; \
-    fi
+    cp /tmp/nginx.conf /etc/nginx/conf.d/default.conf; \
+    fi && rm -f /tmp/nginx*.conf
 
 EXPOSE 80
 EXPOSE 443
