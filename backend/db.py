@@ -245,11 +245,17 @@ def conectar() -> Union[sqlite3.Connection, Any]:
     if is_postgres():
         return conectar_postgres()
     
-    # SQLite connection
+    # SQLite connection with production-hardened settings
     con = sqlite3.connect(DB_PATH, timeout=30)
     con.row_factory = sqlite3.Row
-    # Habilitar foreign keys en SQLite
+    
+    # CRITICAL: These PRAGMAs are CONNECTION-LEVEL and must be set on EVERY connection
+    # busy_timeout: Wait up to 30s for locks instead of failing immediately
+    # This is essential for multi-worker concurrent access
+    con.execute("PRAGMA busy_timeout=30000")  # 30 seconds
+    # foreign_keys: Enforce referential integrity
     con.execute("PRAGMA foreign_keys=ON")
+    
     # Ensure 'zona' column exists in 'clientes' (migration)
     try:
         con.execute("ALTER TABLE clientes ADD COLUMN zona TEXT")
