@@ -66,25 +66,20 @@ def _init_sqlite_from_base64():
             os.remove(DB_PATH)
             logger.info(f"Removed existing database at {DB_PATH}")
     
-    # Check if we need to recreate
-    # The secret file is the source of truth
-    if os.path.exists(DB_PATH):
+    # CRITICAL: Only restore from backup if DB doesn't exist or force_recreate is set
+    # This prevents overwriting live production data on every container restart
+    if os.path.exists(DB_PATH) and not force_recreate:
         try:
-            # Get modification times to decide if we need to update
-            secret_mtime = os.path.getmtime(source_path)
-            db_mtime = os.path.getmtime(DB_PATH)
-            
-            if db_mtime >= secret_mtime:
-                # Check if DB is valid
-                conn = sqlite3.connect(DB_PATH)
-                cursor = conn.execute("SELECT COUNT(*) FROM usuarios")
-                count = cursor.fetchone()[0]
-                conn.close()
-                if count > 0:
-                    logger.info(f"SQLite database is up-to-date at {DB_PATH} ({count} users)")
-                    return
+            # Verify DB is valid
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.execute("SELECT COUNT(*) FROM usuarios")
+            count = cursor.fetchone()[0]
+            conn.close()
+            if count > 0:
+                logger.info(f"SQLite database already exists at {DB_PATH} ({count} users) - skipping restore")
+                return
         except Exception as e:
-            logger.warning(f"Will recreate database from base64: {e}")
+            logger.warning(f"Existing database is invalid, will restore from base64: {e}")
     
     try:
         # Ensure directory exists
