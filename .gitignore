@@ -90,6 +90,10 @@ deploy_*.log
 backups/
 *.bak
 
+# Data folder (uploads, db)
+data/
+backend/node_modules/
+
 # Test outputs
 test_output.*
 test_results.*
