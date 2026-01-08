@@ -131,7 +131,7 @@ async def get_pedidos(
         conditions.append("p.creado_por = ?")
         params.append(current_user["username"])
     # For 'admin' or 'oficina', they can filter by any user if the parameter is provided
-    elif current_user["rol"] in ["admin", "oficina"] and creado_por:
+    elif current_user["rol"] in ["admin", "oficina", "administrador"] and creado_por:
         conditions.append("p.creado_por = ?")
         params.append(creado_por)
 
@@ -156,9 +156,44 @@ async def get_pedidos(
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
-        pedidos = cursor.fetchall()
-
-    return [models.Pedido(id=p[0], cliente_id=p[1], fecha=p[2], estado=p[3], notas=p[4], creado_por=p[5], cliente_nombre=p[6], pdf_generado=p[7]) for p in pedidos]
+        pedidos_raw = cursor.fetchall()
+        
+        # Build result with productos for each pedido
+        result = []
+        for p in pedidos_raw:
+            pedido_id = p[0]
+            # Get productos for this pedido
+            cursor.execute("""
+                SELECT d.producto_id, pr.nombre, pr.precio, d.cantidad, d.tipo
+                FROM detalles_pedido d
+                JOIN productos pr ON d.producto_id = pr.id
+                WHERE d.pedido_id = ?
+            """, (pedido_id,))
+            productos_raw = cursor.fetchall()
+            productos = [
+                models.ProductoPedido(
+                    id=prod[0],
+                    producto_id=prod[0],
+                    nombre=prod[1],
+                    precio=prod[2],
+                    cantidad=prod[3],
+                    tipo=prod[4] or "unidad"
+                ) for prod in productos_raw
+            ]
+            
+            result.append(models.Pedido(
+                id=p[0], 
+                cliente_id=p[1], 
+                fecha=p[2], 
+                estado=p[3], 
+                notas=p[4], 
+                creado_por=p[5], 
+                cliente_nombre=p[6], 
+                pdf_generado=p[7],
+                productos=productos
+            ))
+        
+        return result
 
 @router.get("/pedidos/{pedido_id}", response_model=models.PedidoDetalle)
 async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_current_user)):
