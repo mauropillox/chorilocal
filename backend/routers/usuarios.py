@@ -14,7 +14,7 @@ async def get_usuarios(current_user: dict = Depends(get_admin_user)):
     """Get all users (admin only)"""
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, rol, activo, ultimo_login FROM usuarios ORDER BY id")
+        cursor.execute("SELECT id, username, rol, activo, last_login FROM usuarios ORDER BY id")
         users = cursor.fetchall()
     return [
         models.User(
