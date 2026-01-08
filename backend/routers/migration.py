@@ -2,16 +2,84 @@
 Endpoint especial para migración de producción
 Solo disponible para administradores y en modo development
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.responses import JSONResponse
 import subprocess
 import os
 import sys
+import hashlib
 from deps import get_admin_user
 from logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+@router.post("/bootstrap-database")
+async def bootstrap_database(x_bootstrap_token: str = Header(None)):
+    """
+    Inicializar la base de datos PostgreSQL con schema y usuario admin.
+    Protegido por token secreto derivado de SECRET_KEY.
+    Solo funciona si la BD está vacía.
+    """
+    secret_key = os.getenv("SECRET_KEY", "")
+    expected_token = hashlib.sha256(f"bootstrap-{secret_key}".encode()).hexdigest()[:32]
+    
+    if not x_bootstrap_token or x_bootstrap_token != expected_token:
+        logger.warning("bootstrap_unauthorized_attempt")
+        raise HTTPException(status_code=403, detail="Invalid bootstrap token")
+    
+    try:
+        import db
+        
+        # Verificar que estamos en PostgreSQL
+        if not db.is_postgres():
+            raise HTTPException(status_code=400, detail="Bootstrap only available for PostgreSQL")
+        
+        # Crear tablas
+        db.init_db()
+        logger.info("bootstrap_tables_created")
+        
+        # Verificar si ya hay usuarios
+        with db.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM usuarios")
+            user_count = cursor.fetchone()[0]
+            
+            if user_count > 0:
+                return JSONResponse({
+                    "status": "skipped",
+                    "message": f"Database already has {user_count} users. Bootstrap not needed.",
+                    "next_step": "Use /api/login to authenticate"
+                })
+            
+            # Crear usuario admin
+            from werkzeug.security import generate_password_hash
+            admin_hash = generate_password_hash("admin420")
+            
+            cursor.execute("""
+                INSERT INTO usuarios (username, password_hash, role, nombre, activo)
+                VALUES (%s, %s, %s, %s, %s)
+            """, ("admin", admin_hash, "admin", "Administrador", True))
+            conn.commit()
+        
+        logger.info("bootstrap_admin_created")
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "Database bootstrapped successfully",
+            "admin_user": "admin",
+            "admin_password": "admin420",
+            "next_steps": [
+                "Login with admin/admin420",
+                "Change password immediately",
+                "Run migration to import SQLite data if needed"
+            ]
+        })
+        
+    except Exception as e:
+        logger.error("bootstrap_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Bootstrap failed: {str(e)}")
 
 @router.post("/migrate-to-postgresql")
 async def migrate_to_postgresql(admin_user: dict = Depends(get_admin_user)):
