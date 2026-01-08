@@ -417,6 +417,28 @@ export default function Productos() {
     }
   };
 
+  const quitarImagenProducto = async (productoId) => {
+    if (!confirm('¿Está seguro que desea quitar la imagen de este producto?')) return;
+
+    const producto = productos.find(p => p.id === productoId);
+    if (!producto) return;
+
+    const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...producto, imagen_url: null })
+    });
+
+    if (res.ok) {
+      await cargarProductos();
+      setEditingImage(null);
+      toastSuccess('✅ Imagen eliminada correctamente');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toastError(err.detail || 'Error al eliminar imagen');
+    }
+  };
+
   const validateUrl = (v) => {
     if (!v) { setUrlError(''); return; }
     try {
@@ -1264,7 +1286,21 @@ export default function Productos() {
                               />
                             </label>
 
-                            <div className="flex justify-end mt-3">
+                            <div className="flex justify-between items-center mt-3">
+                              <button
+                                onClick={() => quitarImagenProducto(p.id)}
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                style={{
+                                  backgroundColor: 'var(--color-danger, #dc3545)',
+                                  color: 'white'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger-hover, #c82333)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger, #dc3545)'}
+                                disabled={!p.imagen_url}
+                                title={p.imagen_url ? "Quitar imagen actual" : "Este producto no tiene imagen"}
+                              >
+                                🗑️ Quitar Imagen
+                              </button>
                               <button
                                 onClick={() => setEditingImage(null)}
                                 className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
