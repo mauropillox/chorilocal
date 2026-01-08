@@ -15,17 +15,6 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
-@router.get("/bootstrap-hint")
-async def bootstrap_hint():
-    """Temporal: muestra el token esperado completo"""
-    secret_key = os.getenv("SECRET_KEY", "")
-    expected_token = hashlib.sha256(f"bootstrap-{secret_key}".encode()).hexdigest()[:32]
-    return {
-        "token": expected_token,  # TEMPORAL - borrar después
-        "secret_key_length": len(secret_key),
-    }
-
-
 @router.post("/bootstrap-database")
 async def bootstrap_database(x_bootstrap_token: str = Header(None)):
     """
