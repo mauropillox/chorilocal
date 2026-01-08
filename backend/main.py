@@ -30,7 +30,10 @@ if ENVIRONMENT == "production":
     # Validate required environment variables
     from deps import validate_production_secrets
     validate_production_secrets()
-    logger.info("startup", message="Starting in PRODUCTION mode with PostgreSQL")
+    if db.USE_POSTGRES:
+        logger.info("startup", message="Starting in PRODUCTION mode with PostgreSQL")
+    else:
+        logger.info("startup", message="Starting in PRODUCTION mode with SQLite")
 else:
     logger.info("startup", message="Starting in DEVELOPMENT mode", environment=ENVIRONMENT)
 
