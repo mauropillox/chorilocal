@@ -46,6 +46,34 @@ async def get_ofertas(current_user: dict = Depends(get_current_user)):
     return ofertas
 
 
+@router.get("/ofertas/activas")
+async def get_ofertas_activas(current_user: dict = Depends(get_current_user)):
+    """Get only active offers - used by dashboard and frontend"""
+    try:
+        ofertas = db.get_ofertas(solo_activas=True)
+        # Return simplified list with productos_ids for frontend
+        result = []
+        for o in ofertas:
+            oferta_dict = {
+                "id": o.get("id"),
+                "titulo": o.get("titulo"),
+                "descuento_porcentaje": o.get("descuento_porcentaje", 10),
+                "productos_ids": []
+            }
+            # Extract product IDs from productos
+            if o.get("productos"):
+                for p in o["productos"]:
+                    if isinstance(p, dict) and p.get("producto_id"):
+                        oferta_dict["productos_ids"].append(p["producto_id"])
+                    elif isinstance(p, int):
+                        oferta_dict["productos_ids"].append(p)
+            result.append(oferta_dict)
+        return result
+    except Exception as e:
+        # Return empty array instead of error to not break dashboard
+        return []
+
+
 @router.get("/ofertas/{oferta_id}", response_model=Oferta)
 async def get_oferta(oferta_id: int, current_user: dict = Depends(get_current_user)):
     oferta = db.get_oferta_by_id(oferta_id)

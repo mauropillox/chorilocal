@@ -8,8 +8,23 @@ const ESTADOS_PEDIDO = {
     pendiente: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
     preparando: { label: 'Preparando', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
     entregado: { label: 'Entregado', icon: '✅', color: '#10b981', bg: '#d1fae5' },
-    cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' }
+    cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' },
+    // Legacy states for backward compatibility
+    confirmado: { label: 'Confirmado', icon: '✔️', color: '#3b82f6', bg: '#dbeafe' },
+    enviado: { label: 'Enviado', icon: '🚚', color: '#8b5cf6', bg: '#ede9fe' },
+    Pendiente: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
+    Confirmado: { label: 'Confirmado', icon: '✔️', color: '#3b82f6', bg: '#dbeafe' },
+    'En Preparación': { label: 'En Preparación', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
+    Listo: { label: 'Listo', icon: '📦', color: '#10b981', bg: '#d1fae5' },
+    Entregado: { label: 'Entregado', icon: '✅', color: '#10b981', bg: '#d1fae5' },
+    Cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' }
 };
+
+// Default state info for unknown states
+const DEFAULT_ESTADO_INFO = { label: 'Desconocido', icon: '❓', color: '#6b7280', bg: '#f3f4f6' };
+
+// Helper to get estado info safely
+const getEstadoInfo = (estado) => ESTADOS_PEDIDO[estado] || DEFAULT_ESTADO_INFO;
 
 export default function HojaRuta() {
     const [pedidos, setPedidos] = useState([]);
@@ -258,7 +273,7 @@ export default function HojaRuta() {
             {/* Stats Cards - Clickeables como filtros */}
             <div className="grid grid-cols-4 gap-2 mb-4">
                 {['pendiente', 'preparando', 'entregado'].map(estado => {
-                    const info = ESTADOS_PEDIDO[estado];
+                    const info = getEstadoInfo(estado);
                     const isActive = filtroEstado === estado;
                     return (
                         <button
@@ -390,7 +405,7 @@ export default function HojaRuta() {
                                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                     {pedidosZona.map((p) => {
                                         const estado = p.estado || 'pendiente';
-                                        const estadoInfo = ESTADOS_PEDIDO[estado];
+                                        const estadoInfo = getEstadoInfo(estado);
                                         const siguiente = getSiguienteEstado(estado);
                                         const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
                                         const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
@@ -467,7 +482,7 @@ export default function HojaRuta() {
                                 // Vista EXPANDIDA - Más detalles
                                 pedidosZona.map((p) => {
                                     const estado = p.estado || 'pendiente';
-                                    const estadoInfo = ESTADOS_PEDIDO[estado];
+                                    const estadoInfo = getEstadoInfo(estado);
                                     const siguiente = getSiguienteEstado(estado);
 
                                     return (
