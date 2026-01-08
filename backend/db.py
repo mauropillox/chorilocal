@@ -702,6 +702,11 @@ def delete_cliente(cliente_id: int) -> Dict[str, Any]:
         con.close()
 
 
+# UTF-8 BOM for Excel compatibility
+CSV_BOM = "\ufeff"
+# CSV delimiter - semicolon for Excel in Spanish/Latin regions
+CSV_DELIMITER = ";"
+
 def _sanitize_csv_field(value: str) -> str:
     """Sanitize a field for CSV export to prevent CSV injection"""
     value = str(value or "").replace('"', '""')
@@ -712,22 +717,25 @@ def _sanitize_csv_field(value: str) -> str:
 
 
 def export_clientes_csv() -> str:
-    """Exporta todos los clientes a formato CSV"""
+    """Exporta todos los clientes a formato CSV (Excel compatible)"""
     con = conectar()
     try:
         cur = con.cursor()
-        cur.execute("SELECT id, nombre, telefono, direccion FROM clientes ORDER BY nombre")
+        cur.execute("SELECT id, nombre, telefono, direccion, zona FROM clientes ORDER BY nombre")
         rows = cur.fetchall()
         
-        lines = ["id,nombre,telefono,direccion"]
+        d = CSV_DELIMITER
+        lines = [f"id{d}nombre{d}telefono{d}direccion{d}zona"]
         for r in rows:
             # Sanitize fields to prevent CSV injection
             nombre = _sanitize_csv_field(r["nombre"])
             telefono = _sanitize_csv_field(r["telefono"])
             direccion = _sanitize_csv_field(r["direccion"])
-            lines.append(f'{r["id"]},"{nombre}","{telefono}","{direccion}"')
+            zona = _sanitize_csv_field(r["zona"])
+            lines.append(f'{r["id"]}{d}"{nombre}"{d}"{telefono}"{d}"{direccion}"{d}"{zona}"')
         
-        return "\n".join(lines)
+        # Add BOM for Excel UTF-8 compatibility
+        return CSV_BOM + "\n".join(lines)
     finally:
         con.close()
 
@@ -1267,29 +1275,50 @@ def delete_producto(producto_id: int) -> Dict[str, Any]:
 
 
 def export_productos_csv() -> str:
-    """Exporta todos los productos a formato CSV"""
+    """Exporta todos los productos a formato CSV (Excel compatible)"""
     con = conectar()
     try:
         cur = con.cursor()
         cols = _table_columns(cur, "productos")
         has_stock = "stock" in cols
+        has_categoria = "categoria_id" in cols
         
-        cur.execute("SELECT id, nombre, precio, imagen_url" + (", stock" if has_stock else "") + " FROM productos ORDER BY nombre")
+        select_cols = "p.id, p.nombre, p.precio, p.imagen_url"
+        if has_stock:
+            select_cols += ", p.stock"
+        if has_categoria:
+            select_cols += ", c.nombre as categoria_nombre"
+        
+        query = f"SELECT {select_cols} FROM productos p"
+        if has_categoria:
+            query += " LEFT JOIN categorias c ON p.categoria_id = c.id"
+        query += " ORDER BY p.nombre"
+        
+        cur.execute(query)
         rows = cur.fetchall()
         
-        header = "id,nombre,precio,imagen_url" + (",stock" if has_stock else "")
+        d = CSV_DELIMITER
+        header = f"id{d}nombre{d}precio{d}imagen_url"
+        if has_stock:
+            header += f"{d}stock"
+        if has_categoria:
+            header += f"{d}categoria"
         lines = [header]
+        
         for r in rows:
             nombre = _sanitize_csv_field(r["nombre"])
             precio = r["precio"] or 0
             imagen = _sanitize_csv_field(r["imagen_url"])
-            stock = r["stock"] if has_stock else 0
-            line = f'{r["id"]},"{nombre}",{precio},"{imagen}"'
+            line = f'{r["id"]}{d}"{nombre}"{d}{precio}{d}"{imagen}"'
             if has_stock:
-                line += f',{stock}'
+                stock = r["stock"] if r["stock"] is not None else 0
+                line += f'{d}{stock}'
+            if has_categoria:
+                categoria = _sanitize_csv_field(r["categoria_nombre"])
+                line += f'{d}"{categoria}"'
             lines.append(line)
         
-        return "\n".join(lines)
+        return CSV_BOM + "\n".join(lines)
     finally:
         con.close()
 
@@ -1966,7 +1995,7 @@ def update_pedido_cliente(pedido_id: int, cliente_id: int) -> Dict[str, Any]:
 
 
 def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None) -> str:
-    """Exporta pedidos a formato CSV con filtro de fechas opcional"""
+    """Exporta pedidos a formato CSV (Excel compatible) con filtro de fechas opcional"""
     con = conectar()
     try:
         cur = con.cursor()
@@ -1992,14 +2021,15 @@ def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None)
         cur.execute(query, tuple(params))
         rows = cur.fetchall()
         
-        lines = ["id,cliente_id,cliente_nombre,fecha,pdf_generado,productos"]
+        d = CSV_DELIMITER
+        lines = [f"id{d}cliente_id{d}cliente_nombre{d}fecha{d}pdf_generado{d}productos"]
         
         pedido_fk = _detalles_pedido_col(cur)
         prod_fk = _detalles_producto_col(cur)
         
         for r in rows:
             pid = r["id"]
-            cliente_nombre = str(r["cliente_nombre"] or "Sin cliente").replace('"', '""')
+            cliente_nombre = _sanitize_csv_field(r["cliente_nombre"] or "Sin cliente")
             fecha = r["fecha"] or ""
             generado = "Si" if r["pdf_generado"] else "No"
             
@@ -2011,11 +2041,11 @@ def export_pedidos_csv(desde: Optional[str] = None, hasta: Optional[str] = None)
                 WHERE dp.{pedido_fk} = ?
             """, (pid,))
             prods = [f"{rp['nombre']}x{rp['cantidad']}" for rp in cur.fetchall()]
-            prods_str = "; ".join(prods).replace('"', '""')
+            prods_str = _sanitize_csv_field(", ".join(prods))
             
-            lines.append(f'{pid},{r["cliente_id"] or ""},"{cliente_nombre}","{fecha}",{generado},"{prods_str}"')
+            lines.append(f'{pid}{d}{r["cliente_id"] or ""}{d}"{cliente_nombre}"{d}"{fecha}"{d}{generado}{d}"{prods_str}"')
         
-        return "\n".join(lines)
+        return CSV_BOM + "\n".join(lines)
     finally:
         con.close()
 

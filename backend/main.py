@@ -25,6 +25,24 @@ import urllib.request
 import re
 import secrets
 
+# Sentry for error tracking in production
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[StarletteIntegration(), FastApiIntegration()],
+            traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
+            profiles_sample_rate=0.1,
+            environment=os.getenv("ENVIRONMENT", "development"),
+            release=os.getenv("APP_VERSION", "1.0.0"),
+        )
+    except ImportError:
+        pass  # sentry-sdk not installed
+
 # Load Render Secret File (.env) if it exists
 SECRET_FILE_PATH = "/etc/secrets/.env"
 if os.path.exists(SECRET_FILE_PATH):
@@ -40,7 +58,8 @@ API_VERSION = "1.0.0"
 
 # Configuration from environment variables with sensible defaults
 KEEP_ALIVE_INTERVAL_SECONDS = int(os.getenv("KEEP_ALIVE_INTERVAL", "600"))  # 10 minutes
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))  # 30 min (security best practice)
+REFRESH_TOKEN_THRESHOLD_MINUTES = 10  # Refresh token when less than 10 min remaining
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "5"))
 RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
 RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
