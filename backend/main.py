@@ -137,13 +137,16 @@ async def general_exception_handler(request: Request, exc: Exception):
 # --- Middleware ---
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost,http://localhost:80,http://localhost:8000,http://localhost:5173").split(",")
+# CORS configuration - production domains + localhost for development
+DEFAULT_CORS = "https://www.pedidosfriosur.com,https://pedidosfriosur.com,http://localhost,http://localhost:80,http://localhost:8000,http://localhost:5173"
+CORS_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ORIGINS", DEFAULT_CORS).split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],  # Allow frontend to read request ID
 )
 
 
