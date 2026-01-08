@@ -585,7 +585,7 @@ async def generar_pdfs(
         raise HTTPException(status_code=400, detail="No se seleccionaron pedidos")
     
     try:
-        from pdf_utils import generate_pedidos_pdf
+        from pdf_utils import generar_pdf_multiple
         
         with db.get_db_connection() as conn:
             cursor = conn.cursor()
@@ -602,8 +602,17 @@ async def generar_pdfs(
             """, data.pedido_ids)
             
             pedidos_data = []
+            clientes_data = []
+            clientes_seen = set()
+            
             for row in cursor.fetchall():
                 pedido_id = row[0]
+                cliente_id = row[1]
+                
+                # Build clientes list
+                if cliente_id not in clientes_seen:
+                    clientes_seen.add(cliente_id)
+                    clientes_data.append({"id": cliente_id, "nombre": row[2]})
                 
                 # Get items for this pedido
                 cursor.execute("""
@@ -616,7 +625,7 @@ async def generar_pdfs(
                 
                 pedidos_data.append({
                     "id": pedido_id,
-                    "cliente_id": row[1],
+                    "cliente_id": cliente_id,
                     "cliente_nombre": row[2],
                     "cliente_direccion": row[3],
                     "cliente_telefono": row[4],
@@ -636,8 +645,9 @@ async def generar_pdfs(
             if not pedidos_data:
                 raise HTTPException(status_code=404, detail="No se encontraron pedidos")
             
-            # Generate PDF
-            pdf_content = generate_pedidos_pdf(pedidos_data)
+            # Generate PDF using generar_pdf_multiple
+            fecha_generacion = datetime.now().strftime("%d/%m/%Y %H:%M")
+            pdf_content = generar_pdf_multiple(pedidos_data, clientes_data, fecha_generacion)
             
             # Mark pedidos as pdf_generado = 1
             with db.get_db_transaction() as (conn2, cursor2):
