@@ -16,7 +16,7 @@ import traceback
 import db
 import models
 from deps import limiter
-from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -223,6 +223,7 @@ app.include_router(templates.router, prefix="/api", tags=["Templates"])
 app.include_router(tags.router, prefix="/api", tags=["Tags"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
 
 # --- Static File Serving for Uploads ---
 # NOTE: In production on Render, we use base64 data URLs stored in the database
@@ -256,29 +257,55 @@ app.include_router(upload.router, tags=["Upload (Legacy)"])
 # --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
-    """Run migrations and initialization on startup"""
-    logger.info("startup_migration", message="Running startup migrations...")
+    """
+    Safe startup initialization:
+    - Run controlled, one-time migrations (tracked in migration_log)
+    - Enable SQLite hardening (WAL mode, foreign keys)
+    - Start backup scheduler (in production)
+    
+    IMPORTANT: We do NOT run data-mutating queries here that affect users.
+    All such changes must go through the controlled migration system.
+    """
+    logger.info("startup", message="Starting application initialization...")
+    
     try:
-        # Run one-time migration to fix localhost URLs
-        from migraciones.fix_localhost_urls import migrate_localhost_urls
-        migrate_localhost_urls()
+        # Step 1: SQLite hardening (connection-level settings)
+        if not db.USE_POSTGRES:
+            with db.get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Enable WAL mode for better concurrency
+                cursor.execute("PRAGMA journal_mode=WAL")
+                journal = cursor.fetchone()[0]
+                # Increase busy timeout to reduce "database locked" errors
+                cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
+                # Enable foreign key enforcement
+                cursor.execute("PRAGMA foreign_keys=ON")
+                logger.info("sqlite_hardening", 
+                           journal_mode=journal, 
+                           busy_timeout="30000ms",
+                           foreign_keys="ON")
         
-        # Fix users with activo=0 (set them to active)
-        with db.get_db_transaction() as (conn, cursor):
-            cursor.execute("UPDATE usuarios SET activo = 1 WHERE activo = 0 OR activo IS NULL")
-            affected = cursor.rowcount
-            if affected > 0:
-                print(f"✅ Migration: Activated {affected} users")
-            
-            # Migrate legacy 'usuario' role to 'vendedor'
-            cursor.execute("UPDATE usuarios SET rol = 'vendedor' WHERE rol = 'usuario'")
-            affected_roles = cursor.rowcount
-            if affected_roles > 0:
-                print(f"✅ Migration: Changed {affected_roles} users from 'usuario' to 'vendedor' role")
+        # Step 2: Run controlled migrations (one-time, tracked)
+        from migrations import run_pending_migrations
+        executed = run_pending_migrations()
+        if executed:
+            logger.info("migrations_executed", count=len(executed), names=executed)
+        else:
+            logger.info("migrations_none_pending")
         
-        logger.info("startup_migration", message="Startup migrations completed")
+        # Step 3: Start backup scheduler (production only, non-blocking)
+        if ENVIRONMENT == "production":
+            from backup_scheduler import start_backup_scheduler
+            start_backup_scheduler()
+            logger.info("backup_scheduler", status="started")
+        
+        logger.info("startup", message="Application initialization completed successfully")
+        
     except Exception as e:
-        logger.error("startup_migration_failed", error=str(e), exception_type=type(e).__name__)
+        logger.error("startup_failed", error=str(e), exception_type=type(e).__name__)
+        # In production, we may want to fail fast
+        if ENVIRONMENT == "production":
+            raise
 
 
 # --- Root Endpoint ---
