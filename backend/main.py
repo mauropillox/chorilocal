@@ -143,6 +143,8 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 # --- Middleware ---
+from middleware import RequestTrackingMiddleware
+app.add_middleware(RequestTrackingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS configuration - production domains + localhost for development
