@@ -144,6 +144,8 @@ data/
 logs/
 backups/
 *.db
+*.db.b64
+*.db.gz.b64
 *.sqlite3
 *.log
 *.bak
