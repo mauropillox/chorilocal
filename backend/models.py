@@ -148,6 +148,7 @@ class Pedido(BaseModel):
     creado_por: Optional[str] = None
     cliente_nombre: Optional[str] = None  # From JOIN
     pdf_generado: Optional[int] = 0
+    repartidor: Optional[str] = None
     cliente: Optional[ClienteRef] = None
     productos: Optional[List[ProductoPedido]] = None
 
@@ -175,6 +176,7 @@ class PedidoDetalle(BaseModel):
     creado_por: Optional[str] = None
     cliente_nombre: Optional[str] = None
     pdf_generado: Optional[int] = 0
+    repartidor: Optional[str] = None
     items: List[PedidoItemDetalle]
 
 class EstadoPedidoUpdate(BaseModel):

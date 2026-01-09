@@ -57,7 +57,7 @@ async def get_pedidos_antiguos(
             cur = conn.cursor()
             cur.execute("""
                 SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, 
-                       p.creado_por, c.nombre as cliente_nombre, p.pdf_generado
+                       p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor
                 FROM pedidos p
                 JOIN clientes c ON p.cliente_id = c.id
                 WHERE p.estado IN ('Pendiente', 'pendiente', 'En Preparación', 'preparando')
@@ -75,7 +75,8 @@ async def get_pedidos_antiguos(
                 "notas": p[4],
                 "creado_por": p[5],
                 "cliente_nombre": p[6],
-                "pdf_generado": p[7]
+                "pdf_generado": p[7],
+                "repartidor": p[8]
             } for p in pedidos]
     except Exception as e:
         raise safe_error_handler(e, "pedidos", "obtener pedidos antiguos")
@@ -151,7 +152,7 @@ async def get_pedidos(
     estado: Optional[str] = None,
     creado_por: Optional[str] = Query(None, description="Filtrar pedidos por el nombre de usuario del creador (solo para admin y oficina)")
 ):
-    query = "SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado FROM pedidos p JOIN clientes c ON p.cliente_id = c.id"
+    query = "SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor FROM pedidos p JOIN clientes c ON p.cliente_id = c.id"
     params = []
     conditions = []
 
@@ -219,6 +220,7 @@ async def get_pedidos(
                 creado_por=p[5], 
                 cliente_nombre=p[6], 
                 pdf_generado=p[7],
+                repartidor=p[8],
                 productos=productos
             ))
         
@@ -336,6 +338,7 @@ async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_cu
         "creado_por": pedido[5],
         "cliente_nombre": pedido[6],
         "pdf_generado": pedido[7],
+        "repartidor": pedido[8],
         "items": [models.PedidoItemDetalle(producto_id=i[0], producto_nombre=i[1], cantidad=i[2], precio_unitario=i[3]) for i in items]
     }
     
@@ -362,10 +365,10 @@ async def cambiar_estado_pedido(pedido_id: int, estado_update: models.EstadoPedi
         else:
             cursor.execute("UPDATE pedidos SET estado = ? WHERE id = ?", (nuevo_estado, pedido_id))
 
-        cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
+        cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
         pedido_actualizado = cursor.fetchone()
 
-    return models.Pedido(id=pedido_actualizado[0], cliente_id=pedido_actualizado[1], fecha=pedido_actualizado[2], estado=pedido_actualizado[3], notas=pedido_actualizado[4], creado_por=pedido_actualizado[5], cliente_nombre=pedido_actualizado[6], pdf_generado=pedido_actualizado[7])
+    return models.Pedido(id=pedido_actualizado[0], cliente_id=pedido_actualizado[1], fecha=pedido_actualizado[2], estado=pedido_actualizado[3], notas=pedido_actualizado[4], creado_por=pedido_actualizado[5], cliente_nombre=pedido_actualizado[6], pdf_generado=pedido_actualizado[7], repartidor=pedido_actualizado[8])
 
 @router.delete("/pedidos/{pedido_id}", status_code=204)
 async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin_user)):
