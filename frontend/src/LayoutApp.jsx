@@ -389,15 +389,16 @@ export default function LayoutApp({ onLogout }) {
               <span className="nav-text">Historial</span>
             </Link>
 
+            {/* Ofertas - Todos pueden ver, solo admin puede editar */}
+            <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+              <span className="nav-icon">🎁</span>
+              <span className="nav-text">Ofertas</span>
+              {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
+            </Link>
+
             {/* Todo lo demás es solo para Admin */}
             {isAdmin && (
               <>
-                {/* Ofertas - Solo Admin */}
-                <Link to="/ofertas" className={`nav-link nav-link-with-badge ${isActive('/ofertas') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-                  <span className="nav-icon">🎁</span>
-                  <span className="nav-text">Ofertas</span>
-                  {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
-                </Link>
                 <Link to="/hoja-ruta" className={`nav-link ${isActive('/hoja-ruta') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
                   <span className="nav-icon">🚚</span>
                   <span className="nav-text">Ruta</span>
@@ -486,9 +487,11 @@ export default function LayoutApp({ onLogout }) {
               <Route path="/historial" element={<HistorialPedidos />} />
               <Route path="/cambiar-password" element={<CambiarPassword />} />
 
+              {/* Ofertas - Todos pueden ver, el componente maneja permisos internamente */}
+              <Route path="/ofertas" element={<Ofertas />} />
+
               {/* Rutas solo para Admin */}
               <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/pedidos" />} />
-              <Route path="/ofertas" element={isAdmin ? <Ofertas /> : <Navigate to="/pedidos" />} />
               <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/pedidos" />} />
               <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/pedidos" />} />
               <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/pedidos" />} />

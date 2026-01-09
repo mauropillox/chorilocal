@@ -10,8 +10,8 @@ import { logger } from '../utils/logger';
 export default function Ofertas() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  // Ventas users can only view offers, not edit
-  const isReadOnly = user?.rol === 'ventas';
+  // Vendedor and oficina users can only view offers, not edit
+  const isReadOnly = user?.rol === 'vendedor' || user?.rol === 'oficina';
   const [ofertas, setOfertas] = useState([]);
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
