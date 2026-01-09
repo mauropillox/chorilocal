@@ -293,6 +293,46 @@ export default function HojaRuta() {
         }
     }, [selectedIds, pedidos, bulkRepartidor, repartidores, cargarDatos]);
 
+    // Bulk delete pedidos
+    const bulkEliminarPedidos = useCallback(async () => {
+        const ids = Array.from(selectedIds);
+        if (ids.length === 0) {
+            toastError('No hay pedidos seleccionados');
+            return;
+        }
+
+        // Confirmar eliminación
+        const confirmMsg = `¿Estás seguro de eliminar ${ids.length} pedido${ids.length > 1 ? 's' : ''}?`;
+        if (!window.confirm(confirmMsg)) {
+            return;
+        }
+
+        try {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/bulk-delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pedido_ids: ids })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.deleted > 0) {
+                    toastSuccess(`🗑️ ${data.deleted} pedido${data.deleted > 1 ? 's' : ''} eliminado${data.deleted > 1 ? 's' : ''}`);
+                    await cargarDatos();
+                    setSelectedIds(new Set());
+                }
+                if (data.errors && data.errors.length > 0) {
+                    toastError(`Errores: ${data.errors.join(', ')}`);
+                }
+            } else {
+                toastError('Error al eliminar pedidos');
+            }
+        } catch (e) {
+            logger.error('Error al eliminar pedidos:', e);
+            toastError('Error de conexión');
+        }
+    }, [selectedIds, cargarDatos]);
+
     // Paginación
     const totalPages = Math.ceil(pedidosFiltrados.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -767,6 +807,23 @@ export default function HojaRuta() {
                             👤 Asignar Repartidor
                         </button>
                     )}
+
+                    <button
+                        onClick={() => bulkChangeEstado('cancelado')}
+                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                        style={{ background: '#ef4444', color: 'white' }}
+                    >
+                        ❌ Cancelar
+                    </button>
+
+                    <button
+                        onClick={bulkEliminarPedidos}
+                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                        style={{ background: '#991b1b', color: 'white' }}
+                        title="Eliminar pedidos seleccionados (no se pueden recuperar)"
+                    >
+                        🗑️ Eliminar
+                    </button>
 
                     <button
                         onClick={clearSelection}

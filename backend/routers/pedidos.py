@@ -388,6 +388,53 @@ async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin
     return
 
 
+class EliminarPedidosRequest(BaseModel):
+    pedido_ids: List[int]
+
+
+@router.post("/pedidos/bulk-delete", status_code=200)
+@limiter.limit(RATE_LIMIT_WRITE)
+async def eliminar_pedidos_bulk(
+    request: Request,
+    data: EliminarPedidosRequest,
+    current_user: dict = Depends(get_admin_user)
+):
+    """Eliminar múltiples pedidos en una sola operación"""
+    if not data.pedido_ids:
+        raise HTTPException(status_code=400, detail="No se proporcionaron IDs de pedidos")
+    
+    if len(data.pedido_ids) > 100:
+        raise HTTPException(status_code=400, detail="Máximo 100 pedidos por operación")
+    
+    deleted_count = 0
+    errors = []
+    
+    with db.get_db_transaction() as (conn, cursor):
+        for pedido_id in data.pedido_ids:
+            try:
+                # Verificar si existe
+                cursor.execute("SELECT id FROM pedidos WHERE id = ?", (pedido_id,))
+                if not cursor.fetchone():
+                    errors.append(f"Pedido {pedido_id} no encontrado")
+                    continue
+                
+                # Eliminar detalles
+                cursor.execute("DELETE FROM detalles_pedido WHERE pedido_id = ?", (pedido_id,))
+                
+                # Eliminar pedido
+                cursor.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
+                deleted_count += 1
+                
+            except Exception as e:
+                errors.append(f"Error al eliminar pedido {pedido_id}: {str(e)}")
+    
+    return {
+        "deleted": deleted_count,
+        "errors": errors,
+        "message": f"Se eliminaron {deleted_count} de {len(data.pedido_ids)} pedidos"
+    }
+
+
 # --- Pedido modification endpoints ---
 
 @router.put("/pedidos/{pedido_id}/notas")
