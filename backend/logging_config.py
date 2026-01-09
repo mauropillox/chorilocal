@@ -137,26 +137,29 @@ def setup_logging():
     
     # Initialize Sentry if configured (only with valid DSN)
     if SENTRY_AVAILABLE and SENTRY_DSN and SENTRY_DSN.strip() and ENVIRONMENT == "production":
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            environment=ENVIRONMENT,
-            # Performance Monitoring - sample 10% of requests
-            traces_sample_rate=0.1,
-            # Profiling - sample 10% of transactions
-            profiles_sample_rate=0.1,
-            # Send error events for logging level WARNING and above
-            integrations=[
-                LoggingIntegration(
-                    level=logging.INFO,        # Capture info and above as breadcrumbs
-                    event_level=logging.WARNING  # Send warnings and errors as events
-                )
-            ],
-            # Set tracing options
-            _experiments={
-                "profiles_sample_rate": 0.1,
-            },
-        )
-        logging.getLogger(__name__).info("Sentry performance monitoring enabled (10% sample rate)")
+        try:
+            sentry_sdk.init(
+                dsn=SENTRY_DSN,
+                environment=ENVIRONMENT,
+                # Performance Monitoring - sample 10% of requests
+                traces_sample_rate=0.1,
+                # Profiling - sample 10% of transactions
+                profiles_sample_rate=0.1,
+                # Send error events for logging level WARNING and above
+                integrations=[
+                    LoggingIntegration(
+                        level=logging.INFO,        # Capture info and above as breadcrumbs
+                        event_level=logging.WARNING  # Send warnings and errors as events
+                    )
+                ],
+                # Set tracing options
+                _experiments={
+                    "profiles_sample_rate": 0.1,
+                },
+            )
+            logging.getLogger(__name__).info("Sentry performance monitoring enabled (10% sample rate)")
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize Sentry (invalid DSN?): {e}")
     
     return structlog.get_logger()
 
