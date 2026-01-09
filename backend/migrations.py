@@ -226,3 +226,19 @@ def migrate_004_backup_metadata(cursor):
         )
     """)
     logger.info("migration_004: Created backup_log table")
+
+
+@register_migration("005_create_repartidores_table")
+def migrate_005_create_repartidores(cursor):
+    """Create repartidores table for Hoja de Ruta feature."""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS repartidores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE,
+            telefono TEXT,
+            activo INTEGER DEFAULT 1,
+            color TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    logger.info("migration_005: Created repartidores table")
