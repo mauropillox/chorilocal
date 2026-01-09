@@ -16,7 +16,7 @@ import traceback
 import db
 import models
 from deps import limiter
-from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -222,6 +222,7 @@ app.include_router(usuarios.router, prefix="/api", tags=["Usuarios"])
 app.include_router(templates.router, prefix="/api", tags=["Templates"])
 app.include_router(tags.router, prefix="/api", tags=["Tags"])
 app.include_router(repartidores.router, prefix="/api", tags=["Repartidores"])
+app.include_router(hoja_ruta.router, prefix="/api", tags=["Hoja de Ruta"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
