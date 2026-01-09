@@ -153,7 +153,7 @@ def validate_production_secrets():
     }
     
     # In production, ADMIN_PASSWORD is critical (no default passwords)
-    if ENVIRONMENT == "production":
+    if environment == "production":
         critical_vars["ADMIN_PASSWORD"] = "Admin user password (required in production)"
     
     # Optional but recommended vars (warn only)
@@ -162,7 +162,7 @@ def validate_production_secrets():
     }
     
     # In dev/test, ADMIN_PASSWORD is recommended but not critical
-    if ENVIRONMENT != "production":
+    if environment != "production":
         recommended_vars["ADMIN_PASSWORD"] = "Admin user password"
     
     # Only require DATABASE_URL if using PostgreSQL
