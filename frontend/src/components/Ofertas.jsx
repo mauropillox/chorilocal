@@ -213,18 +213,20 @@ export default function Ofertas() {
         � Gestión de Ofertas
       </h1>
 
-      {/* Ayuda colapsable */}
-      <HelpBanner
-        title="¿Cómo gestionar ofertas?"
-        icon="🎁"
-        items={[
-          { label: 'Crear oferta', text: 'Completá título, descripción, fechas de vigencia y porcentaje de descuento. Podés aplicarla a productos específicos o de forma general.' },
-          { label: 'Asignar productos', text: 'Buscá y seleccioná los productos que quieras incluir en la oferta. Podés agregar o quitar productos en cualquier momento.' },
-          { label: 'Vigencia', text: 'Las ofertas se activan/desactivan automáticamente según las fechas configuradas. Las activas se muestran con un contador en el menú.' },
-          { label: 'Editar o eliminar', text: 'Clickeá cualquier oferta de la lista para editarla. Podés eliminar ofertas que ya no necesites.' },
-          { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' }
-        ]}
-      />
+      {/* Ayuda colapsable - Solo para admin */}
+      {!isReadOnly && (
+        <HelpBanner
+          title="¿Cómo gestionar ofertas?"
+          icon="🎁"
+          items={[
+            { label: 'Crear oferta', text: 'Completá título, descripción, fechas de vigencia y porcentaje de descuento. Podés aplicarla a productos específicos o de forma general.' },
+            { label: 'Asignar productos', text: 'Buscá y seleccioná los productos que quieras incluir en la oferta. Podés agregar o quitar productos en cualquier momento.' },
+            { label: 'Vigencia', text: 'Las ofertas se activan/desactivan automáticamente según las fechas configuradas. Las activas se muestran con un contador en el menú.' },
+            { label: 'Editar o eliminar', text: 'Clickeá cualquier oferta de la lista para editarla. Podés eliminar ofertas que ya no necesites.' },
+            { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' }
+          ]}
+        />
+      )}
 
       {/* Formulario - Solo para admin/oficina */}
       {!isReadOnly && (
