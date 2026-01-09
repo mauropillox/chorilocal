@@ -310,7 +310,7 @@ async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_cu
         cursor = conn.cursor()
 
         # Obtener detalles del pedido
-        cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
+        cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
         pedido = cursor.fetchone()
 
         if not pedido:
