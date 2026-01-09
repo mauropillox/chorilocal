@@ -84,6 +84,36 @@ async def actualizar_producto(producto_id: int, producto: models.ProductoCreate,
     return {**producto.model_dump(), "id": producto_id}
 
 
+@router.patch("/productos/{producto_id}/stock", response_model=models.Producto)
+async def actualizar_stock(producto_id: int, stock_data: models.StockUpdate, current_user: dict = Depends(get_current_user)):
+    """Update only stock fields - available to all authenticated users"""
+    with db.get_db_transaction() as (conn, cursor):
+        cursor.execute("SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo FROM productos WHERE id = ?", (producto_id,))
+        producto = cursor.fetchone()
+        if producto is None:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+        # Update only stock fields
+        new_stock = stock_data.stock
+        new_tipo = stock_data.stock_tipo if stock_data.stock_tipo else producto[7]  # Keep existing tipo if not provided
+        
+        cursor.execute(
+            "UPDATE productos SET stock = ?, stock_tipo = ? WHERE id = ?",
+            (new_stock, new_tipo, producto_id)
+        )
+    
+    return {
+        "id": producto_id,
+        "nombre": producto[1],
+        "precio": producto[2],
+        "categoria_id": producto[3],
+        "imagen_url": producto[4],
+        "stock": new_stock,
+        "stock_minimo": producto[6],
+        "stock_tipo": new_tipo
+    }
+
+
 @router.delete("/productos/{producto_id}", status_code=204)
 async def eliminar_producto(
     producto_id: int,

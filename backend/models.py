@@ -102,6 +102,12 @@ class ProductoCreate(BaseModel):
     stock_minimo: Optional[float] = Field(10, ge=0)
     stock_tipo: Optional[str] = "unidad"
 
+
+class StockUpdate(BaseModel):
+    """Model for stock-only updates"""
+    stock: float = Field(..., ge=0)
+    stock_tipo: Optional[str] = None
+
 # === Pedido Models ===
 
 class ClienteRef(BaseModel):

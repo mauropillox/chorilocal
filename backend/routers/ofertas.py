@@ -41,8 +41,8 @@ class OfertaCreate(BaseModel):
 
 
 @router.get("/ofertas", response_model=List[Oferta])
-@router.get("/ofertas", response_model=List[Oferta])
 async def get_ofertas(current_user: dict = Depends(get_current_user)):
+    """Get ofertas - all authenticated users can view, admins see all including inactive"""
     ofertas = db.get_ofertas(solo_activas=current_user["rol"] != "admin")
     return ofertas
 

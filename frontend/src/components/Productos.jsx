@@ -239,13 +239,15 @@ export default function Productos() {
   }, [agregarProducto]);
 
   const actualizarStock = async (productoId, nuevoStock, nuevoTipo) => {
-    const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}`, {
-      method: "PUT",
+    // Use PATCH endpoint for stock-only updates
+    const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}/stock`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stock: parseFloat(nuevoStock) || 0, stock_tipo: nuevoTipo })
     });
 
     if (res.ok) { await cargarProductos(); setEditingStock(null); setNewStock(''); toastSuccess('Stock actualizado'); }
+    else { toastError('Error al actualizar stock'); }
   };
 
   const actualizarCategoriaProducto = async (productoId, nuevaCategoriaId) => {
