@@ -104,8 +104,8 @@ class ProductoCreate(BaseModel):
 
 
 class StockUpdate(BaseModel):
-    """Model for stock-only updates"""
-    stock: float = Field(..., ge=0)
+    """Model for stock-only updates using delta (relative change)"""
+    delta: float  # Can be positive (add) or negative (subtract)
     stock_tipo: Optional[str] = None
 
 # === Pedido Models ===

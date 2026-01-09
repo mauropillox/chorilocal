@@ -86,15 +86,23 @@ async def actualizar_producto(producto_id: int, producto: models.ProductoCreate,
 
 @router.patch("/productos/{producto_id}/stock", response_model=models.Producto)
 async def actualizar_stock(producto_id: int, stock_data: models.StockUpdate, current_user: dict = Depends(get_current_user)):
-    """Update only stock fields - available to all authenticated users"""
+    """Update stock using delta (relative change) - available to all authenticated users
+    
+    Args:
+        stock_data.delta: Amount to add (positive) or subtract (negative) from current stock
+        stock_data.stock_tipo: Optional - change the stock unit type
+    
+    Example: {"delta": -5} subtracts 5 from current stock (e.g., 100 -> 95)
+    """
     with db.get_db_transaction() as (conn, cursor):
         cursor.execute("SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo FROM productos WHERE id = ?", (producto_id,))
         producto = cursor.fetchone()
         if producto is None:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
         
-        # Update only stock fields
-        new_stock = stock_data.stock
+        # Apply delta to current stock (can't go below 0)
+        current_stock = producto[5] or 0
+        new_stock = max(0, current_stock + stock_data.delta)
         new_tipo = stock_data.stock_tipo if stock_data.stock_tipo else producto[7]  # Keep existing tipo if not provided
         
         cursor.execute(
