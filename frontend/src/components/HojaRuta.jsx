@@ -117,7 +117,7 @@ export default function HojaRuta() {
             const res = await authFetch(`${import.meta.env.VITE_API_URL}/repartidores`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     nombre: nuevoRepartidorNombre.trim(),
                     telefono: nuevoRepartidorTelefono.trim() || null
                 })
@@ -154,6 +154,45 @@ export default function HojaRuta() {
         }
     };
 
+    // Map-based lookup for O(1) client access instead of O(n) array.find
+    // IMPORTANT: Must be defined before callbacks that use pedidosFiltrados
+    const clientesMap = useMemo(() =>
+        new Map(clientes.map(c => [c.id, c])),
+        [clientes]
+    );
+
+    const getCliente = useCallback((clienteId) =>
+        clientesMap.get(clienteId) || {},
+        [clientesMap]
+    );
+
+    const zonasUnicas = useMemo(() => {
+        const zonas = [...new Set(clientes.map(c => c.zona).filter(Boolean))];
+        return zonas.sort();
+    }, [clientes]);
+
+    // Filtrar pedidos (excluir entregados y cancelados por defecto)
+    // IMPORTANT: Must be defined before selectAll callback
+    const pedidosFiltrados = useMemo(() => {
+        return pedidos.filter(p => {
+            const estado = p.estado || 'pendiente';
+            // Excluir entregados y cancelados por defecto
+            if (!filtroEstado && (estado === 'entregado' || estado === 'cancelado')) return false;
+
+            if (filtroEstado && estado !== filtroEstado) return false;
+            if (filtroRepartidor === '__sin_asignar__') {
+                if (p.repartidor) return false;
+            } else if (filtroRepartidor && p.repartidor !== filtroRepartidor) {
+                return false;
+            }
+            if (filtroZona) {
+                const cliente = getCliente(p.cliente_id);
+                if (cliente.zona !== filtroZona) return false;
+            }
+            return true;
+        });
+    }, [pedidos, filtroEstado, filtroRepartidor, filtroZona, getCliente]);
+
     // Toggle selection for bulk actions
     const toggleSelection = useCallback((id) => {
         setSelectedIds(prev => {
@@ -185,7 +224,7 @@ export default function HojaRuta() {
 
         // Create a pedidos map for O(1) lookup
         const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
-        
+
         // Execute all requests in parallel
         const results = await Promise.allSettled(
             ids.map(id => {
@@ -200,7 +239,7 @@ export default function HojaRuta() {
                 });
             })
         );
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
         if (successCount > 0) {
@@ -221,7 +260,7 @@ export default function HojaRuta() {
 
         const ids = Array.from(selectedIds);
         const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
-        
+
         // Execute all requests in parallel
         const results = await Promise.allSettled(
             ids.map(id => {
@@ -236,7 +275,7 @@ export default function HojaRuta() {
                 });
             })
         );
-        
+
         const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
         if (successCount > 0) {
@@ -245,50 +284,14 @@ export default function HojaRuta() {
             setSelectedIds(new Set());
             setBulkAssigning(false);
             setBulkRepartidor('');
-            if (!repartidores.includes(bulkRepartidor)) {
-                setRepartidores([...repartidores, bulkRepartidor]);
+            if (!repartidores.some(r => r.nombre === bulkRepartidor)) {
+                // Reload to get updated list from server
+                await cargarDatos();
             }
         } else {
             toastError('Error al asignar repartidor');
         }
     }, [selectedIds, pedidos, bulkRepartidor, repartidores, cargarDatos]);
-
-    // Map-based lookup for O(1) client access instead of O(n) array.find
-    const clientesMap = useMemo(() => 
-        new Map(clientes.map(c => [c.id, c])), 
-        [clientes]
-    );
-    
-    const getCliente = useCallback((clienteId) => 
-        clientesMap.get(clienteId) || {}, 
-        [clientesMap]
-    );
-
-    const zonasUnicas = useMemo(() => {
-        const zonas = [...new Set(clientes.map(c => c.zona).filter(Boolean))];
-        return zonas.sort();
-    }, [clientes]);
-
-    // Filtrar pedidos (excluir entregados y cancelados por defecto)
-    const pedidosFiltrados = useMemo(() => {
-        return pedidos.filter(p => {
-            const estado = p.estado || 'pendiente';
-            // Excluir entregados y cancelados por defecto
-            if (!filtroEstado && (estado === 'entregado' || estado === 'cancelado')) return false;
-
-            if (filtroEstado && estado !== filtroEstado) return false;
-            if (filtroRepartidor === '__sin_asignar__') {
-                if (p.repartidor) return false;
-            } else if (filtroRepartidor && p.repartidor !== filtroRepartidor) {
-                return false;
-            }
-            if (filtroZona) {
-                const cliente = getCliente(p.cliente_id);
-                if (cliente.zona !== filtroZona) return false;
-            }
-            return true;
-        });
-    }, [pedidos, filtroEstado, filtroRepartidor, filtroZona, clientes]);
 
     // Paginación
     const totalPages = Math.ceil(pedidosFiltrados.length / itemsPerPage);
@@ -457,13 +460,15 @@ export default function HojaRuta() {
                 </p>
             </div>
 
-            {/* Ayuda colapsable - SIN tip de paginación */}
+            {/* Ayuda colapsable - Actualizada con gestión de repartidores */}
             <HelpBanner
                 title="¿Cómo usar la Hoja de Ruta?"
                 icon="🚚"
                 items={[
                     { label: 'Filtrar por estado', text: 'Clickeá las tarjetas de colores (Pendiente, Preparando, etc.) para ver solo esos pedidos. Los números muestran cuántos hay en cada estado.' },
+                    { label: 'Gestionar repartidores', text: 'Usá el botón "⚙️ Repartidores" para agregar nuevos repartidores o desactivar los existentes. Ingresá nombre y opcionalmente teléfono.' },
                     { label: 'Asignar repartidores', text: 'Cada pedido tiene un selector "👤 Asignar Repartidor". Elegí el nombre y se guarda automáticamente. Los pedidos sin asignar aparecen primero.' },
+                    { label: 'Acciones masivas', text: 'Usá "☑ Todos" para seleccionar pedidos visibles. Luego podés cambiar estado o asignar repartidor a todos juntos.' },
                     { label: 'Cambiar estados', text: 'Usá los botones de cada pedido para avanzar: Pendiente → Preparar → Entregar. También podés cancelar si es necesario.' },
                     { label: 'Generar PDF', text: 'Seleccioná un repartidor y hacé clic en "📄 Generar PDF" para crear una hoja de ruta imprimible con todos sus pedidos, agrupados por zona.' },
                     { label: 'Organización', text: 'Los pedidos están agrupados por zona para optimizar la ruta de entrega.' }
@@ -601,7 +606,7 @@ export default function HojaRuta() {
 
             {/* Repartidores Management Panel */}
             {showRepartidoresManager && (
-                <div 
+                <div
                     className="mb-4 p-4 rounded-lg"
                     style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
                 >
@@ -609,7 +614,7 @@ export default function HojaRuta() {
                         <h3 className="font-semibold flex items-center gap-2">
                             👥 Gestionar Repartidores
                         </h3>
-                        <button 
+                        <button
                             onClick={() => setShowRepartidoresManager(false)}
                             className="text-sm px-2 py-1 rounded"
                             style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
@@ -617,7 +622,7 @@ export default function HojaRuta() {
                             ✕
                         </button>
                     </div>
-                    
+
                     {/* Add new repartidor form */}
                     <div className="flex flex-wrap gap-2 mb-3">
                         <input
@@ -655,7 +660,7 @@ export default function HojaRuta() {
                             </span>
                         ) : (
                             repartidores.map(rep => (
-                                <div 
+                                <div
                                     key={rep.id || rep.nombre}
                                     className="flex items-center gap-2 px-3 py-2 rounded text-sm"
                                     style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
