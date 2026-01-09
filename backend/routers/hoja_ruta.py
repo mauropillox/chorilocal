@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-import sqlite3
 from fastapi.responses import Response
 
 import db
@@ -33,76 +32,92 @@ async def generar_hoja_ruta_pdf(
         raise HTTPException(status_code=400, detail="Se requiere un repartidor")
         
     try:
-        conn = db.get_db_connection()
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        
-        # Get pedidos for this repartidor
-        query = """
-            SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por
-            FROM pedidos p
-            JOIN clientes c ON p.cliente_id = c.id
-            WHERE p.repartidor = ? 
-            AND p.estado NOT IN ('entregado', 'cancelado')
-        """
-        params = [repartidor]
-        
-        if zona_filtro:
-            query += " AND c.zona = ?"
-            params.append(zona_filtro)
+        with db.get_db_connection() as conn:
+            cursor = conn.cursor()
             
-        cur.execute(query, params)
-        pedidos_rows = cur.fetchall()
+            # Get pedidos for this repartidor
+            query = """
+                SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por
+                FROM pedidos p
+                JOIN clientes c ON p.cliente_id = c.id
+                WHERE p.repartidor = ? 
+                AND p.estado NOT IN ('entregado', 'cancelado')
+            """
+            params = [repartidor]
+            
+            if zona_filtro:
+                query += " AND c.zona = ?"
+                params.append(zona_filtro)
+                
+            cursor.execute(query, params)
+            pedidos_rows = cursor.fetchall()
+            
+            # If no pedidos, return empty PDF with message
+            if not pedidos_rows:
+                pdf_bytes = pdf_utils.generar_pdf_hoja_ruta([], [], repartidor, datetime.now().strftime("%d/%m/%Y %H:%M"))
+                return Response(
+                    content=pdf_bytes,
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename=hoja_ruta_{repartidor}.pdf"}
+                )
+                
+            # Build full pedidos structure
+            pedidos_list = []
+            clientes_ids = set()
+            
+            # Column indices for pedido query
+            for row in pedidos_rows:
+                p_dict = {
+                    'id': row[0],
+                    'cliente_id': row[1],
+                    'fecha': row[2],
+                    'estado': row[3],
+                    'notas': row[4],
+                    'creado_por': row[5]
+                }
+                clientes_ids.add(p_dict['cliente_id'])
+                
+                # Get productos for this pedido
+                cursor.execute("""
+                    SELECT dp.producto_id, pr.nombre, dp.cantidad, pr.precio, dp.tipo
+                    FROM detalles_pedido dp
+                    JOIN productos pr ON dp.producto_id = pr.id
+                    WHERE dp.pedido_id = ?
+                """, (p_dict['id'],))
+                
+                items = []
+                total = 0
+                for item in cursor.fetchall():
+                    subtotal = item[2] * item[3]  # cantidad * precio
+                    total += subtotal
+                    items.append({
+                        "nombre": item[1],
+                        "cantidad": item[2],
+                        "precio": item[3],
+                        "tipo": item[4]
+                    })
+                
+                p_dict['productos'] = items
+                p_dict['total'] = total
+                pedidos_list.append(p_dict)
+                
+            # Get clientes info
+            if clientes_ids:
+                placeholders = ",".join("?" * len(clientes_ids))
+                cursor.execute(f"SELECT id, nombre, telefono, direccion, zona FROM clientes WHERE id IN ({placeholders})", list(clientes_ids))
+                clientes_list = []
+                for row in cursor.fetchall():
+                    clientes_list.append({
+                        'id': row[0],
+                        'nombre': row[1],
+                        'telefono': row[2],
+                        'direccion': row[3],
+                        'zona': row[4]
+                    })
+            else:
+                clientes_list = []
         
-        # If no pedidos, return empty PDF with message
-        if not pedidos_rows:
-            pdf_bytes = pdf_utils.generar_pdf_hoja_ruta([], [], repartidor, datetime.now().strftime("%d/%m/%Y %H:%M"))
-            return Response(
-                content=pdf_bytes,
-                media_type="application/pdf",
-                headers={"Content-Disposition": f"attachment; filename=hoja_ruta_{repartidor}.pdf"}
-            )
-            
-        # Build full pedidos structure
-        pedidos_list = []
-        clientes_ids = set()
-        
-        for row in pedidos_rows:
-            p_dict = dict(row)
-            clientes_ids.add(p_dict['cliente_id'])
-            
-            # Get productos for this pedido
-            cur.execute("""
-                SELECT dp.producto_id, pr.nombre, dp.cantidad, pr.precio, dp.tipo
-                FROM detalles_pedido dp
-                JOIN productos pr ON dp.producto_id = pr.id
-                WHERE dp.pedido_id = ?
-            """, (p_dict['id'],))
-            
-            items = []
-            total = 0
-            for item in cur.fetchall():
-                subtotal = item['cantidad'] * item['precio']
-                total += subtotal
-                items.append({
-                    "nombre": item['nombre'],
-                    "cantidad": item['cantidad'],
-                    "precio": item['precio'],
-                    "tipo": item['tipo']
-                })
-            
-            p_dict['productos'] = items
-            p_dict['total'] = total
-            pedidos_list.append(p_dict)
-            
-        # Get clientes info
-        placeholders = ",".join("?" * len(clientes_ids))
-        cur.execute(f"SELECT * FROM clientes WHERE id IN ({placeholders})", list(clientes_ids))
-        clientes_list = [dict(row) for row in cur.fetchall()]
-        
-        conn.close()
-        
-        # Generate PDF
+        # Generate PDF (outside with block - connection closed)
         pdf_bytes = pdf_utils.generar_pdf_hoja_ruta(
             pedidos_list,
             clientes_list,

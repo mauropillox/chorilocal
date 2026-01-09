@@ -504,7 +504,7 @@ def generar_pdf_hoja_ruta(
             
             pdf.setFillColor(COLOR_DARK)
             pdf.drawString(LEFT_MARGIN + 10, y - 3, str(entrega_num))
-            pdf.drawString(LEFT_MARGIN + 35, y - 3, zona[:15])
+            pdf.drawString(LEFT_MARGIN + 35, y - 3, (zona or 'Sin Zona')[:15])
             pdf.drawString(LEFT_MARGIN + 150, y - 3, cliente.get('nombre', '')[:25])
             pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 100, y - 3, format_currency(total))
             # Checkbox
