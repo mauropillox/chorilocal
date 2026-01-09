@@ -150,8 +150,9 @@ export function useProductos() {
 
     const actualizarStock = useCallback(async (productoId, nuevoStock, nuevoTipo) => {
         try {
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}`, {
-                method: "PUT",
+            // Use PATCH endpoint for stock-only updates (more efficient)
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}/stock`, {
+                method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ stock: parseFloat(nuevoStock) || 0, stock_tipo: nuevoTipo })
             });
@@ -160,8 +161,11 @@ export function useProductos() {
                 await cargarProductos();
                 toastSuccess('Stock actualizado');
                 return true;
+            } else {
+                const err = await res.json().catch(() => ({}));
+                toastError(err.detail || 'Error al actualizar stock');
+                return false;
             }
-            return false;
         } catch (e) {
             toastError('Error de conexión');
             return false;

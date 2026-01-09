@@ -18,8 +18,9 @@ export function ProductoStockManager({
     const [stockItemsPerPage, setStockItemsPerPage] = useState(15);
 
     const actualizarStock = async (productoId, nuevoStock, nuevoTipo) => {
-        const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}`, {
-            method: "PUT",
+        // Use PATCH endpoint for stock-only updates (more efficient than PUT)
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${productoId}/stock`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ stock: parseFloat(nuevoStock) || 0, stock_tipo: nuevoTipo })
         });
@@ -29,6 +30,10 @@ export function ProductoStockManager({
             setEditingStock(null);
             setNewStock('');
             toastSuccess('Stock actualizado');
+        } else {
+            const err = await res.json().catch(() => ({}));
+            const { toastError } = await import('../../toast');
+            toastError(err.detail || 'Error al actualizar stock');
         }
     };
 

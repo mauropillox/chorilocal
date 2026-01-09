@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator, Field, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import date
 
@@ -104,9 +104,24 @@ class ProductoCreate(BaseModel):
 
 
 class StockUpdate(BaseModel):
-    """Model for stock-only updates using delta (relative change)"""
-    delta: float  # Can be positive (add) or negative (subtract)
+    """Model for stock updates - supports both delta (relative) and stock (absolute) values
+    
+    For delta-based updates (recommended for concurrency):
+        {"delta": -5}  # Subtract 5 from current stock
+        {"delta": 10}  # Add 10 to current stock
+    
+    For absolute updates (legacy, still supported):
+        {"stock": 95}  # Set stock to exactly 95
+    """
+    delta: Optional[float] = None  # Relative change (positive=add, negative=subtract)
+    stock: Optional[float] = None  # Absolute value (legacy support)
     stock_tipo: Optional[str] = None
+    
+    @model_validator(mode='after')
+    def validate_delta_or_stock(self):
+        if self.delta is None and self.stock is None:
+            raise ValueError('Debe proporcionar delta o stock')
+        return self
 
 # === Pedido Models ===
 
