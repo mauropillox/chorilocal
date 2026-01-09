@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { guardarToken } from '../auth';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -22,7 +23,7 @@ export default function Login({ onLoginSuccess }) {
       onLoginSuccess(); // dispara setLogueado(true)
       setLoading(false);
     } catch (err) {
-      console.error(err);
+      logger.error('Login error:', err);
       // Handle specific error messages from backend
       if (err.message) {
         setError(err.message);

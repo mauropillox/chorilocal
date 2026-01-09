@@ -13,6 +13,7 @@ from deps import (
     get_current_user, get_admin_user, limiter,
     RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
+from exceptions import safe_error_handler
 
 router = APIRouter()
 
@@ -77,7 +78,7 @@ async def get_pedidos_antiguos(
                 "pdf_generado": p[7]
             } for p in pedidos]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting old orders: {str(e)}")
+        raise safe_error_handler(e, "pedidos", "obtener pedidos antiguos")
 
 
 @router.post("/pedidos", response_model=models.Pedido)
@@ -139,7 +140,7 @@ async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_us
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al crear el pedido: {e}")
+        raise safe_error_handler(e, "pedidos", "crear pedido")
 
 @router.get("/pedidos", response_model=List[models.Pedido])
 async def get_pedidos(

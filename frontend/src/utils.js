@@ -1,4 +1,5 @@
 // Utility functions for UX improvements
+import { logger } from './utils/logger';
 
 // Track recent items (Productos added to orders)
 export const addToRecentProductos = (producto) => {
@@ -9,7 +10,7 @@ export const addToRecentProductos = (producto) => {
     recent = recent.slice(0, 5); // Keep only last 5
     localStorage.setItem('recent_productos', JSON.stringify(recent));
   } catch (e) {
-    console.error('Failed to save recent producto:', e);
+    logger.error('Failed to save recent producto:', e);
   }
 };
 

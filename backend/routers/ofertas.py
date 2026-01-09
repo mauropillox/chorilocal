@@ -9,6 +9,7 @@ from deps import (
     get_current_user, get_admin_user, limiter,
     RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
+from exceptions import safe_error_handler
 
 router = APIRouter()
 
@@ -114,7 +115,7 @@ async def crear_oferta(
         result = db.add_oferta(oferta_data)
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise safe_error_handler(e, "ofertas", "crear oferta")
 
 
 @router.put("/ofertas/{oferta_id}", response_model=Oferta)

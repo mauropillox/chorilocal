@@ -10,6 +10,7 @@ import sys
 import hashlib
 from deps import get_admin_user
 from logging_config import get_logger
+from exceptions import safe_error_handler
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -289,7 +290,7 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
         
     except Exception as e:
         logger.error("bootstrap_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Bootstrap failed: {str(e)}")
+        raise safe_error_handler(e, "migration", "bootstrap database")
 
 @router.post("/migrate-to-postgresql")
 async def migrate_to_postgresql(admin_user: dict = Depends(get_admin_user)):
@@ -353,10 +354,7 @@ async def migrate_to_postgresql(admin_user: dict = Depends(get_admin_user)):
         logger.error("migration_exception", 
                     user=admin_user["username"], 
                     error=str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Migration failed: {str(e)}"
-        )
+        raise safe_error_handler(e, "migration", "migrar a PostgreSQL")
 
 @router.get("/migration-status")
 async def get_migration_status():

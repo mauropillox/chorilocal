@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import sync from '../offline/sync';
+import { logger } from '../utils/logger';
 
 export default function OfflineNotifier() {
     const [count, setCount] = useState(0);
@@ -10,7 +11,7 @@ export default function OfflineNotifier() {
         try {
             const items = await sync.getAll();
             setCount(items.length);
-        } catch (e) { console.warn('OfflineNotifier: failed to getAll', e); }
+        } catch (e) { logger.warn('OfflineNotifier: failed to getAll', e); }
     };
 
     useEffect(() => {

@@ -9,6 +9,7 @@ from deps import (
     get_current_user, limiter,
     RATE_LIMIT_READ
 )
+from exceptions import safe_error_handler
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -85,7 +86,7 @@ async def get_dashboard_metrics(request: Request, current_user: dict = Depends(g
                 "top_productos": top_productos
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting metrics: {str(e)}")
+        raise safe_error_handler(e, "dashboard", "obtener métricas")
 
 
 @router.get("/pedidos_por_dia")
@@ -113,7 +114,7 @@ async def get_pedidos_por_dia(
             
             return [{"fecha": row[0], "cantidad": row[1]} for row in cur.fetchall()]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting pedidos por dia: {str(e)}")
+        raise safe_error_handler(e, "dashboard", "obtener pedidos por día")
 
 
 @router.get("/alertas")
@@ -146,4 +147,4 @@ async def get_alertas(request: Request, current_user: dict = Depends(get_current
             
             return alertas
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting alertas: {str(e)}")
+        raise safe_error_handler(e, "dashboard", "obtener alertas")

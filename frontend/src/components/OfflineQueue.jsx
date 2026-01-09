@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import sync from '../offline/sync';
 import { toastSuccess, toastError } from '../toast';
+import { logger } from '../utils/logger';
 
 export default function OfflineQueue() {
     const [items, setItems] = useState([]);
@@ -10,7 +11,7 @@ export default function OfflineQueue() {
         try {
             const all = await sync.getAll();
             setItems(all);
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error('OfflineQueue load error:', e); }
     };
 
     useEffect(() => { load(); }, []);

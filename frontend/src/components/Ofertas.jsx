@@ -5,6 +5,7 @@ import ConfirmDialog from './ConfirmDialog';
 import { toast } from '../toast';
 import HelpBanner from './HelpBanner';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 export default function Ofertas() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ export default function Ofertas() {
       if (ofertasRes.res.ok) setOfertas(ofertasRes.data);
       if (productosRes.res.ok) setProductos(productosRes.data);
     } catch (e) {
-      console.error('Error cargando datos:', e);
+      logger.error('Error cargando datos:', e);
       toast('Error al cargar datos', 'error');
     } finally {
       setLoading(false);

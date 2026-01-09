@@ -26,6 +26,7 @@ import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
 import OfflineNotifier from './components/OfflineNotifier';
 import OfflineQueue from './components/OfflineQueue';
+import { logger } from './utils/logger';
 
 // Loading fallback para Suspense
 const PageLoader = () => (
@@ -68,7 +69,7 @@ export default function LayoutApp({ onLogout }) {
           setOfertasCount(data.length);
         }
       } catch (e) {
-        if (import.meta.env.MODE === 'development') console.error('Error loading ofertas count:', e);
+        logger.error('Error loading ofertas count:', e);
       }
     };
     loadOfertasCount();
@@ -114,8 +115,8 @@ export default function LayoutApp({ onLogout }) {
         setSearchResults({ clientes: filteredClientes, productos: filteredProductos });
       } catch (e) {
         // Ignore abort errors
-        if (e.name !== 'AbortError' && import.meta.env.MODE === 'development') {
-          console.error('Search error:', e);
+        if (e.name !== 'AbortError') {
+          logger.error('Search error:', e);
         }
       } finally {
         // Only update searching state if not aborted
@@ -190,7 +191,7 @@ export default function LayoutApp({ onLogout }) {
       }
     } catch (e) {
       // Ignore errors - we're logging out anyway
-      if (import.meta.env.MODE === 'development') console.warn('Logout API call failed:', e);
+      logger.warn('Logout API call failed:', e);
     }
     borrarToken();
     if (onLogout) onLogout();

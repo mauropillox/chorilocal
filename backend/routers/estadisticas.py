@@ -9,6 +9,7 @@ from deps import (
     get_current_user, get_admin_user, limiter,
     RATE_LIMIT_READ
 )
+from exceptions import safe_error_handler
 
 router = APIRouter(prefix="/estadisticas", tags=["Estadísticas"])
 
@@ -144,4 +145,4 @@ async def get_estadisticas_ventas(
                 "por_categoria": por_categoria
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting sales statistics: {str(e)}")
+        raise safe_error_handler(e, "estadisticas", "obtener estadísticas de ventas")

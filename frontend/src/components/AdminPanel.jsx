@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchConToken } from "../auth";
 import HelpBanner from './HelpBanner';
+import { logger } from '../utils/logger';
 
 export default function AdminPanel() {
   const [usuarios, setUsuarios] = useState([]);
@@ -28,10 +29,10 @@ export default function AdminPanel() {
         });
         setRolesEdit(rolesIniciales);
       } else {
-        console.error("Error al obtener usuarios");
+        logger.error("Error al obtener usuarios");
       }
     } catch (err) {
-      console.error("Fallo al cargar usuarios:", err);
+      logger.error("Fallo al cargar usuarios:", err);
     }
   };
 

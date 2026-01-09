@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
 import HelpBanner from './HelpBanner';
+import { logger } from '../utils/logger';
 
 // Estados de pedido workflow SIMPLIFICADOS
 const ESTADOS_PEDIDO = {
@@ -75,7 +76,7 @@ export default function HojaRuta() {
                 else setClientes(Array.isArray(cliData) ? cliData : []);
             }
         } catch (e) {
-            console.error('Error cargando datos:', e);
+            logger.error('Error cargando datos:', e);
         } finally {
             setLoading(false);
         }

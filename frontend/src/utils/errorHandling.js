@@ -2,6 +2,7 @@
  * Centralized API error handling utilities.
  * Provides consistent error extraction and user-friendly messages.
  */
+import { logger } from './logger';
 
 /**
  * Extracts error message from various API error response formats.
@@ -104,7 +105,7 @@ export const safeStorage = {
             const item = localStorage.getItem(key);
             return item !== null ? item : defaultValue;
         } catch {
-            console.warn(`localStorage.getItem failed for key: ${key}`);
+            logger.warn(`localStorage.getItem failed for key: ${key}`);
             return defaultValue;
         }
     },
@@ -114,7 +115,7 @@ export const safeStorage = {
             localStorage.setItem(key, value);
             return true;
         } catch (e) {
-            console.warn(`localStorage.setItem failed for key: ${key}`, e);
+            logger.warn(`localStorage.setItem failed for key: ${key}`, e);
             return false;
         }
     },
@@ -124,7 +125,7 @@ export const safeStorage = {
             localStorage.removeItem(key);
             return true;
         } catch {
-            console.warn(`localStorage.removeItem failed for key: ${key}`);
+            logger.warn(`localStorage.removeItem failed for key: ${key}`);
             return false;
         }
     },
@@ -143,7 +144,7 @@ export const safeStorage = {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch {
-            console.warn(`localStorage.setJSON failed for key: ${key}`);
+            logger.warn(`localStorage.setJSON failed for key: ${key}`);
             return false;
         }
     },

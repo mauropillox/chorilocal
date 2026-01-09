@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { logger } from '../utils/logger';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -102,7 +103,7 @@ export const useAppStore = create(
                                 headers: { Authorization: `Bearer ${token}` },
                             });
                         } catch (e) {
-                            console.warn('Logout request failed:', e);
+                            logger.warn('Logout request failed:', e);
                         }
                     }
 

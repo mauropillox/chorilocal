@@ -17,6 +17,7 @@ import os
 
 import db
 from deps import get_admin_user, limiter, RATE_LIMIT_ADMIN, RATE_LIMIT_WRITE, RATE_LIMIT_READ
+from exceptions import safe_error_handler
 from backup_scheduler import (
     create_backup_now, 
     list_backups, 
@@ -177,10 +178,7 @@ async def run_migrations(
             "count": len(executed)
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Migration failed: {str(e)}"
-        )
+        raise safe_error_handler(e, "admin", "ejecutar migraciones")
 
 
 # ============================================================================

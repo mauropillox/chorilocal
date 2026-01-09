@@ -1,4 +1,6 @@
 // Minimal IndexedDB-backed queue for offline requests
+import { logger } from '../utils/logger';
+
 const DB_NAME = 'chorilocal-offline';
 const STORE = 'queue';
 const DB_VERSION = 1;
@@ -80,7 +82,7 @@ export async function processQueue() {
             }
         } catch (e) {
             // network error: stop processing and try later
-            console.warn('processQueue network error, will retry later', e);
+            logger.warn('processQueue network error, will retry later', e);
             return;
         }
     }

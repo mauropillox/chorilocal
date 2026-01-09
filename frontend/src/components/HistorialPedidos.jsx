@@ -7,6 +7,7 @@ import ConfirmDialog from './ConfirmDialog';
 import { getSelectStyles } from '../selectStyles';
 import HelpBanner from './HelpBanner';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 export default function HistorialPedidos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -76,7 +77,7 @@ export default function HistorialPedidos() {
         toastError(err.detail || 'Error al restaurar pedido');
       }
     } catch (e) {
-      console.error('Error restaurando pedido:', e);
+      logger.error('Error restaurando pedido:', e);
       toastError('Error de conexión al restaurar pedido');
     }
   };
@@ -216,9 +217,9 @@ export default function HistorialPedidos() {
         try {
           const creatorsRes = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos/creators`);
           if (creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
-        } catch (e) { console.error('Error loading creators:', e); }
+        } catch (e) { logger.error('Error loading creators:', e); }
       }
-    } catch (e) { console.error('Error cargando datos:', e); }
+    } catch (e) { logger.error('Error cargando datos:', e); }
     finally { setLoading(false); }
   };
 
