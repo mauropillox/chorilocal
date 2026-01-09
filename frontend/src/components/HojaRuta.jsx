@@ -178,12 +178,8 @@ export default function HojaRuta() {
             toastError('Error de conexión');
         }
     };
-} catch (e) {
-    toastError('Error de conexión');
-}
-    };
 
-// Delete repartidor
+    // Delete repartidor
 const eliminarRepartidor = async (id) => {
     if (!window.confirm('¿Desactivar este repartidor?')) return;
     try {
