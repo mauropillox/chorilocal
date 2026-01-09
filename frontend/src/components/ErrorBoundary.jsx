@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 // Lazy-load Sentry for error boundary integration
 let SentryModule = null;
 if (import.meta.env.VITE_SENTRY_DSN) {
-  import('@sentry/react').then(m => { SentryModule = m; }).catch(() => {});
+  import('@sentry/react').then(m => { SentryModule = m; }).catch(() => { });
 }
 
 /**

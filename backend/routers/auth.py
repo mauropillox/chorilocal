@@ -47,12 +47,19 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
 
 @router.post("/register")
-async def register(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), rol: str = Form("vendedor")):
+@limiter.limit(RATE_LIMIT_AUTH)
+async def register(
+    request: Request, 
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    rol: str = Form("vendedor"),
+    current_user: dict = Depends(get_admin_user)  # Only admins can register new users
+):
+    """Register a new user - ADMIN ONLY for security"""
     is_valid, msg = validate_password_strength(form_data.password)
     if not is_valid:
         raise HTTPException(status_code=400, detail=msg)
 
-    if rol not in ["admin", "vendedor", "oficina"]:
+    if rol not in ["admin", "vendedor", "oficina", "usuario"]:
         raise HTTPException(status_code=400, detail="Rol no válido")
 
     with db.get_db_transaction() as (conn, cursor):

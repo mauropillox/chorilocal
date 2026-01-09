@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import HelpBanner from './HelpBanner';
+import { logger } from '../utils/logger';
 
 export default function Pedidos() {
   const [clientes, setClientes] = useState([]);
@@ -70,7 +71,7 @@ export default function Pedidos() {
           setOfertasActivas(ofertas);
         }
       } catch (e) {
-        console.error('Error cargando ofertas:', e);
+        logger.error('Error cargando ofertas:', e);
       }
     })();
 
@@ -82,7 +83,7 @@ export default function Pedidos() {
         if (parsed.clienteId) setClienteId(parsed.clienteId);
         if (Array.isArray(parsed.productos)) setProductosSeleccionados(parsed.productos);
         if (parsed.notas) setNotas(parsed.notas);
-      } catch (e) { console.error('Failed to restore draft:', e); }
+      } catch (e) { logger.warn('Failed to restore draft:', e); }
     }
   }, []);
 

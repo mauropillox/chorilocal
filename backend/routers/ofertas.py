@@ -48,8 +48,9 @@ async def get_ofertas(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/ofertas/activas")
-async def get_ofertas_activas(current_user: dict = Depends(get_current_user)):
-    """Get only active offers - used by dashboard and frontend"""
+@limiter.limit(RATE_LIMIT_READ)
+async def get_ofertas_activas(request: Request):
+    """Get only active offers - PUBLIC endpoint for dashboard and frontend"""
     try:
         ofertas = db.get_ofertas(solo_activas=True)
         # Return simplified list with productos_ids for frontend

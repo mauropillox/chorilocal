@@ -78,7 +78,7 @@ export default function AdminPanel() {
     const username = confirmDelete.username;
     if (!username) return;
     setConfirmDelete({ open: false, username: null });
-    
+
     if (loadingUsuarios[username]) return;
     marcarCargando(username, true);
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}`, { method: "DELETE" });

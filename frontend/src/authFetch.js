@@ -1,6 +1,7 @@
 import { obtenerToken, borrarToken, guardarToken, decodeToken } from './auth';
 import { queueRequest } from './offline/sync';
 import { toastSuccess, toastWarn, toastError } from './toast';
+import { logger } from './utils/logger';
 
 // Token refresh: intenta refrescar el token antes de que expire
 let refreshPromise = null;
@@ -32,7 +33,7 @@ async function refreshToken() {
       }
       return null;
     } catch (e) {
-      console.error('Token refresh failed:', e);
+      logger.error('Token refresh failed:', e);
       return null;
     } finally {
       refreshPromise = null;
@@ -123,7 +124,7 @@ async function authFetch(input, init = {}, retryCount = 0) {
         try { window.dispatchEvent(new CustomEvent('offline-request-queued', { detail: { method, url: input } })); } catch (e) { }
         try { toastWarn('Acción encolada — se enviará cuando vuelva la conexión'); } catch (e) { }
       } catch (e) {
-        console.warn('Failed to queue request offline', e);
+        logger.warn('Failed to queue request offline', e);
         try { toastError('No se pudo encolar la acción'); } catch (e) { }
       }
       // Return a synthetic 202 Accepted response indicating queued
@@ -135,7 +136,7 @@ async function authFetch(input, init = {}, retryCount = 0) {
     // Handle rate limiting (429)
     if (res.status === 429) {
       const retryAfter = parseInt(res.headers.get('Retry-After') || '60', 10);
-      console.warn(`Rate limited. Retry after ${retryAfter}s`);
+      logger.warn(`Rate limited. Retry after ${retryAfter}s`);
       // Dispatch event for UI to show user-friendly message
       try {
         window.dispatchEvent(new CustomEvent('rate-limited', {

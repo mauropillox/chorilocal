@@ -5,6 +5,7 @@ import { toastSuccess, toastError, toastWarn } from '../toast';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
+import { logger } from '../utils/logger';
 
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -489,7 +490,7 @@ export default function Productos() {
 
       if (!res.ok) {
         const errorData = await res.text();
-        console.error('Upload error:', errorData);
+        logger.error('Upload error:', errorData);
         toastError(`Error al subir imagen: ${res.status}`);
         return;
       }
@@ -510,7 +511,7 @@ export default function Productos() {
       setUrlError('');
 
     } catch (err) {
-      console.error('Upload error:', err);
+      logger.error('Upload error:', err);
       toastError('❌ Error de conexión al subir imagen');
     } finally {
       setFileUploading(false);

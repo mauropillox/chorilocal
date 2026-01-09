@@ -13,7 +13,6 @@ router = APIRouter()
 
 
 @router.post("/productos", response_model=models.Producto)
-@router.post("/productos", response_model=models.Producto)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def crear_producto(request: Request, producto: models.ProductoCreate, current_user: dict = Depends(get_admin_user)):
     with db.get_db_transaction() as (conn, cursor):

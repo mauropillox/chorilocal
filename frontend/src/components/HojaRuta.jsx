@@ -31,6 +31,7 @@ export default function HojaRuta() {
     const [pedidos, setPedidos] = useState([]);
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null); // Error state for UX
     const [repartidores, setRepartidores] = useState([]);
     const [filtroRepartidor, setFiltroRepartidor] = useState('');
     const [filtroZona, setFiltroZona] = useState('');
@@ -38,6 +39,11 @@ export default function HojaRuta() {
     const [nuevoRepartidor, setNuevoRepartidor] = useState('');
     const [asignandoRepartidor, setAsignandoRepartidor] = useState(null);
     const [generandoPDF, setGenerandoPDF] = useState(false);
+    
+    // Bulk selection for batch actions
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkAssigning, setBulkAssigning] = useState(false);
+    const [bulkRepartidor, setBulkRepartidor] = useState('');
 
     // Paginación - default 25 para ver más
     const [currentPage, setCurrentPage] = useState(1);
@@ -53,10 +59,12 @@ export default function HojaRuta() {
     // Reset página cuando cambian filtros
     useEffect(() => {
         setCurrentPage(1);
+        setSelectedIds(new Set()); // Clear selection on filter change
     }, [filtroEstado, filtroZona, filtroRepartidor]);
 
     const cargarDatos = async () => {
         setLoading(true);
+        setError(null);
         try {
             const [pedRes, cliRes] = await Promise.all([
                 authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`),
@@ -68,6 +76,8 @@ export default function HojaRuta() {
                 setPedidos(pedidosData);
                 const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
                 setRepartidores(reps);
+            } else {
+                setError('Error al cargar pedidos');
             }
 
             if (cliRes.res.ok) {
@@ -77,8 +87,106 @@ export default function HojaRuta() {
             }
         } catch (e) {
             logger.error('Error cargando datos:', e);
+            setError('Error de conexión. Por favor, intentá de nuevo.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Toggle selection for bulk actions
+    const toggleSelection = (id) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    // Select all visible pedidos
+    const selectAll = () => {
+        const visibleIds = pedidosFiltrados.map(p => p.id);
+        setSelectedIds(new Set(visibleIds));
+    };
+
+    // Clear selection
+    const clearSelection = () => {
+        setSelectedIds(new Set());
+    };
+
+    // Bulk change estado
+    const bulkChangeEstado = async (nuevoEstado) => {
+        const ids = Array.from(selectedIds);
+        if (ids.length === 0) return;
+        
+        let successCount = 0;
+        for (const id of ids) {
+            try {
+                const pedido = pedidos.find(p => p.id === id);
+                const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        estado: nuevoEstado,
+                        repartidor: pedido?.repartidor
+                    })
+                });
+                if (res.ok) successCount++;
+            } catch (e) {
+                logger.error('Error en bulk update:', e);
+            }
+        }
+        
+        if (successCount > 0) {
+            toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
+            await cargarDatos();
+            setSelectedIds(new Set());
+        } else {
+            toastError('Error al actualizar pedidos');
+        }
+    };
+
+    // Bulk assign repartidor
+    const bulkAsignarRepartidor = async () => {
+        if (!bulkRepartidor.trim()) {
+            toastError('Ingresá un nombre de repartidor');
+            return;
+        }
+        
+        const ids = Array.from(selectedIds);
+        let successCount = 0;
+        
+        for (const id of ids) {
+            try {
+                const pedido = pedidos.find(p => p.id === id);
+                const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        estado: pedido?.estado || 'pendiente',
+                        repartidor: bulkRepartidor
+                    })
+                });
+                if (res.ok) successCount++;
+            } catch (e) {
+                logger.error('Error asignando repartidor:', e);
+            }
+        }
+        
+        if (successCount > 0) {
+            toastSuccess(`👤 ${successCount} pedidos asignados a ${bulkRepartidor}`);
+            await cargarDatos();
+            setSelectedIds(new Set());
+            setBulkAssigning(false);
+            setBulkRepartidor('');
+            if (!repartidores.includes(bulkRepartidor)) {
+                setRepartidores([...repartidores, bulkRepartidor]);
+            }
+        } else {
+            toastError('Error al asignar repartidor');
         }
     };
 
@@ -246,6 +354,25 @@ export default function HojaRuta() {
         );
     }
 
+    // Error state
+    if (error) {
+        return (
+            <div className="flex items-center justify-center p-8">
+                <div className="text-center p-6 rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-danger)' }}>
+                    <div className="text-4xl mb-2">⚠️</div>
+                    <div className="font-semibold mb-2" style={{ color: 'var(--color-danger)' }}>{error}</div>
+                    <button
+                        onClick={cargarDatos}
+                        className="px-4 py-2 rounded text-white"
+                        style={{ background: 'var(--color-primary)' }}
+                    >
+                        🔄 Reintentar
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-4 max-w-6xl mx-auto">
             {/* Header */}
@@ -336,6 +463,16 @@ export default function HojaRuta() {
                 {/* Separador */}
                 <div className="h-8 w-px mx-2" style={{ background: 'var(--color-border)' }}></div>
 
+                {/* Bulk selection buttons */}
+                <button
+                    onClick={selectAll}
+                    className="px-3 py-2 text-sm rounded"
+                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                    title="Seleccionar todos los pedidos visibles"
+                >
+                    ☑️ Seleccionar todos
+                </button>
+
                 {/* Botón PDF */}
                 {filtroRepartidor && filtroRepartidor !== '__sin_asignar__' && (
                     <button
@@ -381,6 +518,87 @@ export default function HojaRuta() {
                 </div>
             </div>
 
+            {/* Bulk Actions Bar - appears when items are selected */}
+            {selectedIds.size > 0 && (
+                <div 
+                    className="mb-4 p-3 rounded-lg flex flex-wrap items-center gap-3"
+                    style={{ 
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        color: 'white',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    <span className="font-semibold">
+                        ✓ {selectedIds.size} pedido{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                    </span>
+                    
+                    <div className="h-6 w-px" style={{ background: 'rgba(255,255,255,0.3)' }}></div>
+                    
+                    <button
+                        onClick={() => bulkChangeEstado('preparando')}
+                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                        style={{ background: '#f59e0b', color: 'white' }}
+                    >
+                        🔧 Marcar Preparando
+                    </button>
+                    
+                    <button
+                        onClick={() => bulkChangeEstado('entregado')}
+                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                        style={{ background: '#10b981', color: 'white' }}
+                    >
+                        ✅ Marcar Entregado
+                    </button>
+                    
+                    {bulkAssigning ? (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={bulkRepartidor}
+                                onChange={e => setBulkRepartidor(e.target.value)}
+                                placeholder="Nombre del repartidor..."
+                                className="px-2 py-1 rounded text-sm text-gray-900"
+                                autoFocus
+                                list="bulk-reps-list"
+                            />
+                            <datalist id="bulk-reps-list">
+                                {repartidores.map(r => <option key={r} value={r} />)}
+                            </datalist>
+                            <button
+                                onClick={bulkAsignarRepartidor}
+                                className="px-2 py-1 rounded text-sm"
+                                style={{ background: 'white', color: '#3b82f6' }}
+                            >
+                                ✓
+                            </button>
+                            <button
+                                onClick={() => { setBulkAssigning(false); setBulkRepartidor(''); }}
+                                className="px-2 py-1 rounded text-sm"
+                                style={{ background: 'rgba(255,255,255,0.2)' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setBulkAssigning(true)}
+                            className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                            style={{ background: 'rgba(255,255,255,0.2)' }}
+                        >
+                            👤 Asignar Repartidor
+                        </button>
+                    )}
+                    
+                    <button
+                        onClick={clearSelection}
+                        className="ml-auto px-3 py-1.5 rounded text-sm transition-all hover:bg-white/20"
+                        style={{ background: 'rgba(255,255,255,0.1)' }}
+                    >
+                        ✕ Cancelar
+                    </button>
+                </div>
+            )}
+
             {/* Lista de pedidos */}
             {pedidosPorZona.length === 0 ? (
                 <div className="text-center py-12 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
@@ -410,9 +628,26 @@ export default function HojaRuta() {
                                         const siguiente = getSiguienteEstado(estado);
                                         const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
                                         const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
+                                        const isSelected = selectedIds.has(p.id);
 
                                         return (
-                                            <div key={p.id} className="px-3 py-2 flex items-center gap-3" style={{ background: 'var(--color-bg)' }}>
+                                            <div 
+                                                key={p.id} 
+                                                className="px-3 py-2 flex items-center gap-3 transition-all" 
+                                                style={{ 
+                                                    background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                                    borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
+                                                }}
+                                            >
+                                                {/* Checkbox for bulk selection */}
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleSelection(p.id)}
+                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                                />
+                                                
                                                 {/* Cliente + Estado */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
@@ -485,11 +720,27 @@ export default function HojaRuta() {
                                     const estado = p.estado || 'pendiente';
                                     const estadoInfo = getEstadoInfo(estado);
                                     const siguiente = getSiguienteEstado(estado);
+                                    const isSelected = selectedIds.has(p.id);
 
                                     return (
-                                        <div key={p.id} className="p-3 border-t" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
-                                            {/* Línea 1: Cliente + Estado + Repartidor */}
+                                        <div 
+                                            key={p.id} 
+                                            className="p-3 border-t transition-all" 
+                                            style={{ 
+                                                borderColor: 'var(--color-border)', 
+                                                background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                                borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
+                                            }}
+                                        >
+                                            {/* Línea 1: Checkbox + Cliente + Estado + Repartidor */}
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleSelection(p.id)}
+                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                                />
                                                 <span className="font-semibold">{p.cliente?.nombre || 'Cliente'}</span>
                                                 <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
                                                     {estadoInfo.icon} {estadoInfo.label}
