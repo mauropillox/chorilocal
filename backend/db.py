@@ -316,22 +316,66 @@ def get_db_connection():
 
 @contextmanager
 def get_db_transaction():
-    """Context manager para transacciones atómicas"""
-    con = conectar()
-    try:
-        cur = con.cursor()
-        if not is_postgres():
-            cur.execute("BEGIN TRANSACTION")
-        yield con, cur
-        con.commit()
-    except Exception:
-        con.rollback()
-        raise
-    finally:
-        if is_postgres():
-            release_pg_connection(con)
-        else:
-            con.close()
+    """Context manager para transacciones atómicas con retry para SQLite locks"""
+    import time
+    import sqlite3
+    import random
+    
+    max_retries = 3
+    retry_delay = 0.5  # 500ms initial delay
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        con = None
+        closed = False
+        try:
+            con = conectar()
+            cur = con.cursor()
+            if not is_postgres():
+                cur.execute("BEGIN IMMEDIATE")  # Use IMMEDIATE for faster lock detection
+            yield con, cur
+            con.commit()
+            return  # Success - exit the function
+        except sqlite3.OperationalError as e:
+            last_exception = e
+            if con:
+                try:
+                    con.rollback()
+                except Exception:
+                    pass
+            
+            # Only retry on lock errors
+            if "database is locked" in str(e) and attempt < max_retries - 1:
+                # Add jitter to prevent thundering herd
+                jittered_delay = retry_delay * (0.5 + random.random())
+                logger.warning(f"Database locked (attempt {attempt + 1}/{max_retries}), retrying in {jittered_delay:.2f}s...")
+                time.sleep(jittered_delay)
+                retry_delay *= 2  # Exponential backoff
+                continue
+            else:
+                raise
+        except Exception as e:
+            last_exception = e
+            if con:
+                try:
+                    con.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if con and not closed:
+                try:
+                    if is_postgres():
+                        release_pg_connection(con)
+                    else:
+                        con.close()
+                    closed = True
+                except Exception:
+                    pass
+    
+    # If we exhausted all retries, raise the last exception
+    if last_exception:
+        raise last_exception
 
 
 # Lista blanca de tablas válidas para prevenir SQL injection
@@ -339,7 +383,7 @@ VALID_TABLES = {
     'clientes', 'productos', 'pedidos', 'detalles_pedido', 'usuarios',
     'categorias', 'ofertas', 'audit_log', 'historial_pedidos', 'revoked_tokens',
     'listas_precios', 'precios_lista', 'pedidos_template', 'detalles_template',
-    'oferta_productos', 'tags', 'productos_tags'
+    'oferta_productos', 'tags', 'productos_tags', 'repartidores'
 }
 
 def _table_columns(cur, table: str) -> List[str]:
@@ -586,6 +630,18 @@ def _ensure_schema_sqlite() -> None:
         _ensure_column(cur, "pedidos", "estado", "TEXT DEFAULT 'pendiente'")
         _ensure_column(cur, "pedidos", "repartidor", "TEXT")  # Asignación de repartidor
         _ensure_column(cur, "pedidos", "fecha_entrega", "TEXT")  # Cuando se entregó
+
+        # === REPARTIDORES - Gestión de repartidores para Hoja de Ruta ===
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS repartidores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE,
+            telefono TEXT,
+            activo INTEGER DEFAULT 1,
+            color TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
 
         # Tabla historial de modificaciones
         cur.execute("""
@@ -3726,3 +3782,79 @@ def get_productos_by_tag(tag_id: int) -> List[Dict[str, Any]]:
             (tag_id,)
         )
         return _fetchall_as_dict(cur)
+
+
+# ============================================
+# REPARTIDORES - Gestión de repartidores
+# ============================================
+
+def get_repartidores(solo_activos: bool = True) -> List[Dict[str, Any]]:
+    """Obtiene lista de repartidores."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        if solo_activos:
+            _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores WHERE activo = 1 ORDER BY nombre")
+        else:
+            _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores ORDER BY nombre")
+        return _fetchall_as_dict(cur)
+
+
+def get_repartidor_by_id(repartidor_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un repartidor por ID."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores WHERE id = ?", (repartidor_id,))
+        return _fetchone_as_dict(cur)
+
+
+def get_repartidor_by_nombre(nombre: str) -> Optional[Dict[str, Any]]:
+    """Obtiene un repartidor por nombre."""
+    with get_db_connection() as con:
+        cur = con.cursor()
+        _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores WHERE nombre = ?", (nombre,))
+        return _fetchone_as_dict(cur)
+
+
+def add_repartidor(nombre: str, telefono: str = None, color: str = None) -> Dict[str, Any]:
+    """Agrega un nuevo repartidor."""
+    with get_db_transaction() as (con, cur):
+        _execute(
+            cur,
+            "INSERT INTO repartidores (nombre, telefono, color) VALUES (?, ?, ?)",
+            (nombre.strip(), telefono, color)
+        )
+        repartidor_id = cur.lastrowid
+        return {"id": repartidor_id, "nombre": nombre.strip(), "telefono": telefono, "color": color, "activo": 1}
+
+
+def update_repartidor(repartidor_id: int, nombre: str = None, telefono: str = None, color: str = None, activo: int = None) -> Dict[str, Any]:
+    """Actualiza un repartidor existente."""
+    with get_db_transaction() as (con, cur):
+        updates = []
+        params = []
+        
+        if nombre is not None:
+            updates.append("nombre = ?")
+            params.append(nombre.strip())
+        if telefono is not None:
+            updates.append("telefono = ?")
+            params.append(telefono)
+        if color is not None:
+            updates.append("color = ?")
+            params.append(color)
+        if activo is not None:
+            updates.append("activo = ?")
+            params.append(activo)
+        
+        if not updates:
+            return get_repartidor_by_id(repartidor_id)
+        
+        params.append(repartidor_id)
+        _execute(cur, f"UPDATE repartidores SET {', '.join(updates)} WHERE id = ?", tuple(params))
+        
+    return get_repartidor_by_id(repartidor_id)
+
+
+def delete_repartidor(repartidor_id: int) -> Dict[str, Any]:
+    """Elimina un repartidor (soft delete - marca como inactivo)."""
+    return update_repartidor(repartidor_id, activo=0)

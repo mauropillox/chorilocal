@@ -62,16 +62,22 @@ async def register(
     if rol not in ["admin", "vendedor", "oficina", "usuario"]:
         raise HTTPException(status_code=400, detail="Rol no válido")
 
-    with db.get_db_transaction() as (conn, cursor):
-        cursor.execute("SELECT id FROM usuarios WHERE username = ?", (form_data.username,))
-        if cursor.fetchone():
+    import sqlite3
+    hashed_pwd = hash_password(form_data.password)
+    
+    try:
+        with db.get_db_transaction() as (conn, cursor):
+            cursor.execute(
+                "INSERT INTO usuarios (username, password_hash, rol) VALUES (?, ?, ?)",
+                (form_data.username, hashed_pwd, rol)
+            )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    except Exception as e:
+        if "UNIQUE constraint failed" in str(e) or "duplicate key" in str(e).lower():
             raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
-
-        hashed_pwd = hash_password(form_data.password)
-        cursor.execute(
-            "INSERT INTO usuarios (username, password_hash, rol) VALUES (?, ?, ?)",
-            (form_data.username, hashed_pwd, rol)
-        )
+        raise
+    
     return {"msg": "Usuario registrado exitosamente"}
 
 

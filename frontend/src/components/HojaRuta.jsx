@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
 import HelpBanner from './HelpBanner';
@@ -52,6 +52,11 @@ export default function HojaRuta() {
     // Vista compacta toggle
     const [vistaCompacta, setVistaCompacta] = useState(true);
 
+    // Repartidores management state
+    const [showRepartidoresManager, setShowRepartidoresManager] = useState(false);
+    const [nuevoRepartidorNombre, setNuevoRepartidorNombre] = useState('');
+    const [nuevoRepartidorTelefono, setNuevoRepartidorTelefono] = useState('');
+
     useEffect(() => {
         cargarDatos();
     }, []);
@@ -66,16 +71,15 @@ export default function HojaRuta() {
         setLoading(true);
         setError(null);
         try {
-            const [pedRes, cliRes] = await Promise.all([
+            const [pedRes, cliRes, repRes] = await Promise.all([
                 authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`),
-                authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`)
+                authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
+                authFetchJson(`${import.meta.env.VITE_API_URL}/repartidores`)
             ]);
 
             if (pedRes.res.ok) {
                 const pedidosData = Array.isArray(pedRes.data) ? pedRes.data : [];
                 setPedidos(pedidosData);
-                const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
-                setRepartidores(reps);
             } else {
                 setError('Error al cargar pedidos');
             }
@@ -85,6 +89,16 @@ export default function HojaRuta() {
                 if (cliData.data) setClientes(cliData.data);
                 else setClientes(Array.isArray(cliData) ? cliData : []);
             }
+
+            // Load repartidores from API (with fallback to pedidos-based list)
+            if (repRes.res.ok && Array.isArray(repRes.data)) {
+                setRepartidores(repRes.data);
+            } else {
+                // Fallback: extract from pedidos
+                const pedidosData = Array.isArray(pedRes.data) ? pedRes.data : [];
+                const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
+                setRepartidores(reps.map(r => ({ nombre: r, id: null })));
+            }
         } catch (e) {
             logger.error('Error cargando datos:', e);
             setError('Error de conexión. Por favor, intentá de nuevo.');
@@ -93,8 +107,55 @@ export default function HojaRuta() {
         }
     };
 
+    // Add new repartidor
+    const agregarRepartidor = async () => {
+        if (!nuevoRepartidorNombre.trim()) {
+            toastError('Ingresá un nombre');
+            return;
+        }
+        try {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/repartidores`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    nombre: nuevoRepartidorNombre.trim(),
+                    telefono: nuevoRepartidorTelefono.trim() || null
+                })
+            });
+            if (res.ok) {
+                toastSuccess('Repartidor agregado');
+                setNuevoRepartidorNombre('');
+                setNuevoRepartidorTelefono('');
+                await cargarDatos();
+            } else {
+                const data = await res.json();
+                toastError(data.detail || 'Error al agregar');
+            }
+        } catch (e) {
+            toastError('Error de conexión');
+        }
+    };
+
+    // Delete repartidor
+    const eliminarRepartidor = async (id) => {
+        if (!window.confirm('¿Desactivar este repartidor?')) return;
+        try {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/repartidores/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                toastSuccess('Repartidor desactivado');
+                await cargarDatos();
+            } else {
+                toastError('Error al desactivar');
+            }
+        } catch (e) {
+            toastError('Error de conexión');
+        }
+    };
+
     // Toggle selection for bulk actions
-    const toggleSelection = (id) => {
+    const toggleSelection = useCallback((id) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev);
             if (newSet.has(id)) {
@@ -104,29 +165,32 @@ export default function HojaRuta() {
             }
             return newSet;
         });
-    };
+    }, []);
 
     // Select all visible pedidos
-    const selectAll = () => {
+    const selectAll = useCallback(() => {
         const visibleIds = pedidosFiltrados.map(p => p.id);
         setSelectedIds(new Set(visibleIds));
-    };
+    }, [pedidosFiltrados]);
 
     // Clear selection
-    const clearSelection = () => {
+    const clearSelection = useCallback(() => {
         setSelectedIds(new Set());
-    };
+    }, []);
 
-    // Bulk change estado
-    const bulkChangeEstado = async (nuevoEstado) => {
+    // Bulk change estado - using parallel requests for better performance
+    const bulkChangeEstado = useCallback(async (nuevoEstado) => {
         const ids = Array.from(selectedIds);
         if (ids.length === 0) return;
 
-        let successCount = 0;
-        for (const id of ids) {
-            try {
-                const pedido = pedidos.find(p => p.id === id);
-                const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+        // Create a pedidos map for O(1) lookup
+        const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+        
+        // Execute all requests in parallel
+        const results = await Promise.allSettled(
+            ids.map(id => {
+                const pedido = pedidosMap.get(id);
+                return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -134,11 +198,10 @@ export default function HojaRuta() {
                         repartidor: pedido?.repartidor
                     })
                 });
-                if (res.ok) successCount++;
-            } catch (e) {
-                logger.error('Error en bulk update:', e);
-            }
-        }
+            })
+        );
+        
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
         if (successCount > 0) {
             toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
@@ -147,22 +210,23 @@ export default function HojaRuta() {
         } else {
             toastError('Error al actualizar pedidos');
         }
-    };
+    }, [selectedIds, pedidos, cargarDatos]);
 
-    // Bulk assign repartidor
-    const bulkAsignarRepartidor = async () => {
+    // Bulk assign repartidor - using parallel requests
+    const bulkAsignarRepartidor = useCallback(async () => {
         if (!bulkRepartidor.trim()) {
             toastError('Ingresá un nombre de repartidor');
             return;
         }
 
         const ids = Array.from(selectedIds);
-        let successCount = 0;
-
-        for (const id of ids) {
-            try {
-                const pedido = pedidos.find(p => p.id === id);
-                const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+        const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+        
+        // Execute all requests in parallel
+        const results = await Promise.allSettled(
+            ids.map(id => {
+                const pedido = pedidosMap.get(id);
+                return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -170,11 +234,10 @@ export default function HojaRuta() {
                         repartidor: bulkRepartidor
                     })
                 });
-                if (res.ok) successCount++;
-            } catch (e) {
-                logger.error('Error asignando repartidor:', e);
-            }
-        }
+            })
+        );
+        
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
         if (successCount > 0) {
             toastSuccess(`👤 ${successCount} pedidos asignados a ${bulkRepartidor}`);
@@ -188,9 +251,18 @@ export default function HojaRuta() {
         } else {
             toastError('Error al asignar repartidor');
         }
-    };
+    }, [selectedIds, pedidos, bulkRepartidor, repartidores, cargarDatos]);
 
-    const getCliente = (clienteId) => clientes.find(c => c.id === clienteId) || {};
+    // Map-based lookup for O(1) client access instead of O(n) array.find
+    const clientesMap = useMemo(() => 
+        new Map(clientes.map(c => [c.id, c])), 
+        [clientes]
+    );
+    
+    const getCliente = useCallback((clienteId) => 
+        clientesMap.get(clienteId) || {}, 
+        [clientesMap]
+    );
 
     const zonasUnicas = useMemo(() => {
         const zonas = [...new Set(clientes.map(c => c.zona).filter(Boolean))];
@@ -446,9 +518,18 @@ export default function HojaRuta() {
                     <option value="">👤 Todos</option>
                     <option value="__sin_asignar__">❌ Sin repartidor</option>
                     {repartidores.map(rep => (
-                        <option key={rep} value={rep}>{rep}</option>
+                        <option key={rep.id || rep.nombre} value={rep.nombre}>{rep.nombre}</option>
                     ))}
                 </select>
+
+                {/* Gestionar Repartidores button */}
+                <button
+                    onClick={() => setShowRepartidoresManager(!showRepartidoresManager)}
+                    className="px-3 py-2 text-sm rounded flex items-center gap-1"
+                    style={{ background: showRepartidoresManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showRepartidoresManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                >
+                    ⚙️ Repartidores
+                </button>
 
                 {(filtroEstado || filtroZona || filtroRepartidor) && (
                     <button
@@ -518,6 +599,88 @@ export default function HojaRuta() {
                 </div>
             </div>
 
+            {/* Repartidores Management Panel */}
+            {showRepartidoresManager && (
+                <div 
+                    className="mb-4 p-4 rounded-lg"
+                    style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            👥 Gestionar Repartidores
+                        </h3>
+                        <button 
+                            onClick={() => setShowRepartidoresManager(false)}
+                            className="text-sm px-2 py-1 rounded"
+                            style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    
+                    {/* Add new repartidor form */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        <input
+                            type="text"
+                            value={nuevoRepartidorNombre}
+                            onChange={e => setNuevoRepartidorNombre(e.target.value)}
+                            placeholder="Nombre del repartidor"
+                            className="px-3 py-2 rounded border text-sm flex-1 min-w-[150px]"
+                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                            onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
+                        />
+                        <input
+                            type="text"
+                            value={nuevoRepartidorTelefono}
+                            onChange={e => setNuevoRepartidorTelefono(e.target.value)}
+                            placeholder="Teléfono (opcional)"
+                            className="px-3 py-2 rounded border text-sm w-36"
+                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                            onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
+                        />
+                        <button
+                            onClick={agregarRepartidor}
+                            className="px-4 py-2 rounded text-sm font-semibold"
+                            style={{ background: '#10b981', color: 'white' }}
+                        >
+                            + Agregar
+                        </button>
+                    </div>
+
+                    {/* List of repartidores */}
+                    <div className="flex flex-wrap gap-2">
+                        {repartidores.length === 0 ? (
+                            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                                No hay repartidores registrados. Agregá uno arriba.
+                            </span>
+                        ) : (
+                            repartidores.map(rep => (
+                                <div 
+                                    key={rep.id || rep.nombre}
+                                    className="flex items-center gap-2 px-3 py-2 rounded text-sm"
+                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                >
+                                    <span className="font-medium">{rep.nombre}</span>
+                                    {rep.telefono && (
+                                        <span style={{ color: 'var(--color-text-muted)' }}>📞 {rep.telefono}</span>
+                                    )}
+                                    {rep.id && (
+                                        <button
+                                            onClick={() => eliminarRepartidor(rep.id)}
+                                            className="ml-2 px-2 py-0.5 rounded text-xs"
+                                            style={{ background: 'var(--color-danger)', color: 'white' }}
+                                            title="Desactivar repartidor"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Bulk Actions Bar - appears when items are selected */}
             {selectedIds.size > 0 && (
                 <div
@@ -562,7 +725,7 @@ export default function HojaRuta() {
                                 list="bulk-reps-list"
                             />
                             <datalist id="bulk-reps-list">
-                                {repartidores.map(r => <option key={r} value={r} />)}
+                                {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
                             </datalist>
                             <button
                                 onClick={bulkAsignarRepartidor}
@@ -685,7 +848,7 @@ export default function HojaRuta() {
                                                                 list="reps-list"
                                                             />
                                                             <datalist id="reps-list">
-                                                                {repartidores.map(r => <option key={r} value={r} />)}
+                                                                {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
                                                             </datalist>
                                                             <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
                                                             <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
@@ -781,7 +944,7 @@ export default function HojaRuta() {
                                                             list="reps-list"
                                                         />
                                                         <datalist id="reps-list">
-                                                            {repartidores.map(r => <option key={r} value={r} />)}
+                                                            {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
                                                         </datalist>
                                                         <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-sm" style={{ background: '#10b981' }}>✓</button>
                                                         <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>

@@ -41,7 +41,7 @@ async def upload_file(
     base64 data URL that can be stored directly in the database.
     """
     
-    # Validate file type
+    # Validate file type by extension
     if not file.filename:
         raise HTTPException(status_code=400, detail="No se proporcionó un nombre de archivo")
     
@@ -49,6 +49,14 @@ async def upload_file(
         raise HTTPException(
             status_code=400, 
             detail=f"Tipo de archivo no permitido. Use: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Validate MIME type (defense in depth - don't trust extension alone)
+    allowed_mime_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    if file.content_type and file.content_type not in allowed_mime_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de contenido no permitido: {file.content_type}"
         )
     
     # Read file content to check size
