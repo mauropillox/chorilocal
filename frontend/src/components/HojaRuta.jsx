@@ -39,7 +39,7 @@ export default function HojaRuta() {
     const [nuevoRepartidor, setNuevoRepartidor] = useState('');
     const [asignandoRepartidor, setAsignandoRepartidor] = useState(null);
     const [generandoPDF, setGenerandoPDF] = useState(false);
-    
+
     // Bulk selection for batch actions
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [bulkAssigning, setBulkAssigning] = useState(false);
@@ -121,7 +121,7 @@ export default function HojaRuta() {
     const bulkChangeEstado = async (nuevoEstado) => {
         const ids = Array.from(selectedIds);
         if (ids.length === 0) return;
-        
+
         let successCount = 0;
         for (const id of ids) {
             try {
@@ -139,7 +139,7 @@ export default function HojaRuta() {
                 logger.error('Error en bulk update:', e);
             }
         }
-        
+
         if (successCount > 0) {
             toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
             await cargarDatos();
@@ -155,10 +155,10 @@ export default function HojaRuta() {
             toastError('Ingresá un nombre de repartidor');
             return;
         }
-        
+
         const ids = Array.from(selectedIds);
         let successCount = 0;
-        
+
         for (const id of ids) {
             try {
                 const pedido = pedidos.find(p => p.id === id);
@@ -175,7 +175,7 @@ export default function HojaRuta() {
                 logger.error('Error asignando repartidor:', e);
             }
         }
-        
+
         if (successCount > 0) {
             toastSuccess(`👤 ${successCount} pedidos asignados a ${bulkRepartidor}`);
             await cargarDatos();
@@ -520,9 +520,9 @@ export default function HojaRuta() {
 
             {/* Bulk Actions Bar - appears when items are selected */}
             {selectedIds.size > 0 && (
-                <div 
+                <div
                     className="mb-4 p-3 rounded-lg flex flex-wrap items-center gap-3"
-                    style={{ 
+                    style={{
                         background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
                         color: 'white',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
@@ -531,9 +531,9 @@ export default function HojaRuta() {
                     <span className="font-semibold">
                         ✓ {selectedIds.size} pedido{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
                     </span>
-                    
+
                     <div className="h-6 w-px" style={{ background: 'rgba(255,255,255,0.3)' }}></div>
-                    
+
                     <button
                         onClick={() => bulkChangeEstado('preparando')}
                         className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
@@ -541,7 +541,7 @@ export default function HojaRuta() {
                     >
                         🔧 Marcar Preparando
                     </button>
-                    
+
                     <button
                         onClick={() => bulkChangeEstado('entregado')}
                         className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
@@ -549,7 +549,7 @@ export default function HojaRuta() {
                     >
                         ✅ Marcar Entregado
                     </button>
-                    
+
                     {bulkAssigning ? (
                         <div className="flex items-center gap-2">
                             <input
@@ -588,7 +588,7 @@ export default function HojaRuta() {
                             👤 Asignar Repartidor
                         </button>
                     )}
-                    
+
                     <button
                         onClick={clearSelection}
                         className="ml-auto px-3 py-1.5 rounded text-sm transition-all hover:bg-white/20"
@@ -631,10 +631,10 @@ export default function HojaRuta() {
                                         const isSelected = selectedIds.has(p.id);
 
                                         return (
-                                            <div 
-                                                key={p.id} 
-                                                className="px-3 py-2 flex items-center gap-3 transition-all" 
-                                                style={{ 
+                                            <div
+                                                key={p.id}
+                                                className="px-3 py-2 flex items-center gap-3 transition-all"
+                                                style={{
                                                     background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
                                                     borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
                                                 }}
@@ -647,7 +647,7 @@ export default function HojaRuta() {
                                                     className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                                                     aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
                                                 />
-                                                
+
                                                 {/* Cliente + Estado */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
@@ -723,11 +723,11 @@ export default function HojaRuta() {
                                     const isSelected = selectedIds.has(p.id);
 
                                     return (
-                                        <div 
-                                            key={p.id} 
-                                            className="p-3 border-t transition-all" 
-                                            style={{ 
-                                                borderColor: 'var(--color-border)', 
+                                        <div
+                                            key={p.id}
+                                            className="p-3 border-t transition-all"
+                                            style={{
+                                                borderColor: 'var(--color-border)',
                                                 background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
                                                 borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
                                             }}

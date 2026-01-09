@@ -147,3 +147,25 @@ async def logout(request: Request, current_user: dict = Depends(get_current_user
             # Continue with logout even if revocation fails
     
     return {"msg": "Sesión cerrada exitosamente"}
+
+
+@router.post("/refresh")
+@limiter.limit(RATE_LIMIT_AUTH)
+async def refresh_token(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Refresh access token - issues a new token if the current one is still valid.
+    This allows clients to extend their session without re-authenticating.
+    """
+    # Issue a new token with fresh expiration
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_token = create_access_token(
+        data={"sub": current_user["username"], "rol": current_user["rol"]}, 
+        expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": new_token, 
+        "token_type": "bearer", 
+        "rol": current_user["rol"], 
+        "username": current_user["username"]
+    }
