@@ -31,8 +31,8 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
             response.headers["X-Request-ID"] = request_id
             response.headers["X-Process-Time"] = f"{process_time_ms:.2f}ms"
             
-            # Log slow requests (> 1 second)
-            if process_time_ms > 1000:
+            # Log slow requests (> 1 second), except login (bcrypt is intentionally slow)
+            if process_time_ms > 1000 and request.url.path != "/api/login":
                 logger.warning(
                     f"SLOW REQUEST [{request_id}] {request.method} {request.url.path} "
                     f"took {process_time_ms:.2f}ms"
