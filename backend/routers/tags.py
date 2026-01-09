@@ -2,10 +2,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Optional
 from pydantic import BaseModel
+import sqlite3
+import logging
 
 import db
 from deps import get_current_user, get_admin_user, limiter, RATE_LIMIT_READ, RATE_LIMIT_WRITE
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Tags"])
 
 
@@ -73,8 +76,11 @@ async def create_tag(request: Request, tag: TagCreate, current_user: dict = Depe
         try:
             cursor.execute("INSERT INTO tags (nombre) VALUES (?)", (tag.nombre,))
             return Tag(id=cursor.lastrowid, nombre=tag.nombre)
-        except Exception:
+        except sqlite3.IntegrityError:
             raise HTTPException(status_code=400, detail="El tag ya existe")
+        except Exception as e:
+            logger.warning(f"Error creating tag '{tag.nombre}': {e}")
+            raise HTTPException(status_code=400, detail="Error al crear el tag")
 
 
 @router.delete("/tags/{tag_id}", status_code=204)
@@ -159,8 +165,11 @@ async def add_tag_to_producto(request: Request, producto_id: int, tag_id: int, c
                 "INSERT INTO productos_tags (producto_id, tag_id) VALUES (?, ?)",
                 (producto_id, tag_id)
             )
-        except Exception:
+        except sqlite3.IntegrityError:
             raise HTTPException(status_code=400, detail="El producto ya tiene este tag")
+        except Exception as e:
+            logger.warning(f"Error adding tag {tag_id} to product {producto_id}: {e}")
+            raise HTTPException(status_code=400, detail="Error al agregar el tag")
         
         return {"message": "Tag agregado"}
 

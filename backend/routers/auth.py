@@ -1,18 +1,21 @@
 """Authentication and User Management Router"""
 from fastapi import APIRouter, Depends, HTTPException, Form, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
+import logging
+from jose import jwt
 
 import db
 import models
 from deps import (
     hash_password, create_access_token, get_current_user, 
     get_admin_user, verify_password, validate_password_strength,
-    ACCESS_TOKEN_EXPIRE_MINUTES, limiter,
+    ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM, limiter,
     RATE_LIMIT_AUTH, RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -32,8 +35,9 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     # Record login timestamp
     try:
         db.record_login(form_data.username)
-    except Exception:
-        pass  # Don't fail login if recording fails
+    except Exception as e:
+        logger.warning(f"Failed to record login for {form_data.username}: {e}")
+        # Don't fail login if recording fails
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -117,10 +121,6 @@ async def toggle_active_usuario(user_id: int, current_user: dict = Depends(get_a
 @router.post("/logout")
 async def logout(request: Request, current_user: dict = Depends(get_current_user)):
     """Logout endpoint - revokes the current token"""
-    from jose import jwt
-    from deps import SECRET_KEY, ALGORITHM
-    from datetime import datetime, timezone
-    
     # Get the token from the request header
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
@@ -133,7 +133,10 @@ async def logout(request: Request, current_user: dict = Depends(get_current_user
                 # Convert exp (timestamp) to datetime
                 expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
                 db.revoke_token(jti, expires_at, current_user["username"])
-        except Exception:
-            pass  # Token already invalid or can't be parsed
+        except jwt.ExpiredSignatureError:
+            pass  # Token already expired - no need to revoke
+        except Exception as e:
+            logger.warning(f"Failed to revoke token for {current_user['username']}: {e}")
+            # Continue with logout even if revocation fails
     
     return {"msg": "Sesión cerrada exitosamente"}

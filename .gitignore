@@ -185,6 +185,34 @@ playwright-report/
 *.test.pdf
 MUESTRA_PDF_GENERADO.pdf
 
+# Test scripts and results (keep tests locally but not in repo)
+scripts/test/
+scripts/smoke_test.sh
+scripts/concurrency_test.sh
+frontend/tests/
+frontend/src/test/
+backend/tests/
+backend/test_*.py
+backend/pytest.ini
+quick-b2b-test.sh
+test-complete-workflow.sh
+test-p1-security.sh
+testlocal.sh
+
+# Test documentation and reports
+QUICK_TEST_REFERENCE.txt
+*TEST_REPORT*.md
+*TEST_RESULTS*.md
+*TEST_CHECKLIST*.md
+*TEST_INSTRUCTIONS*
+*TEST_SCRIPT*.md
+*TESTING_README*.md
+CLI_TEST_RESULTS.md
+GUI_TEST_GUIDE.md
+COMPREHENSIVE_TEST_RESULTS.md
+ROLE_BASED_NAVIGATION_TEST_REPORT.md
+docs/MASTER_TEST_PLAN.md
+docs/ARCHITECTURAL_REVIEW*.md
 
 # Local verification scripts
 scripts/test/

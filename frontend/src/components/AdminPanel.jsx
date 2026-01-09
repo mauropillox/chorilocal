@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchConToken } from "../auth";
 import HelpBanner from './HelpBanner';
+import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../utils/logger';
 
 export default function AdminPanel() {
@@ -12,6 +13,7 @@ export default function AdminPanel() {
   const [errorForm, setErrorForm] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState({});
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, username: null });
 
   useEffect(() => {
     cargarUsuarios();
@@ -45,8 +47,12 @@ export default function AdminPanel() {
     marcarCargando(username, true);
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/activar`, { method: "PUT" });
     marcarCargando(username, false);
-    if (res.ok) cargarUsuarios();
-    else alert("Error al activar usuario");
+    if (res.ok) {
+      setMensaje(`✅ Usuario ${username} activado`);
+      cargarUsuarios();
+    } else {
+      setMensaje(`❌ Error al activar usuario ${username}`);
+    }
   };
 
   const suspenderUsuario = async (username) => {
@@ -54,18 +60,35 @@ export default function AdminPanel() {
     marcarCargando(username, true);
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}/suspender`, { method: "PUT" });
     marcarCargando(username, false);
-    if (res.ok) cargarUsuarios();
-    else alert("Error al suspender usuario");
+    if (res.ok) {
+      setMensaje(`✅ Usuario ${username} suspendido`);
+      cargarUsuarios();
+    } else {
+      setMensaje(`❌ Error al suspender usuario ${username}`);
+    }
   };
 
-  const eliminarUsuario = async (username) => {
-    if (!confirm(`¿Seguro que querés eliminar al usuario ${username}?`)) return;
+  // Request delete - shows confirmation dialog
+  const solicitarEliminar = (username) => {
+    setConfirmDelete({ open: true, username });
+  };
+
+  // Actually delete after confirmation
+  const eliminarUsuario = async () => {
+    const username = confirmDelete.username;
+    if (!username) return;
+    setConfirmDelete({ open: false, username: null });
+    
     if (loadingUsuarios[username]) return;
     marcarCargando(username, true);
     const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios/${username}`, { method: "DELETE" });
     marcarCargando(username, false);
-    if (res.ok) cargarUsuarios();
-    else alert("Error al eliminar usuario");
+    if (res.ok) {
+      setMensaje(`✅ Usuario ${username} eliminado`);
+      cargarUsuarios();
+    } else {
+      setMensaje(`❌ Error al eliminar usuario ${username}`);
+    }
   };
 
   const actualizarRol = async (username) => {
@@ -97,7 +120,7 @@ export default function AdminPanel() {
     if (loadingUsuarios[username]) return;
     const nueva = resetPasswords[username];
     if (!nueva || nueva.length < 4) {
-      alert("Ingresá una contraseña válida.");
+      setMensaje("⚠️ Ingresá una contraseña válida (mínimo 4 caracteres).");
       return;
     }
 
@@ -115,7 +138,7 @@ export default function AdminPanel() {
       setMensaje(`✅ Contraseña reseteada para ${username}`);
       setResetPasswords((prev) => ({ ...prev, [username]: "" }));
     } else {
-      alert("Error al resetear contraseña");
+      setMensaje(`❌ Error al resetear contraseña para ${username}`);
     }
   };
 
@@ -304,7 +327,7 @@ export default function AdminPanel() {
                 )}
                 <button
                   disabled={loadingUsuarios[u.username]}
-                  onClick={() => eliminarUsuario(u.username)}
+                  onClick={() => solicitarEliminar(u.username)}
                   className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                 >
                   Eliminar
@@ -314,6 +337,15 @@ export default function AdminPanel() {
           ))}
         </tbody>
       </table>
+
+      {/* Confirmation dialog for delete */}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="¿Eliminar usuario?"
+        message={`¿Seguro que querés eliminar al usuario ${confirmDelete.username}?`}
+        onConfirm={eliminarUsuario}
+        onCancel={() => setConfirmDelete({ open: false, username: null })}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 // frontend/src/components/Register.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logger } from '../utils/logger';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function Register() {
       setOk(true);
       setTimeout(() => navigate('/'), 2500);
     } catch (err) {
-      console.error(err);
+      logger.error('Registration error:', err);
       setError('Error de conexión. Verificá tu internet.');
       setLoading(false);
     }

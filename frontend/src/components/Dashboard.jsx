@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import authFetch from '../authFetch';
 import { DashboardSkeleton } from './Skeleton';
 import HelpBanner from './HelpBanner';
+import { logger } from '../utils/logger';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function Dashboard() {
         setProductosEnOferta(ids);
       }
     } catch (e) {
-      console.error('Error cargando ofertas:', e);
+      logger.error('Error cargando ofertas:', e);
     }
   };
 
@@ -100,7 +101,7 @@ export default function Dashboard() {
       setPedidosAntiguos(antiguosData);
       setLoading(false);
     } catch (error) {
-      console.error('Error cargando dashboard:', error);
+      logger.error('Error cargando dashboard:', error);
       setLoading(false);
     }
   };

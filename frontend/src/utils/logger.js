@@ -2,7 +2,7 @@
  * Production-safe logger utility.
  * 
  * - In development: Logs to console
- * - In production: Silently ignores (or can send to Sentry)
+ * - In production: Sends errors to Sentry (if configured)
  * 
  * Usage:
  *   import { logger } from './utils/logger';
@@ -13,25 +13,40 @@
 
 const isDev = import.meta.env.MODE === 'development';
 
-// Optional: Import Sentry for production error tracking
-// import * as Sentry from '@sentry/react';
+// Lazy-load Sentry to avoid import errors if not installed
+let Sentry = null;
+const getSentry = async () => {
+    if (Sentry === null && !isDev && import.meta.env.VITE_SENTRY_DSN) {
+        try {
+            Sentry = await import('@sentry/react');
+        } catch {
+            Sentry = undefined; // Mark as unavailable
+        }
+    }
+    return Sentry;
+};
 
 /**
  * Centralized logger that respects environment
  */
 export const logger = {
     /**
-     * Log error messages - only in development
-     * In production, consider sending to Sentry
+     * Log error messages
+     * - Development: logs to console
+     * - Production: sends to Sentry
      */
     error: (message, ...args) => {
         if (isDev) {
             console.error(`[ERROR] ${message}`, ...args);
+        } else {
+            // Production: send to Sentry
+            getSentry().then(s => {
+                if (s && s.captureException) {
+                    const error = args[0] instanceof Error ? args[0] : new Error(String(message));
+                    s.captureException(error, { extra: { message, args } });
+                }
+            });
         }
-        // Production: Uncomment when Sentry is configured
-        // else if (typeof Sentry !== 'undefined') {
-        //   Sentry.captureException(args[0] instanceof Error ? args[0] : new Error(message));
-        // }
     },
 
     /**

@@ -14,10 +14,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse, FileResponse
 from typing import List, Dict, Any
 import os
+import logging
 
 import db
 from deps import get_admin_user, limiter, RATE_LIMIT_ADMIN, RATE_LIMIT_WRITE, RATE_LIMIT_READ
 from exceptions import safe_error_handler
+
+logger = logging.getLogger(__name__)
 from backup_scheduler import (
     create_backup_now, 
     list_backups, 
@@ -207,7 +210,8 @@ async def get_system_info(
             try:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[table] = cursor.fetchone()[0]
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to count rows in {table}: {e}")
                 stats[table] = "error"
         
         # Get SQLite info

@@ -1,4 +1,11 @@
 import { Component } from 'react';
+import { logger } from '../utils/logger';
+
+// Lazy-load Sentry for error boundary integration
+let SentryModule = null;
+if (import.meta.env.VITE_SENTRY_DSN) {
+  import('@sentry/react').then(m => { SentryModule = m; }).catch(() => {});
+}
 
 /**
  * ErrorBoundary - Captura errores de renderizado en React
@@ -16,8 +23,12 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ error, errorInfo });
-    // Log error to console (could send to monitoring service)
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    // Log error using production-safe logger
+    logger.error('ErrorBoundary caught:', error);
+    // Send to Sentry if available
+    if (SentryModule && SentryModule.captureException) {
+      SentryModule.captureException(error, { extra: { componentStack: errorInfo?.componentStack } });
+    }
   }
 
   handleReload = () => {

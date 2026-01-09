@@ -97,11 +97,11 @@ export default function Ofertas() {
         cargarDatos();
       } else {
         const errorData = await res.json().catch(() => ({}));
-        console.error('Error response:', errorData);
+        logger.error('Error response:', errorData);
         toast('Error al guardar oferta: ' + (errorData.detail || 'Error desconocido'), 'error');
       }
     } catch (e) {
-      console.error('Error:', e);
+      logger.error('Error saving oferta:', e);
       toast('Error al guardar oferta', 'error');
     }
   };
@@ -138,7 +138,7 @@ export default function Ofertas() {
         toast('Error al eliminar oferta', 'error');
       }
     } catch (e) {
-      console.error('Error:', e);
+      logger.error('Error deleting oferta:', e);
       toast('Error al eliminar oferta', 'error');
     } finally {
       setConfirmOpen(false);
@@ -164,7 +164,7 @@ export default function Ofertas() {
         toast('Error al cambiar estado', 'error');
       }
     } catch (e) {
-      console.error('Error:', e);
+      logger.error('Error toggling oferta:', e);
       toast('Error al cambiar estado', 'error');
     }
   };
