@@ -117,8 +117,8 @@ def setup_logging():
         level=getattr(logging, LOG_LEVEL),
     )
     
-    # Initialize Sentry if configured
-    if SENTRY_AVAILABLE and SENTRY_DSN and ENVIRONMENT == "production":
+    # Initialize Sentry if configured (only with valid DSN)
+    if SENTRY_AVAILABLE and SENTRY_DSN and SENTRY_DSN.strip() and ENVIRONMENT == "production":
         sentry_sdk.init(
             dsn=SENTRY_DSN,
             environment=ENVIRONMENT,
