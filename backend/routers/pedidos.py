@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import io
 import csv
 
@@ -389,7 +389,7 @@ async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin
 
 
 class EliminarPedidosRequest(BaseModel):
-    pedido_ids: List[int]
+    pedido_ids: List[int] = Field(..., min_length=1, max_length=100)
 
 
 @router.post("/pedidos/bulk-delete", status_code=200)
@@ -400,38 +400,59 @@ async def eliminar_pedidos_bulk(
     current_user: dict = Depends(get_admin_user)
 ):
     """Eliminar múltiples pedidos en una sola operación"""
-    if not data.pedido_ids:
-        raise HTTPException(status_code=400, detail="No se proporcionaron IDs de pedidos")
-    
-    if len(data.pedido_ids) > 100:
-        raise HTTPException(status_code=400, detail="Máximo 100 pedidos por operación")
-    
-    deleted_count = 0
-    errors = []
-    
+    # Deduplicar manteniendo el orden
+    pedido_ids = list(dict.fromkeys(data.pedido_ids))
+
+    # Validación adicional
+    if any((not isinstance(x, int)) or x <= 0 for x in pedido_ids):
+        raise HTTPException(status_code=400, detail="IDs de pedidos inválidos")
+
+    placeholders = ",".join(["?"] * len(pedido_ids))
+    missing: List[int] = []
+
     with db.get_db_transaction() as (conn, cursor):
-        for pedido_id in data.pedido_ids:
-            try:
-                # Verificar si existe
-                cursor.execute("SELECT id FROM pedidos WHERE id = ?", (pedido_id,))
-                if not cursor.fetchone():
-                    errors.append(f"Pedido {pedido_id} no encontrado")
-                    continue
-                
-                # Eliminar detalles
-                cursor.execute("DELETE FROM detalles_pedido WHERE pedido_id = ?", (pedido_id,))
-                
-                # Eliminar pedido
-                cursor.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
-                deleted_count += 1
-                
-            except Exception as e:
-                errors.append(f"Error al eliminar pedido {pedido_id}: {str(e)}")
-    
+        cursor.execute(
+            f"SELECT id FROM pedidos WHERE id IN ({placeholders})",
+            tuple(pedido_ids)
+        )
+        found_ids = {row[0] for row in cursor.fetchall()}
+        missing = [pid for pid in pedido_ids if pid not in found_ids]
+        if missing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pedidos no encontrados: {', '.join(map(str, missing))}"
+            )
+
+        # Eliminar en bloque (detalles primero)
+        cursor.execute(
+            f"DELETE FROM detalles_pedido WHERE pedido_id IN ({placeholders})",
+            tuple(pedido_ids)
+        )
+        cursor.execute(
+            f"DELETE FROM pedidos WHERE id IN ({placeholders})",
+            tuple(pedido_ids)
+        )
+
+    # Audit log fuera de la transacción principal (no bloquear deletes si audit falla)
+    try:
+        for pid in pedido_ids:
+            db.audit_log(
+                usuario=current_user.get("username", "unknown"),
+                accion="DELETE",
+                tabla="pedidos",
+                registro_id=pid,
+                datos_antes=None,
+                datos_despues=None,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent")
+            )
+    except Exception:
+        pass
+
     return {
-        "deleted": deleted_count,
-        "errors": errors,
-        "message": f"Se eliminaron {deleted_count} de {len(data.pedido_ids)} pedidos"
+        "deleted": len(pedido_ids),
+        "errors": [],
+        "message": f"Se eliminaron {len(pedido_ids)} pedidos"
     }
 
 

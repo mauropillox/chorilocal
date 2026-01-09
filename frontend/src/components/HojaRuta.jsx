@@ -44,6 +44,7 @@ export default function HojaRuta() {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [bulkAssigning, setBulkAssigning] = useState(false);
     const [bulkRepartidor, setBulkRepartidor] = useState('');
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     // Paginación - default 25 para ver más
     const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +57,12 @@ export default function HojaRuta() {
     const [showRepartidoresManager, setShowRepartidoresManager] = useState(false);
     const [nuevoRepartidorNombre, setNuevoRepartidorNombre] = useState('');
     const [nuevoRepartidorTelefono, setNuevoRepartidorTelefono] = useState('');
+
+    // Zonas management state
+    const [showZonasManager, setShowZonasManager] = useState(false);
+    const [editingClienteZona, setEditingClienteZona] = useState(null);
+    const [nuevaZonaCliente, setNuevaZonaCliente] = useState('');
+    const [zonasPredefinidasUY] = useState(['Montevideo Centro', 'Montevideo Este', 'Montevideo Oeste', 'Ciudad de la Costa', 'Canelones', 'San José', 'Colonia', 'Maldonado', 'Punta del Este', 'Otras zonas']);
 
     useEffect(() => {
         cargarDatos();
@@ -132,257 +139,144 @@ export default function HojaRuta() {
                 toastError(data.detail || 'Error al agregar');
             }
         } catch (e) {
+            logger.error('Error agregando repartidor:', e);
             toastError('Error de conexión');
         }
     };
 
-    // Delete repartidor
-    const eliminarRepartidor = async (id) => {
-        if (!window.confirm('¿Desactivar este repartidor?')) return;
-        try {
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/repartidores/${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                toastSuccess('Repartidor desactivado');
-                await cargarDatos();
-            } else {
-                toastError('Error al desactivar');
-            }
-        } catch (e) {
-            toastError('Error de conexión');
-        }
-    };
-
-    // Map-based lookup for O(1) client access instead of O(n) array.find
-    // IMPORTANT: Must be defined before callbacks that use pedidosFiltrados
-    const clientesMap = useMemo(() =>
-        new Map(clientes.map(c => [c.id, c])),
-        [clientes]
-    );
-
-    const getCliente = useCallback((clienteId) =>
-        clientesMap.get(clienteId) || {},
-        [clientesMap]
-    );
-
-    const zonasUnicas = useMemo(() => {
-        const zonas = [...new Set(clientes.map(c => c.zona).filter(Boolean))];
-        return zonas.sort();
-    }, [clientes]);
-
-    // Filtrar pedidos (excluir entregados y cancelados por defecto)
-    // IMPORTANT: Must be defined before selectAll callback
-    const pedidosFiltrados = useMemo(() => {
-        return pedidos.filter(p => {
-            const estado = p.estado || 'pendiente';
-            // Excluir entregados y cancelados por defecto
-            if (!filtroEstado && (estado === 'entregado' || estado === 'cancelado')) return false;
-
-            if (filtroEstado && estado !== filtroEstado) return false;
-            if (filtroRepartidor === '__sin_asignar__') {
-                if (p.repartidor) return false;
-            } else if (filtroRepartidor && p.repartidor !== filtroRepartidor) {
-                return false;
-            }
-            if (filtroZona) {
-                const cliente = getCliente(p.cliente_id);
-                if (cliente.zona !== filtroZona) return false;
-            }
-            return true;
-        });
-    }, [pedidos, filtroEstado, filtroRepartidor, filtroZona, getCliente]);
-
-    // Toggle selection for bulk actions
-    const toggleSelection = useCallback((id) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
-            return newSet;
-        });
-    }, []);
-
-    // Select all visible pedidos
-    const selectAll = useCallback(() => {
-        const visibleIds = pedidosFiltrados.map(p => p.id);
-        setSelectedIds(new Set(visibleIds));
-    }, [pedidosFiltrados]);
-
-    // Clear selection
-    const clearSelection = useCallback(() => {
-        setSelectedIds(new Set());
-    }, []);
-
-    // Bulk change estado - using parallel requests for better performance
-    const bulkChangeEstado = useCallback(async (nuevoEstado) => {
-        const ids = Array.from(selectedIds);
-        if (ids.length === 0) return;
-
-        // Create a pedidos map for O(1) lookup
-        const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
-
-        // Execute all requests in parallel
-        const results = await Promise.allSettled(
-            ids.map(id => {
-                const pedido = pedidosMap.get(id);
-                return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        estado: nuevoEstado,
-                        repartidor: pedido?.repartidor
-                    })
-                });
-            })
-        );
-
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
-
-        if (successCount > 0) {
-            toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
-            await cargarDatos();
-            setSelectedIds(new Set());
-        } else {
-            toastError('Error al actualizar pedidos');
-        }
-    }, [selectedIds, pedidos, cargarDatos]);
-
-    // Bulk assign repartidor - using parallel requests
-    const bulkAsignarRepartidor = useCallback(async () => {
-        if (!bulkRepartidor.trim()) {
-            toastError('Ingresá un nombre de repartidor');
-            return;
-        }
-
-        const ids = Array.from(selectedIds);
-        const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
-
-        // Execute all requests in parallel
-        const results = await Promise.allSettled(
-            ids.map(id => {
-                const pedido = pedidosMap.get(id);
-                return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        estado: pedido?.estado || 'pendiente',
-                        repartidor: bulkRepartidor
-                    })
-                });
-            })
-        );
-
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
-
-        if (successCount > 0) {
-            toastSuccess(`👤 ${successCount} pedidos asignados a ${bulkRepartidor}`);
-            await cargarDatos();
-            setSelectedIds(new Set());
-            setBulkAssigning(false);
-            setBulkRepartidor('');
-            if (!repartidores.some(r => r.nombre === bulkRepartidor)) {
-                // Reload to get updated list from server
-                await cargarDatos();
-            }
-        } else {
-            toastError('Error al asignar repartidor');
-        }
-    }, [selectedIds, pedidos, bulkRepartidor, repartidores, cargarDatos]);
-
-    // Bulk delete pedidos
-    const bulkEliminarPedidos = useCallback(async () => {
-        const ids = Array.from(selectedIds);
-        if (ids.length === 0) {
-            toastError('No hay pedidos seleccionados');
-            return;
-        }
-
-        // Confirmar eliminación
-        const confirmMsg = `¿Estás seguro de eliminar ${ids.length} pedido${ids.length > 1 ? 's' : ''}?`;
-        if (!window.confirm(confirmMsg)) {
+    // Asignar/cambiar zona de un cliente
+    const asignarZonaCliente = async (clienteId, zona) => {
+        if (!zona || !zona.trim()) {
+            toastError('Seleccioná una zona');
             return;
         }
 
         try {
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/bulk-delete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pedido_ids: ids })
-            });
+            const cliente = clientes.find(c => c.id === clienteId);
+            if (!cliente) return;
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.deleted > 0) {
-                    toastSuccess(`🗑️ ${data.deleted} pedido${data.deleted > 1 ? 's' : ''} eliminado${data.deleted > 1 ? 's' : ''}`);
-                    await cargarDatos();
-                    setSelectedIds(new Set());
-                }
-                if (data.errors && data.errors.length > 0) {
-                    toastError(`Errores: ${data.errors.join(', ')}`);
-                }
-            } else {
-                toastError('Error al eliminar pedidos');
-            }
-        } catch (e) {
-            logger.error('Error al eliminar pedidos:', e);
-            toastError('Error de conexión');
-        }
-    }, [selectedIds, cargarDatos]);
-
-    // Paginación
-    const totalPages = Math.ceil(pedidosFiltrados.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const pedidosPaginados = pedidosFiltrados.slice(startIndex, startIndex + itemsPerPage);
-
-    // Agrupar pedidos paginados por zona
-    const pedidosPorZona = useMemo(() => {
-        const grupos = {};
-        pedidosPaginados.forEach(p => {
-            const cliente = getCliente(p.cliente_id);
-            const zona = cliente.zona || 'Sin Zona';
-            if (!grupos[zona]) grupos[zona] = [];
-            grupos[zona].push({ ...p, cliente });
-        });
-        return Object.entries(grupos).sort((a, b) => a[0].localeCompare(b[0]));
-    }, [pedidosPaginados, clientes]);
-
-    const asignarRepartidor = async (pedidoId, repartidor) => {
-        if (!repartidor.trim()) {
-            toastError('Ingresá un nombre de repartidor');
-            return;
-        }
-        try {
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/estado`, {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/${clienteId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    estado: pedidos.find(p => p.id === pedidoId)?.estado || 'pendiente',
-                    repartidor
+                    nombre: cliente.nombre,
+                    telefono: cliente.telefono,
+                    direccion: cliente.direccion,
+                    zona: zona.trim()
                 })
             });
 
             if (res.ok) {
-                toastSuccess(`Repartidor: ${repartidor}`);
+                toastSuccess(`Zona actualizada: ${zona}`);
+                setEditingClienteZona(null);
+                setNuevaZonaCliente('');
                 await cargarDatos();
-                // Note: cargarDatos already refreshes repartidores from API
             } else {
-                toastError('Error al asignar');
+                toastError('Error al actualizar zona');
             }
         } catch (e) {
             toastError('Error de conexión');
         }
-        setAsignandoRepartidor(null);
-        setNuevoRepartidor('');
+    };
+} catch (e) {
+    toastError('Error de conexión');
+}
     };
 
-    const cambiarEstado = async (pedidoId, nuevoEstado) => {
-        try {
-            const pedido = pedidos.find(p => p.id === pedidoId);
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/estado`, {
+// Delete repartidor
+const eliminarRepartidor = async (id) => {
+    if (!window.confirm('¿Desactivar este repartidor?')) return;
+    try {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/repartidores/${id}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            toastSuccess('Repartidor desactivado');
+            await cargarDatos();
+        } else {
+            toastError('Error al desactivar');
+        }
+    } catch (e) {
+        toastError('Error de conexión');
+    }
+};
+
+// Map-based lookup for O(1) client access instead of O(n) array.find
+// IMPORTANT: Must be defined before callbacks that use pedidosFiltrados
+const clientesMap = useMemo(() =>
+    new Map(clientes.map(c => [c.id, c])),
+    [clientes]
+);
+
+const getCliente = useCallback((clienteId) =>
+    clientesMap.get(clienteId) || {},
+    [clientesMap]
+);
+
+const zonasUnicas = useMemo(() => {
+    const zonas = [...new Set(clientes.map(c => c.zona).filter(Boolean))];
+    return zonas.sort();
+}, [clientes]);
+
+// Filtrar pedidos (excluir entregados y cancelados por defecto)
+// IMPORTANT: Must be defined before selectAll callback
+const pedidosFiltrados = useMemo(() => {
+    return pedidos.filter(p => {
+        const estado = p.estado || 'pendiente';
+        // Excluir entregados y cancelados por defecto
+        if (!filtroEstado && (estado === 'entregado' || estado === 'cancelado')) return false;
+
+        if (filtroEstado && estado !== filtroEstado) return false;
+        if (filtroRepartidor === '__sin_asignar__') {
+            if (p.repartidor) return false;
+        } else if (filtroRepartidor && p.repartidor !== filtroRepartidor) {
+            return false;
+        }
+        if (filtroZona) {
+            const cliente = getCliente(p.cliente_id);
+            if (cliente.zona !== filtroZona) return false;
+        }
+        return true;
+    });
+}, [pedidos, filtroEstado, filtroRepartidor, filtroZona, getCliente]);
+
+// Toggle selection for bulk actions
+const toggleSelection = useCallback((id) => {
+    setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        return newSet;
+    });
+}, []);
+
+// Select all visible pedidos
+const selectAll = useCallback(() => {
+    const visibleIds = pedidosFiltrados.map(p => p.id);
+    setSelectedIds(new Set(visibleIds));
+}, [pedidosFiltrados]);
+
+// Clear selection
+const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+}, []);
+
+// Bulk change estado - using parallel requests for better performance
+const bulkChangeEstado = useCallback(async (nuevoEstado) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    // Create a pedidos map for O(1) lookup
+    const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+
+    // Execute all requests in parallel
+    const results = await Promise.allSettled(
+        ids.map(id => {
+            const pedido = pedidosMap.get(id);
+            return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -390,620 +284,894 @@ export default function HojaRuta() {
                     repartidor: pedido?.repartidor
                 })
             });
+        })
+    );
 
-            if (res.ok) {
-                toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${ESTADOS_PEDIDO[nuevoEstado].label}`);
-                await cargarDatos();
-            } else {
-                toastError('Error al cambiar estado');
-            }
-        } catch (e) {
-            toastError('Error de conexión');
-        }
-    };
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
-    // Generar PDF de hoja de ruta
-    const generarPDFHojaRuta = async (repartidor) => {
-        if (!repartidor) {
-            toastError('Seleccioná un repartidor primero');
-            return;
-        }
+    if (successCount > 0) {
+        toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
+        await cargarDatos();
+        setSelectedIds(new Set());
+    } else {
+        toastError('Error al actualizar pedidos');
+    }
+}, [selectedIds, pedidos, cargarDatos]);
 
-        setGenerandoPDF(true);
-        try {
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/hoja-ruta/generar-pdf`, {
-                method: 'POST',
+// Bulk assign repartidor - using parallel requests
+const bulkAsignarRepartidor = useCallback(async () => {
+    if (!bulkRepartidor.trim()) {
+        toastError('Ingresá un nombre de repartidor');
+        return;
+    }
+
+    const ids = Array.from(selectedIds);
+    const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+
+    // Execute all requests in parallel
+    const results = await Promise.allSettled(
+        ids.map(id => {
+            const pedido = pedidosMap.get(id);
+            return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    repartidor,
-                    zona: filtroZona || ''
+                    estado: pedido?.estado || 'pendiente',
+                    repartidor: bulkRepartidor
                 })
             });
+        })
+    );
 
-            if (res.ok) {
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `hoja_ruta_${repartidor.replace(/\s+/g, '_')}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                toastSuccess(`📄 PDF generado para ${repartidor}`);
-            } else {
-                const err = await res.json();
-                toastError(err.detail || 'Error generando PDF');
-            }
-        } catch (e) {
-            toastError('Error de conexión');
-        } finally {
-            setGenerandoPDF(false);
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
+
+    if (successCount > 0) {
+        toastSuccess(`👤 ${successCount} pedidos asignados a ${bulkRepartidor}`);
+        await cargarDatos();
+        setSelectedIds(new Set());
+        setBulkAssigning(false);
+        setBulkRepartidor('');
+        if (!repartidores.some(r => r.nombre === bulkRepartidor)) {
+            // Reload to get updated list from server
+            await cargarDatos();
         }
-    };
+    } else {
+        toastError('Error al asignar repartidor');
+    }
+}, [selectedIds, pedidos, bulkRepartidor, repartidores, cargarDatos]);
 
-    // Contadores - memoized to avoid recalculating on every render
-    const contadores = useMemo(() => ({
-        pendiente: pedidos.filter(p => (p.estado || 'pendiente') === 'pendiente').length,
-        preparando: pedidos.filter(p => p.estado === 'preparando').length,
-        entregado: pedidos.filter(p => p.estado === 'entregado').length,
-    }), [pedidos]);
-
-    // Siguiente estado en el workflow
-    const getSiguienteEstado = (estadoActual) => {
-        const flujo = { 'pendiente': 'preparando', 'preparando': 'entregado' };
-        return flujo[estadoActual] || null;
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <div className="text-center">
-                    <div className="text-4xl mb-2">⏳</div>
-                    <div>Cargando...</div>
-                </div>
-            </div>
-        );
+// Bulk delete pedidos
+const bulkEliminarPedidos = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+        toastError('No hay pedidos seleccionados');
+        return;
     }
 
-    // Error state
-    if (error) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <div className="text-center p-6 rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-danger)' }}>
-                    <div className="text-4xl mb-2">⚠️</div>
-                    <div className="font-semibold mb-2" style={{ color: 'var(--color-danger)' }}>{error}</div>
-                    <button
-                        onClick={cargarDatos}
-                        className="px-4 py-2 rounded text-white"
-                        style={{ background: 'var(--color-primary)' }}
-                    >
-                        🔄 Reintentar
-                    </button>
-                </div>
-            </div>
-        );
+    // Confirmar eliminación
+    const confirmMsg = `¿Estás seguro de eliminar ${ids.length} pedido${ids.length > 1 ? 's' : ''}?`;
+    if (!window.confirm(confirmMsg)) {
+        return;
     }
 
+    try {
+        setBulkDeleting(true);
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/bulk-delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pedido_ids: ids })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.deleted > 0) {
+                toastSuccess(`🗑️ ${data.deleted} pedido${data.deleted > 1 ? 's' : ''} eliminado${data.deleted > 1 ? 's' : ''}`);
+                await cargarDatos();
+                setSelectedIds(new Set());
+            }
+            if (data.errors && data.errors.length > 0) {
+                toastError(`Errores: ${data.errors.join(', ')}`);
+            }
+        } else {
+            let err;
+            try {
+                err = await res.json();
+            } catch {
+                err = null;
+            }
+            const msg = err?.error || err?.detail || 'Error al eliminar pedidos';
+            toastError(msg);
+        }
+    } catch (e) {
+        logger.error('Error al eliminar pedidos:', e);
+        toastError('Error de conexión');
+    } finally {
+        setBulkDeleting(false);
+    }
+}, [selectedIds, cargarDatos]);
+
+// Paginación
+const totalPages = Math.ceil(pedidosFiltrados.length / itemsPerPage);
+const startIndex = (currentPage - 1) * itemsPerPage;
+const pedidosPaginados = pedidosFiltrados.slice(startIndex, startIndex + itemsPerPage);
+
+// Agrupar pedidos paginados por zona
+const pedidosPorZona = useMemo(() => {
+    const grupos = {};
+    pedidosPaginados.forEach(p => {
+        const cliente = getCliente(p.cliente_id);
+        const zona = cliente.zona || 'Sin Zona';
+        if (!grupos[zona]) grupos[zona] = [];
+        grupos[zona].push({ ...p, cliente });
+    });
+    return Object.entries(grupos).sort((a, b) => a[0].localeCompare(b[0]));
+}, [pedidosPaginados, clientes]);
+
+const asignarRepartidor = async (pedidoId, repartidor) => {
+    if (!repartidor.trim()) {
+        toastError('Ingresá un nombre de repartidor');
+        return;
+    }
+    try {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                estado: pedidos.find(p => p.id === pedidoId)?.estado || 'pendiente',
+                repartidor
+            })
+        });
+
+        if (res.ok) {
+            toastSuccess(`Repartidor: ${repartidor}`);
+            await cargarDatos();
+            // Note: cargarDatos already refreshes repartidores from API
+        } else {
+            toastError('Error al asignar');
+        }
+    } catch (e) {
+        toastError('Error de conexión');
+    }
+    setAsignandoRepartidor(null);
+    setNuevoRepartidor('');
+};
+
+const cambiarEstado = async (pedidoId, nuevoEstado) => {
+    try {
+        const pedido = pedidos.find(p => p.id === pedidoId);
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                estado: nuevoEstado,
+                repartidor: pedido?.repartidor
+            })
+        });
+
+        if (res.ok) {
+            toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${ESTADOS_PEDIDO[nuevoEstado].label}`);
+            await cargarDatos();
+        } else {
+            toastError('Error al cambiar estado');
+        }
+    } catch (e) {
+        toastError('Error de conexión');
+    }
+};
+
+// Generar PDF de hoja de ruta
+const generarPDFHojaRuta = async (repartidor) => {
+    if (!repartidor) {
+        toastError('Seleccioná un repartidor primero');
+        return;
+    }
+
+    setGenerandoPDF(true);
+    try {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/hoja-ruta/generar-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                repartidor,
+                zona: filtroZona || ''
+            })
+        });
+
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hoja_ruta_${repartidor.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            toastSuccess(`📄 PDF generado para ${repartidor}`);
+        } else {
+            const err = await res.json();
+            toastError(err.detail || 'Error generando PDF');
+        }
+    } catch (e) {
+        toastError('Error de conexión');
+    } finally {
+        setGenerandoPDF(false);
+    }
+};
+
+// Contadores - memoized to avoid recalculating on every render
+const contadores = useMemo(() => ({
+    pendiente: pedidos.filter(p => (p.estado || 'pendiente') === 'pendiente').length,
+    preparando: pedidos.filter(p => p.estado === 'preparando').length,
+    entregado: pedidos.filter(p => p.estado === 'entregado').length,
+}), [pedidos]);
+
+// Siguiente estado en el workflow
+const getSiguienteEstado = (estadoActual) => {
+    const flujo = { 'pendiente': 'preparando', 'preparando': 'entregado' };
+    return flujo[estadoActual] || null;
+};
+
+if (loading) {
     return (
-        <div className="p-4 max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="mb-4">
-                <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
-                    🚚 Hoja de Ruta
-                </h1>
-                <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    Gestiona entregas • {pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}
-                </p>
+        <div className="flex items-center justify-center p-8">
+            <div className="text-center">
+                <div className="text-4xl mb-2">⏳</div>
+                <div>Cargando...</div>
             </div>
+        </div>
+    );
+}
 
-            {/* Ayuda colapsable - Actualizada con gestión de repartidores */}
-            <HelpBanner
-                title="¿Cómo usar la Hoja de Ruta?"
-                icon="🚚"
-                items={[
-                    { label: 'Filtrar por estado', text: 'Clickeá las tarjetas de colores (Pendiente, Preparando, etc.) para ver solo esos pedidos. Los números muestran cuántos hay en cada estado.' },
-                    { label: 'Gestionar repartidores', text: 'Usá el botón "⚙️ Repartidores" para agregar nuevos repartidores o desactivar los existentes. Ingresá nombre y opcionalmente teléfono.' },
-                    { label: 'Asignar repartidores', text: 'Cada pedido tiene un selector "👤 Asignar Repartidor". Elegí el nombre y se guarda automáticamente. Los pedidos sin asignar aparecen primero.' },
-                    { label: 'Acciones masivas', text: 'Usá "☑ Todos" para seleccionar pedidos visibles. Luego podés cambiar estado o asignar repartidor a todos juntos.' },
-                    { label: 'Cambiar estados', text: 'Usá los botones de cada pedido para avanzar: Pendiente → Preparar → Entregar. También podés cancelar si es necesario.' },
-                    { label: 'Generar PDF', text: 'Seleccioná un repartidor y hacé clic en "📄 Generar PDF" para crear una hoja de ruta imprimible con todos sus pedidos, agrupados por zona.' },
-                    { label: 'Organización', text: 'Los pedidos están agrupados por zona para optimizar la ruta de entrega.' }
-                ]}
-            />
-
-            {/* Tutorial paso a paso para armar rutas */}
-            <HelpBanner
-                title="📋 Paso a paso: Armar rutas de entrega"
-                icon="📍"
-                items={[
-                    { label: 'PASO 1: Crear repartidores', text: 'Abrí "⚙️ Repartidores" → Ingresá nombre (ej: Juan, Pedro) → Click "Agregar". Hacelo una vez y quedan guardados.' },
-                    { label: 'PASO 2: Organizar por zonas', text: 'Las zonas vienen de los clientes. Usá el filtro "📍 Todas las zonas" para ver solo los pedidos de una zona (ej: Morón, Castelar).' },
-                    { label: 'PASO 3: Asignar pedidos', text: 'Seleccioná una zona → Click "☑ Seleccionar todos" → Elegí un repartidor del dropdown → Listo! Todos los pedidos de esa zona quedan asignados.' },
-                    { label: 'PASO 4: Repetir por zona', text: 'Hacé lo mismo con cada zona: Morón → Juan, Castelar → Pedro, etc. Así cada repartidor tiene su ruta definida.' },
-                    { label: 'PASO 5: Imprimir hoja de ruta', text: 'Filtrá por repartidor (ej: "👤 Juan") → Aparece el botón "📄 Generar PDF" → Se descarga el PDF para imprimir.' },
-                    { label: 'PASO 6: Marcar entregas', text: 'Cuando el repartidor vuelve, filtrá por su nombre y marcá cada pedido como "Entregado". Podés hacerlo masivo con "☑ Seleccionar todos".' }
-                ]}
-            />
-
-            {/* Stats Cards - Clickeables como filtros */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
-                {['pendiente', 'preparando', 'entregado'].map(estado => {
-                    const info = getEstadoInfo(estado);
-                    const isActive = filtroEstado === estado;
-                    return (
-                        <button
-                            key={estado}
-                            onClick={() => setFiltroEstado(isActive ? '' : estado)}
-                            className="p-2 rounded-lg text-center transition-all"
-                            style={{
-                                background: isActive ? info.color : info.bg,
-                                color: isActive ? 'white' : info.color,
-                                border: `2px solid ${info.color}`,
-                                cursor: 'pointer'
-                            }}
-                        >
-                            <div className="text-lg font-bold">{contadores[estado]}</div>
-                            <div className="text-xs">{info.icon} {info.label}</div>
-                        </button>
-                    );
-                })}
+// Error state
+if (error) {
+    return (
+        <div className="flex items-center justify-center p-8">
+            <div className="text-center p-6 rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-danger)' }}>
+                <div className="text-4xl mb-2">⚠️</div>
+                <div className="font-semibold mb-2" style={{ color: 'var(--color-danger)' }}>{error}</div>
+                <button
+                    onClick={cargarDatos}
+                    className="px-4 py-2 rounded text-white"
+                    style={{ background: 'var(--color-primary)' }}
+                >
+                    🔄 Reintentar
+                </button>
             </div>
+        </div>
+    );
+}
 
-            {/* Barra de acciones */}
-            <div className="flex flex-wrap gap-3 mb-4 p-3 rounded-lg items-center" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                {/* Filtros */}
-                <select
-                    value={filtroZona}
-                    onChange={e => setFiltroZona(e.target.value)}
-                    className="px-3 py-2 rounded border text-sm"
-                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
-                >
-                    <option value="">📍 Todas las zonas</option>
-                    {zonasUnicas.map(zona => (
-                        <option key={zona} value={zona}>{zona}</option>
-                    ))}
-                </select>
+return (
+    <div className="p-4 max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-4">
+            <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
+                🚚 Hoja de Ruta
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                Gestiona entregas • {pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}
+            </p>
+        </div>
 
-                <select
-                    value={filtroRepartidor}
-                    onChange={e => setFiltroRepartidor(e.target.value)}
-                    className="px-3 py-2 rounded border text-sm"
-                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
-                >
-                    <option value="">👤 Todos</option>
-                    <option value="__sin_asignar__">❌ Sin repartidor</option>
-                    {repartidores.map(rep => (
-                        <option key={rep.id || rep.nombre} value={rep.nombre}>{rep.nombre}</option>
-                    ))}
-                </select>
+        {/* Ayuda colapsable - Actualizada con gestión de repartidores */}
+        <HelpBanner
+            title="¿Cómo usar la Hoja de Ruta?"
+            icon="🚚"
+            items={[
+                { label: 'Filtrar por estado', text: 'Clickeá las tarjetas de colores (Pendiente, Preparando, etc.) para ver solo esos pedidos. Los números muestran cuántos hay en cada estado.' },
+                { label: 'Gestionar repartidores', text: 'Usá el botón "⚙️ Repartidores" para agregar nuevos repartidores o desactivar los existentes. Ingresá nombre y opcionalmente teléfono.' },
+                { label: 'Asignar repartidores', text: 'Cada pedido tiene un selector "👤 Asignar Repartidor". Elegí el nombre y se guarda automáticamente. Los pedidos sin asignar aparecen primero.' },
+                { label: 'Acciones masivas', text: 'Usá "☑ Todos" para seleccionar pedidos visibles. Luego podés cambiar estado o asignar repartidor a todos juntos.' },
+                { label: 'Cambiar estados', text: 'Usá los botones de cada pedido para avanzar: Pendiente → Preparar → Entregar. También podés cancelar si es necesario.' },
+                { label: 'Generar PDF', text: 'Seleccioná un repartidor y hacé clic en "📄 Generar PDF" para crear una hoja de ruta imprimible con todos sus pedidos, agrupados por zona.' },
+                { label: 'Organización', text: 'Los pedidos están agrupados por zona para optimizar la ruta de entrega.' }
+            ]}
+        />
 
-                {/* Gestionar Repartidores button */}
-                <button
-                    onClick={() => setShowRepartidoresManager(!showRepartidoresManager)}
-                    className="px-3 py-2 text-sm rounded flex items-center gap-1"
-                    style={{ background: showRepartidoresManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showRepartidoresManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
-                >
-                    ⚙️ Repartidores
-                </button>
+        {/* Tutorial paso a paso para armar rutas */}
+        <HelpBanner
+            title="📋 Paso a paso: Armar rutas de entrega"
+            icon="📍"
+            items={[
+                { label: 'PASO 1: Crear repartidores', text: 'Abrí "⚙️ Repartidores" → Ingresá nombre (ej: Juan, Pedro) → Click "Agregar". Hacelo una vez y quedan guardados.' },
+                { label: 'PASO 2: Organizar por zonas', text: 'Usá "🗺️ Zonas" para asignar zonas a tus clientes (ej: Montevideo Centro, San José, Ciudad de la Costa). Filtrá por zona para ver pedidos agrupados.' },
+                { label: 'PASO 3: Asignar pedidos', text: 'Seleccioná una zona → Click "☑ Seleccionar todos" → Elegí un repartidor del dropdown → Listo! Todos los pedidos de esa zona quedan asignados.' },
+                { label: 'PASO 4: Repetir por zona', text: 'Hacé lo mismo con cada zona: Montevideo Centro → Juan, San José → Pedro, etc. Así cada repartidor tiene su ruta definida.' },
+                { label: 'PASO 5: Imprimir hoja de ruta', text: 'Filtrá por repartidor (ej: "👤 Juan") → Aparece el botón "📄 Generar PDF" → Se descarga el PDF para imprimir.' },
+                { label: 'PASO 6: Marcar entregas', text: 'Cuando el repartidor vuelve, filtrá por su nombre y marcá cada pedido como "Entregado". Podés hacerlo masivo con "☑ Seleccionar todos".' }
+            ]}
+        />
 
-                {(filtroEstado || filtroZona || filtroRepartidor) && (
+        {/* Stats Cards - Clickeables como filtros */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+            {['pendiente', 'preparando', 'entregado'].map(estado => {
+                const info = getEstadoInfo(estado);
+                const isActive = filtroEstado === estado;
+                return (
                     <button
-                        onClick={() => { setFiltroEstado(''); setFiltroZona(''); setFiltroRepartidor(''); }}
-                        className="px-3 py-2 text-sm rounded"
-                        style={{ background: 'var(--color-danger)', color: 'white' }}
-                    >
-                        ✕ Limpiar
-                    </button>
-                )}
-
-                {/* Separador */}
-                <div className="h-8 w-px mx-2" style={{ background: 'var(--color-border)' }}></div>
-
-                {/* Bulk selection buttons */}
-                <button
-                    onClick={selectAll}
-                    className="px-3 py-2 text-sm rounded"
-                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
-                    title="Seleccionar todos los pedidos visibles"
-                >
-                    ☑️ Seleccionar todos
-                </button>
-
-                {/* Botón PDF */}
-                {filtroRepartidor && filtroRepartidor !== '__sin_asignar__' && (
-                    <button
-                        onClick={() => generarPDFHojaRuta(filtroRepartidor)}
-                        disabled={generandoPDF}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+                        key={estado}
+                        onClick={() => setFiltroEstado(isActive ? '' : estado)}
+                        className="p-2 rounded-lg text-center transition-all"
                         style={{
-                            background: generandoPDF ? '#6b7280' : '#059669',
-                            color: 'white',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            background: isActive ? info.color : info.bg,
+                            color: isActive ? 'white' : info.color,
+                            border: `2px solid ${info.color}`,
+                            cursor: 'pointer'
                         }}
                     >
-                        {generandoPDF ? (
-                            <>⏳ Generando...</>
-                        ) : (
-                            <>📄 Generar PDF para {filtroRepartidor}</>
-                        )}
+                        <div className="text-lg font-bold">{contadores[estado]}</div>
+                        <div className="text-xs">{info.icon} {info.label}</div>
                     </button>
-                )}
+                );
+            })}
+        </div>
 
-                {/* Vista compacta toggle */}
+        {/* Barra de acciones */}
+        <div className="flex flex-wrap gap-3 mb-4 p-3 rounded-lg items-center" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+            {/* Filtros */}
+            <select
+                value={filtroZona}
+                onChange={e => setFiltroZona(e.target.value)}
+                className="px-3 py-2 rounded border text-sm"
+                style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+            >
+                <option value="">📍 Todas las zonas</option>
+                {zonasUnicas.map(zona => (
+                    <option key={zona} value={zona}>{zona}</option>
+                ))}
+            </select>
+
+            <select
+                value={filtroRepartidor}
+                onChange={e => setFiltroRepartidor(e.target.value)}
+                className="px-3 py-2 rounded border text-sm"
+                style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+            >
+                <option value="">👤 Todos</option>
+                <option value="__sin_asignar__">❌ Sin repartidor</option>
+                {repartidores.map(rep => (
+                    <option key={rep.id || rep.nombre} value={rep.nombre}>{rep.nombre}</option>
+                ))}
+            </select>
+
+            {/* Gestionar Repartidores button */}
+            <button
+                onClick={() => setShowRepartidoresManager(!showRepartidoresManager)}
+                className="px-3 py-2 text-sm rounded flex items-center gap-1"
+                style={{ background: showRepartidoresManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showRepartidoresManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
+            >
+                ⚙️ Repartidores
+            </button>
+
+            {(filtroEstado || filtroZona || filtroRepartidor) && (
                 <button
-                    onClick={() => setVistaCompacta(!vistaCompacta)}
-                    className="px-3 py-2 rounded text-sm ml-auto"
-                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                    onClick={() => { setFiltroEstado(''); setFiltroZona(''); setFiltroRepartidor(''); }}
+                    className="px-3 py-2 text-sm rounded"
+                    style={{ background: 'var(--color-danger)', color: 'white' }}
                 >
-                    {vistaCompacta ? '📋 Vista Expandida' : '📑 Vista Compacta'}
+                    ✕ Limpiar
                 </button>
+            )}
 
-                {/* Items por página */}
-                <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
-                    <select
-                        value={itemsPerPage}
-                        onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="px-2 py-1 rounded border text-sm"
-                        style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+            {/* Separador */}
+            <div className="h-8 w-px mx-2" style={{ background: 'var(--color-border)' }}></div>
+
+            {/* Zonas Manager Button */}
+            <button
+                onClick={() => setShowZonasManager(!showZonasManager)}
+                className="px-3 py-2 text-sm rounded font-medium"
+                style={{ background: showZonasManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showZonasManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
+            >
+                🗺️ Zonas
+            </button>
+
+            {/* Bulk selection buttons */}
+            <button
+                onClick={selectAll}
+                className="px-3 py-2 text-sm rounded"
+                style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                title="Seleccionar todos los pedidos visibles"
+            >
+                ☑️ Seleccionar todos
+            </button>
+
+            {/* Botón PDF */}
+            {filtroRepartidor && filtroRepartidor !== '__sin_asignar__' && (
+                <button
+                    onClick={() => generarPDFHojaRuta(filtroRepartidor)}
+                    disabled={generandoPDF}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+                    style={{
+                        background: generandoPDF ? '#6b7280' : '#059669',
+                        color: 'white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    {generandoPDF ? (
+                        <>⏳ Generando...</>
+                    ) : (
+                        <>📄 Generar PDF para {filtroRepartidor}</>
+                    )}
+                </button>
+            )}
+
+            {/* Vista compacta toggle */}
+            <button
+                onClick={() => setVistaCompacta(!vistaCompacta)}
+                className="px-3 py-2 rounded text-sm ml-auto"
+                style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+            >
+                {vistaCompacta ? '📋 Vista Expandida' : '📑 Vista Compacta'}
+            </button>
+
+            {/* Items por página */}
+            <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
+                <select
+                    value={itemsPerPage}
+                    onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                    className="px-2 py-1 rounded border text-sm"
+                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                </select>
+            </div>
+        </div>
+
+        {/* Repartidores Management Panel */}
+        {showRepartidoresManager && (
+            <div
+                className="mb-4 p-4 rounded-lg"
+                style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                        👥 Gestionar Repartidores
+                    </h3>
+                    <button
+                        onClick={() => setShowRepartidoresManager(false)}
+                        className="text-sm px-2 py-1 rounded"
+                        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
                     >
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                    </select>
+                        ✕
+                    </button>
+                </div>
+
+                {/* Add new repartidor form */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                    <input
+                        type="text"
+                        value={nuevoRepartidorNombre}
+                        onChange={e => setNuevoRepartidorNombre(e.target.value)}
+                        placeholder="Nombre del repartidor"
+                        className="px-3 py-2 rounded border text-sm flex-1 min-w-[150px]"
+                        style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                        onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
+                    />
+                    <input
+                        type="text"
+                        value={nuevoRepartidorTelefono}
+                        onChange={e => setNuevoRepartidorTelefono(e.target.value)}
+                        placeholder="Teléfono (opcional)"
+                        className="px-3 py-2 rounded border text-sm w-36"
+                        style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                        onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
+                    />
+                    <button
+                        onClick={agregarRepartidor}
+                        className="px-4 py-2 rounded text-sm font-semibold"
+                        style={{ background: '#10b981', color: 'white' }}
+                    >
+                        + Agregar
+                    </button>
+                </div>
+
+                {/* List of repartidores */}
+                <div className="flex flex-wrap gap-2">
+                    {repartidores.length === 0 ? (
+                        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                            No hay repartidores registrados. Agregá uno arriba.
+                        </span>
+                    ) : (
+                        repartidores.map(rep => (
+                            <div
+                                key={rep.id || rep.nombre}
+                                className="flex items-center gap-2 px-3 py-2 rounded text-sm"
+                                style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                            >
+                                <span className="font-medium">{rep.nombre}</span>
+                                {rep.telefono && (
+                                    <span style={{ color: 'var(--color-text-muted)' }}>📞 {rep.telefono}</span>
+                                )}
+                                {rep.id && (
+                                    <button
+                                        onClick={() => eliminarRepartidor(rep.id)}
+                                        className="ml-2 px-2 py-0.5 rounded text-xs"
+                                        style={{ background: 'var(--color-danger)', color: 'white' }}
+                                        title="Desactivar repartidor"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
+        )}
 
-            {/* Repartidores Management Panel */}
-            {showRepartidoresManager && (
-                <div
-                    className="mb-4 p-4 rounded-lg"
-                    style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold flex items-center gap-2">
-                            👥 Gestionar Repartidores
-                        </h3>
-                        <button
-                            onClick={() => setShowRepartidoresManager(false)}
-                            className="text-sm px-2 py-1 rounded"
-                            style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-                        >
-                            ✕
-                        </button>
-                    </div>
+        {/* Zonas Manager Panel */}
+        {showZonasManager && (
+            <div
+                className="mb-4 p-4 rounded-lg"
+                style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                        🗺️ Gestionar Zonas de Clientes
+                    </h3>
+                    <button
+                        onClick={() => setShowZonasManager(false)}
+                        className="text-sm px-2 py-1 rounded"
+                        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
 
-                    {/* Add new repartidor form */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        <input
-                            type="text"
-                            value={nuevoRepartidorNombre}
-                            onChange={e => setNuevoRepartidorNombre(e.target.value)}
-                            placeholder="Nombre del repartidor"
-                            className="px-3 py-2 rounded border text-sm flex-1 min-w-[150px]"
-                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
-                            onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
-                        />
-                        <input
-                            type="text"
-                            value={nuevoRepartidorTelefono}
-                            onChange={e => setNuevoRepartidorTelefono(e.target.value)}
-                            placeholder="Teléfono (opcional)"
-                            className="px-3 py-2 rounded border text-sm w-36"
-                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
-                            onKeyDown={e => e.key === 'Enter' && agregarRepartidor()}
-                        />
-                        <button
-                            onClick={agregarRepartidor}
-                            className="px-4 py-2 rounded text-sm font-semibold"
-                            style={{ background: '#10b981', color: 'white' }}
-                        >
-                            + Agregar
-                        </button>
-                    </div>
+                <p className="text-sm mb-3" style={{ color: 'var(--color-text-muted)' }}>
+                    Asigná zonas a tus clientes para organizar mejor las rutas de entrega. Click en "Editar" para cambiar la zona de un cliente.
+                </p>
 
-                    {/* List of repartidores */}
-                    <div className="flex flex-wrap gap-2">
-                        {repartidores.length === 0 ? (
+                {/* Clientes sin zona primero */}
+                <div className="mb-4">
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                        ⚠️ Clientes sin zona asignada
+                    </h4>
+                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                        {clientes.filter(c => !c.zona).length === 0 ? (
                             <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                                No hay repartidores registrados. Agregá uno arriba.
+                                ✓ Todos los clientes tienen zona asignada
                             </span>
                         ) : (
-                            repartidores.map(rep => (
+                            clientes.filter(c => !c.zona).map(cliente => (
                                 <div
-                                    key={rep.id || rep.nombre}
-                                    className="flex items-center gap-2 px-3 py-2 rounded text-sm"
+                                    key={cliente.id}
+                                    className="flex items-center justify-between px-3 py-2 rounded text-sm"
                                     style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
                                 >
-                                    <span className="font-medium">{rep.nombre}</span>
-                                    {rep.telefono && (
-                                        <span style={{ color: 'var(--color-text-muted)' }}>📞 {rep.telefono}</span>
-                                    )}
-                                    {rep.id && (
-                                        <button
-                                            onClick={() => eliminarRepartidor(rep.id)}
-                                            className="ml-2 px-2 py-0.5 rounded text-xs"
-                                            style={{ background: 'var(--color-danger)', color: 'white' }}
-                                            title="Desactivar repartidor"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
+                                    <div>
+                                        <span className="font-medium">{cliente.nombre}</span>
+                                        {cliente.direccion && (
+                                            <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
+                                                📍 {cliente.direccion}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setEditingClienteZona(cliente.id);
+                                            setNuevaZonaCliente('');
+                                        }}
+                                        className="px-3 py-1 rounded text-xs font-medium"
+                                        style={{ background: 'var(--color-primary)', color: 'white' }}
+                                    >
+                                        Asignar zona
+                                    </button>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
-            )}
 
-            {/* Bulk Actions Bar - appears when items are selected */}
-            {selectedIds.size > 0 && (
-                <div
-                    className="mb-4 p-3 rounded-lg flex flex-wrap items-center gap-3"
-                    style={{
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                        color: 'white',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                >
-                    <span className="font-semibold">
-                        ✓ {selectedIds.size} pedido{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
-                    </span>
-
-                    <div className="h-6 w-px" style={{ background: 'rgba(255,255,255,0.3)' }}></div>
-
-                    <button
-                        onClick={() => bulkChangeEstado('preparando')}
-                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
-                        style={{ background: '#f59e0b', color: 'white' }}
-                    >
-                        🔧 Marcar Preparando
-                    </button>
-
-                    <button
-                        onClick={() => bulkChangeEstado('entregado')}
-                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
-                        style={{ background: '#10b981', color: 'white' }}
-                    >
-                        ✅ Marcar Entregado
-                    </button>
-
-                    {bulkAssigning ? (
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={bulkRepartidor}
-                                onChange={e => setBulkRepartidor(e.target.value)}
-                                placeholder="Nombre del repartidor..."
-                                className="px-2 py-1 rounded text-sm text-gray-900"
-                                autoFocus
-                                list="bulk-reps-list"
-                            />
-                            <datalist id="bulk-reps-list">
-                                {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
-                            </datalist>
-                            <button
-                                onClick={bulkAsignarRepartidor}
-                                className="px-2 py-1 rounded text-sm"
-                                style={{ background: 'white', color: '#3b82f6' }}
-                            >
-                                ✓
-                            </button>
-                            <button
-                                onClick={() => { setBulkAssigning(false); setBulkRepartidor(''); }}
-                                className="px-2 py-1 rounded text-sm"
-                                style={{ background: 'rgba(255,255,255,0.2)' }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setBulkAssigning(true)}
-                            className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
-                            style={{ background: 'rgba(255,255,255,0.2)' }}
-                        >
-                            👤 Asignar Repartidor
-                        </button>
-                    )}
-
-                    <button
-                        onClick={() => bulkChangeEstado('cancelado')}
-                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
-                        style={{ background: '#ef4444', color: 'white' }}
-                    >
-                        ❌ Cancelar
-                    </button>
-
-                    <button
-                        onClick={bulkEliminarPedidos}
-                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
-                        style={{ background: '#991b1b', color: 'white' }}
-                        title="Eliminar pedidos seleccionados (no se pueden recuperar)"
-                    >
-                        🗑️ Eliminar
-                    </button>
-
-                    <button
-                        onClick={clearSelection}
-                        className="ml-auto px-3 py-1.5 rounded text-sm transition-all hover:bg-white/20"
-                        style={{ background: 'rgba(255,255,255,0.1)' }}
-                    >
-                        ✕ Cancelar
-                    </button>
-                </div>
-            )}
-
-            {/* Lista de pedidos */}
-            {pedidosPorZona.length === 0 ? (
-                <div className="text-center py-12 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
-                    <div className="text-4xl mb-2">📭</div>
-                    <div className="font-semibold mb-1">No hay pedidos</div>
-                    <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        {filtroEstado ? `No hay pedidos "${ESTADOS_PEDIDO[filtroEstado].label}"` : 'Ajustá los filtros'}
-                    </div>
-                </div>
-            ) : (
-                <>
-                    {pedidosPorZona.map(([zona, pedidosZona]) => (
-                        <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-                            {/* Header zona */}
-                            <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'var(--color-primary)', color: 'white' }}>
-                                <span className="font-semibold text-sm">📍 {zona}</span>
-                                <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
-                            </div>
-
-                            {/* Pedidos - Vista compacta o expandida */}
-                            {vistaCompacta ? (
-                                // Vista COMPACTA - Más pedidos visibles
-                                <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                                    {pedidosZona.map((p) => {
-                                        const estado = p.estado || 'pendiente';
-                                        const estadoInfo = getEstadoInfo(estado);
-                                        const siguiente = getSiguienteEstado(estado);
-                                        const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
-                                        const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
-                                        const isSelected = selectedIds.has(p.id);
-
-                                        return (
-                                            <div
-                                                key={p.id}
-                                                className="px-3 py-2 flex items-center gap-3 transition-all"
-                                                style={{
-                                                    background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
-                                                    borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
-                                                }}
-                                            >
-                                                {/* Checkbox for bulk selection */}
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => toggleSelection(p.id)}
-                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
-                                                />
-
-                                                {/* Cliente + Estado */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-semibold text-sm truncate">{p.cliente?.nombre || 'Cliente'}</span>
-                                                        <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
-                                                            {estadoInfo.icon} {estadoInfo.label}
-                                                        </span>
-                                                        {p.repartidor && (
-                                                            <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap" style={{ background: '#e0e7ff', color: '#4338ca' }}>
-                                                                👤 {p.repartidor}
+                {/* Clientes por zona */}
+                <div>
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                        Clientes por zona
+                    </h4>
+                    <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+                        {zonasUnicas.length === 0 ? (
+                            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                                No hay zonas asignadas aún
+                            </span>
+                        ) : (
+                            zonasUnicas.map(zona => {
+                                const clientesEnZona = clientes.filter(c => c.zona === zona);
+                                return (
+                                    <div key={zona} className="mb-3">
+                                        <div className="font-medium text-sm mb-1" style={{ color: 'var(--color-primary)' }}>
+                                            📍 {zona} ({clientesEnZona.length} cliente{clientesEnZona.length !== 1 ? 's' : ''})
+                                        </div>
+                                        <div className="flex flex-col gap-1 ml-4">
+                                            {clientesEnZona.map(cliente => (
+                                                <div
+                                                    key={cliente.id}
+                                                    className="flex items-center justify-between px-3 py-2 rounded text-sm"
+                                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                                >
+                                                    <div>
+                                                        <span className="font-medium">{cliente.nombre}</span>
+                                                        {cliente.direccion && (
+                                                            <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
+                                                                📍 {cliente.direccion}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                                                        {p.cliente?.direccion && <span>📍 {p.cliente.direccion.substring(0, 30)}{p.cliente.direccion.length > 30 ? '...' : ''}</span>}
-                                                        {p.cliente?.telefono && <span className="ml-2">📞 {p.cliente.telefono}</span>}
-                                                    </div>
-                                                    <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                                                        {productosResumen}{masProductos}
-                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingClienteZona(cliente.id);
+                                                            setNuevaZonaCliente(cliente.zona);
+                                                        }}
+                                                        className="px-3 py-1 rounded text-xs"
+                                                        style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+                                                    >
+                                                        Editar
+                                                    </button>
                                                 </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
 
-                                                {/* Acciones */}
-                                                <div className="flex gap-1 items-center flex-shrink-0">
-                                                    {asignandoRepartidor === p.id ? (
-                                                        <div className="flex gap-1 items-center">
-                                                            <input
-                                                                type="text"
-                                                                value={nuevoRepartidor}
-                                                                onChange={e => setNuevoRepartidor(e.target.value)}
-                                                                onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
-                                                                placeholder="Nombre..."
-                                                                className="px-2 py-1 border rounded text-xs w-24"
-                                                                autoFocus
-                                                                list="reps-list"
-                                                            />
-                                                            <datalist id="reps-list">
-                                                                {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
-                                                            </datalist>
-                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
-                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setAsignandoRepartidor(p.id)}
-                                                            className="px-2 py-1 rounded text-xs"
-                                                            style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
-                                                        >
-                                                            👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
-                                                        </button>
-                                                    )}
+                {/* Edit zona modal overlay */}
+                {editingClienteZona && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                        onClick={() => setEditingClienteZona(null)}
+                    >
+                        <div
+                            className="p-6 rounded-lg max-w-md w-full mx-4"
+                            style={{ background: 'var(--color-bg)' }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="font-semibold mb-4">
+                                Asignar zona a {clientes.find(c => c.id === editingClienteZona)?.nombre}
+                            </h3>
 
-                                                    {siguiente && (
-                                                        <button
-                                                            onClick={() => cambiarEstado(p.id, siguiente)}
-                                                            className="px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap"
-                                                            style={{ background: ESTADOS_PEDIDO[siguiente].color }}
-                                                        >
-                                                            {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                            {/* Zonas predefinidas de Uruguay */}
+                            <div className="mb-4">
+                                <label className="text-sm font-medium mb-2 block">
+                                    Zonas comunes:
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {zonasPredefinidasUY.map(zona => (
+                                        <button
+                                            key={zona}
+                                            onClick={() => setNuevaZonaCliente(zona)}
+                                            className="px-3 py-1 rounded text-sm"
+                                            style={{
+                                                background: nuevaZonaCliente === zona ? 'var(--color-primary)' : 'var(--color-bg-secondary)',
+                                                color: nuevaZonaCliente === zona ? 'white' : 'var(--color-text)',
+                                                border: '1px solid var(--color-border)'
+                                            }}
+                                        >
+                                            {zona}
+                                        </button>
+                                    ))}
                                 </div>
-                            ) : (
-                                // Vista EXPANDIDA - Más detalles
-                                pedidosZona.map((p) => {
+                            </div>
+
+                            {/* Custom zona input */}
+                            <div className="mb-4">
+                                <label className="text-sm font-medium mb-2 block">
+                                    O escribí una zona personalizada:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={nuevaZonaCliente}
+                                    onChange={e => setNuevaZonaCliente(e.target.value)}
+                                    placeholder="Ej: Las Piedras, Pando, etc."
+                                    className="w-full px-3 py-2 rounded border"
+                                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                    onKeyDown={e => e.key === 'Enter' && asignarZonaCliente(editingClienteZona, nuevaZonaCliente)}
+                                />
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex gap-2 justify-end">
+                                <button
+                                    onClick={() => {
+                                        setEditingClienteZona(null);
+                                        setNuevaZonaCliente('');
+                                    }}
+                                    className="px-4 py-2 rounded text-sm"
+                                    style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => asignarZonaCliente(editingClienteZona, nuevaZonaCliente)}
+                                    className="px-4 py-2 rounded text-sm font-semibold"
+                                    style={{ background: '#10b981', color: 'white' }}
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* Bulk Actions Bar - appears when items are selected */}
+        {selectedIds.size > 0 && (
+            <div
+                className="mb-4 p-3 rounded-lg flex flex-wrap items-center gap-3"
+                style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}
+            >
+                <span className="font-semibold">
+                    ✓ {selectedIds.size} pedido{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                </span>
+
+                <div className="h-6 w-px" style={{ background: 'rgba(255,255,255,0.3)' }}></div>
+
+                <button
+                    onClick={() => bulkChangeEstado('preparando')}
+                    className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                    style={{ background: '#f59e0b', color: 'white' }}
+                >
+                    🔧 Marcar Preparando
+                </button>
+
+                <button
+                    onClick={() => bulkChangeEstado('entregado')}
+                    className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                    style={{ background: '#10b981', color: 'white' }}
+                >
+                    ✅ Marcar Entregado
+                </button>
+
+                {bulkAssigning ? (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={bulkRepartidor}
+                            onChange={e => setBulkRepartidor(e.target.value)}
+                            placeholder="Nombre del repartidor..."
+                            className="px-2 py-1 rounded text-sm text-gray-900"
+                            autoFocus
+                            list="bulk-reps-list"
+                        />
+                        <datalist id="bulk-reps-list">
+                            {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
+                        </datalist>
+                        <button
+                            onClick={bulkAsignarRepartidor}
+                            className="px-2 py-1 rounded text-sm"
+                            style={{ background: 'white', color: '#3b82f6' }}
+                        >
+                            ✓
+                        </button>
+                        <button
+                            onClick={() => { setBulkAssigning(false); setBulkRepartidor(''); }}
+                            className="px-2 py-1 rounded text-sm"
+                            style={{ background: 'rgba(255,255,255,0.2)' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => setBulkAssigning(true)}
+                        className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                        style={{ background: 'rgba(255,255,255,0.2)' }}
+                    >
+                        👤 Asignar Repartidor
+                    </button>
+                )}
+
+                <button
+                    onClick={() => bulkChangeEstado('cancelado')}
+                    className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                    style={{ background: '#ef4444', color: 'white' }}
+                >
+                    ❌ Cancelar
+                </button>
+
+                <button
+                    onClick={bulkEliminarPedidos}
+                    disabled={bulkDeleting}
+                    className="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                    style={{ background: '#991b1b', color: 'white', opacity: bulkDeleting ? 0.7 : 1 }}
+                    title="Eliminar pedidos seleccionados (no se pueden recuperar)"
+                >
+                    {bulkDeleting ? '⏳ Eliminando...' : '🗑️ Eliminar'}
+                </button>
+
+                <button
+                    onClick={clearSelection}
+                    className="ml-auto px-3 py-1.5 rounded text-sm transition-all hover:bg-white/20"
+                    style={{ background: 'rgba(255,255,255,0.1)' }}
+                >
+                    ✕ Cancelar
+                </button>
+            </div>
+        )}
+
+        {/* Lista de pedidos */}
+        {pedidosPorZona.length === 0 ? (
+            <div className="text-center py-12 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
+                <div className="text-4xl mb-2">📭</div>
+                <div className="font-semibold mb-1">No hay pedidos</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                    {filtroEstado ? `No hay pedidos "${ESTADOS_PEDIDO[filtroEstado].label}"` : 'Ajustá los filtros'}
+                </div>
+            </div>
+        ) : (
+            <>
+                {pedidosPorZona.map(([zona, pedidosZona]) => (
+                    <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+                        {/* Header zona */}
+                        <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'var(--color-primary)', color: 'white' }}>
+                            <span className="font-semibold text-sm">📍 {zona}</span>
+                            <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
+                        </div>
+
+                        {/* Pedidos - Vista compacta o expandida */}
+                        {vistaCompacta ? (
+                            // Vista COMPACTA - Más pedidos visibles
+                            <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                {pedidosZona.map((p) => {
                                     const estado = p.estado || 'pendiente';
                                     const estadoInfo = getEstadoInfo(estado);
                                     const siguiente = getSiguienteEstado(estado);
+                                    const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
+                                    const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
                                     const isSelected = selectedIds.has(p.id);
 
                                     return (
                                         <div
                                             key={p.id}
-                                            className="p-3 border-t transition-all"
+                                            className="px-3 py-2 flex items-center gap-3 transition-all"
                                             style={{
-                                                borderColor: 'var(--color-border)',
                                                 background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
                                                 borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
                                             }}
                                         >
-                                            {/* Línea 1: Checkbox + Cliente + Estado + Repartidor */}
-                                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => toggleSelection(p.id)}
-                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
-                                                />
-                                                <span className="font-semibold">{p.cliente?.nombre || 'Cliente'}</span>
-                                                <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
-                                                    {estadoInfo.icon} {estadoInfo.label}
-                                                </span>
-                                                {p.repartidor && (
-                                                    <span className="px-2 py-0.5 rounded text-xs" style={{ background: '#e0e7ff', color: '#4338ca' }}>
-                                                        👤 {p.repartidor}
+                                            {/* Checkbox for bulk selection */}
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleSelection(p.id)}
+                                                className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                            />
+
+                                            {/* Cliente + Estado */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-semibold text-sm truncate">{p.cliente?.nombre || 'Cliente'}</span>
+                                                    <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
+                                                        {estadoInfo.icon} {estadoInfo.label}
                                                     </span>
-                                                )}
+                                                    {p.repartidor && (
+                                                        <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                            👤 {p.repartidor}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                                                    {p.cliente?.direccion && <span>📍 {p.cliente.direccion.substring(0, 30)}{p.cliente.direccion.length > 30 ? '...' : ''}</span>}
+                                                    {p.cliente?.telefono && <span className="ml-2">📞 {p.cliente.telefono}</span>}
+                                                </div>
+                                                <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                                                    {productosResumen}{masProductos}
+                                                </div>
                                             </div>
 
-                                            {/* Línea 2: Dirección y teléfono */}
-                                            <div className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                                {p.cliente?.direccion && <span>📍 {p.cliente.direccion}</span>}
-                                                {p.cliente?.telefono && <span className="ml-3">📞 {p.cliente.telefono}</span>}
-                                            </div>
-
-                                            {/* Línea 3: Productos */}
-                                            <div className="text-xs p-2 rounded mb-2" style={{ background: 'var(--color-bg-secondary)' }}>
-                                                {p.productos?.slice(0, 4).map((prod, i) => (
-                                                    <span key={i}>{prod.nombre} x{prod.cantidad}{i < Math.min(p.productos.length, 4) - 1 ? ' • ' : ''}</span>
-                                                ))}
-                                                {p.productos?.length > 4 && <span className="opacity-60"> +{p.productos.length - 4} más</span>}
-                                            </div>
-
-                                            {/* Línea 4: Acciones */}
-                                            <div className="flex gap-2 flex-wrap">
+                                            {/* Acciones */}
+                                            <div className="flex gap-1 items-center flex-shrink-0">
                                                 {asignandoRepartidor === p.id ? (
                                                     <div className="flex gap-1 items-center">
                                                         <input
@@ -1012,20 +1180,20 @@ export default function HojaRuta() {
                                                             onChange={e => setNuevoRepartidor(e.target.value)}
                                                             onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
                                                             placeholder="Nombre..."
-                                                            className="px-2 py-1 border rounded text-sm w-32"
+                                                            className="px-2 py-1 border rounded text-xs w-24"
                                                             autoFocus
                                                             list="reps-list"
                                                         />
                                                         <datalist id="reps-list">
                                                             {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
                                                         </datalist>
-                                                        <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-sm" style={{ background: '#10b981' }}>✓</button>
-                                                        <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                        <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
+                                                        <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
                                                     </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => setAsignandoRepartidor(p.id)}
-                                                        className="px-3 py-1 rounded text-sm"
+                                                        className="px-2 py-1 rounded text-xs"
                                                         style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
                                                     >
                                                         👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
@@ -1035,7 +1203,7 @@ export default function HojaRuta() {
                                                 {siguiente && (
                                                     <button
                                                         onClick={() => cambiarEstado(p.id, siguiente)}
-                                                        className="px-3 py-1 rounded text-sm font-medium text-white"
+                                                        className="px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap"
                                                         style={{ background: ESTADOS_PEDIDO[siguiente].color }}
                                                     >
                                                         {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
@@ -1044,42 +1212,138 @@ export default function HojaRuta() {
                                             </div>
                                         </div>
                                     );
-                                })
-                            )}
-                        </div>
-                    ))}
-
-                    {/* Paginación */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-4 p-3 rounded" style={{ background: 'var(--color-bg-secondary)' }}>
-                            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                                {startIndex + 1}-{Math.min(startIndex + itemsPerPage, pedidosFiltrados.length)} de {pedidosFiltrados.length}
-                            </span>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1 rounded text-sm"
-                                    style={{ background: currentPage === 1 ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === 1 ? 'var(--color-text-muted)' : 'white' }}
-                                >
-                                    ← Anterior
-                                </button>
-                                <span className="px-3 py-1 text-sm">
-                                    {currentPage} / {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1 rounded text-sm"
-                                    style={{ background: currentPage === totalPages ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === totalPages ? 'var(--color-text-muted)' : 'white' }}
-                                >
-                                    Siguiente →
-                                </button>
+                                })}
                             </div>
+                        ) : (
+                            // Vista EXPANDIDA - Más detalles
+                            pedidosZona.map((p) => {
+                                const estado = p.estado || 'pendiente';
+                                const estadoInfo = getEstadoInfo(estado);
+                                const siguiente = getSiguienteEstado(estado);
+                                const isSelected = selectedIds.has(p.id);
+
+                                return (
+                                    <div
+                                        key={p.id}
+                                        className="p-3 border-t transition-all"
+                                        style={{
+                                            borderColor: 'var(--color-border)',
+                                            background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                            borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
+                                        }}
+                                    >
+                                        {/* Línea 1: Checkbox + Cliente + Estado + Repartidor */}
+                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleSelection(p.id)}
+                                                className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                            />
+                                            <span className="font-semibold">{p.cliente?.nombre || 'Cliente'}</span>
+                                            <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
+                                                {estadoInfo.icon} {estadoInfo.label}
+                                            </span>
+                                            {p.repartidor && (
+                                                <span className="px-2 py-0.5 rounded text-xs" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                    👤 {p.repartidor}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Línea 2: Dirección y teléfono */}
+                                        <div className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                            {p.cliente?.direccion && <span>📍 {p.cliente.direccion}</span>}
+                                            {p.cliente?.telefono && <span className="ml-3">📞 {p.cliente.telefono}</span>}
+                                        </div>
+
+                                        {/* Línea 3: Productos */}
+                                        <div className="text-xs p-2 rounded mb-2" style={{ background: 'var(--color-bg-secondary)' }}>
+                                            {p.productos?.slice(0, 4).map((prod, i) => (
+                                                <span key={i}>{prod.nombre} x{prod.cantidad}{i < Math.min(p.productos.length, 4) - 1 ? ' • ' : ''}</span>
+                                            ))}
+                                            {p.productos?.length > 4 && <span className="opacity-60"> +{p.productos.length - 4} más</span>}
+                                        </div>
+
+                                        {/* Línea 4: Acciones */}
+                                        <div className="flex gap-2 flex-wrap">
+                                            {asignandoRepartidor === p.id ? (
+                                                <div className="flex gap-1 items-center">
+                                                    <input
+                                                        type="text"
+                                                        value={nuevoRepartidor}
+                                                        onChange={e => setNuevoRepartidor(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
+                                                        placeholder="Nombre..."
+                                                        className="px-2 py-1 border rounded text-sm w-32"
+                                                        autoFocus
+                                                        list="reps-list"
+                                                    />
+                                                    <datalist id="reps-list">
+                                                        {repartidores.map(r => <option key={r.id || r.nombre} value={r.nombre} />)}
+                                                    </datalist>
+                                                    <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-sm" style={{ background: '#10b981' }}>✓</button>
+                                                    <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setAsignandoRepartidor(p.id)}
+                                                    className="px-3 py-1 rounded text-sm"
+                                                    style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
+                                                >
+                                                    👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
+                                                </button>
+                                            )}
+
+                                            {siguiente && (
+                                                <button
+                                                    onClick={() => cambiarEstado(p.id, siguiente)}
+                                                    className="px-3 py-1 rounded text-sm font-medium text-white"
+                                                    style={{ background: ESTADOS_PEDIDO[siguiente].color }}
+                                                >
+                                                    {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                ))}
+
+                {/* Paginación */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 p-3 rounded" style={{ background: 'var(--color-bg-secondary)' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                            {startIndex + 1}-{Math.min(startIndex + itemsPerPage, pedidosFiltrados.length)} de {pedidosFiltrados.length}
+                        </span>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 rounded text-sm"
+                                style={{ background: currentPage === 1 ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === 1 ? 'var(--color-text-muted)' : 'white' }}
+                            >
+                                ← Anterior
+                            </button>
+                            <span className="px-3 py-1 text-sm">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 rounded text-sm"
+                                style={{ background: currentPage === totalPages ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === totalPages ? 'var(--color-text-muted)' : 'white' }}
+                            >
+                                Siguiente →
+                            </button>
                         </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
+                    </div>
+                )}
+            </>
+        )}
+    </div>
+);
 }

@@ -6,6 +6,11 @@ import { test, expect } from '@playwright/test';
 const API_URL = 'https://api.pedidosfriosur.com/api';
 const BASE_URL = 'https://www.pedidosfriosur.com';
 
+const E2E_ADMIN_USERNAME = process.env.E2E_ADMIN_USERNAME || 'admin';
+const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
+
+test.skip(!E2E_ADMIN_PASSWORD, 'Set E2E_ADMIN_PASSWORD to run production E2E tests');
+
 test.describe('Critical Production Flows', () => {
     let authToken;
 
@@ -13,8 +18,8 @@ test.describe('Critical Production Flows', () => {
         // Get auth token
         const response = await request.post(`${API_URL}/login`, {
             form: {
-                username: 'admin',
-                password: 'admin420'
+                username: E2E_ADMIN_USERNAME,
+                password: E2E_ADMIN_PASSWORD
             }
         });
         const data = await response.json();
