@@ -34,10 +34,28 @@ except ImportError:
 # Context variable for request ID tracking
 request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
 
+
+def _read_secret(env_var: str, file_env_var: str, default: str) -> str:
+    """Read secret from environment or Docker secrets file"""
+    # First try direct environment variable
+    value = os.getenv(env_var)
+    if value:
+        return value
+    # Then try Docker secrets file
+    file_path = os.getenv(file_env_var)
+    if file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, 'r') as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return default
+
+
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = os.getenv("LOG_FORMAT", "json" if ENVIRONMENT == "production" else "console")
-SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_DSN = _read_secret("SENTRY_DSN", "SENTRY_DSN_FILE", "")
 
 
 def get_request_id() -> Optional[str]:
