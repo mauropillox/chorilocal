@@ -328,9 +328,7 @@ export default function HojaRuta() {
             if (res.ok) {
                 toastSuccess(`Repartidor: ${repartidor}`);
                 await cargarDatos();
-                if (!repartidores.includes(repartidor)) {
-                    setRepartidores([...repartidores, repartidor]);
-                }
+                // Note: cargarDatos already refreshes repartidores from API
             } else {
                 toastError('Error al asignar');
             }
@@ -404,13 +402,12 @@ export default function HojaRuta() {
         }
     };
 
-    // Contadores
-    const contadores = {
+    // Contadores - memoized to avoid recalculating on every render
+    const contadores = useMemo(() => ({
         pendiente: pedidos.filter(p => (p.estado || 'pendiente') === 'pendiente').length,
         preparando: pedidos.filter(p => p.estado === 'preparando').length,
-
         entregado: pedidos.filter(p => p.estado === 'entregado').length,
-    };
+    }), [pedidos]);
 
     // Siguiente estado en el workflow
     const getSiguienteEstado = (estadoActual) => {

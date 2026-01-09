@@ -89,10 +89,6 @@ async def update_repartidor(
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing repartidor"""
-    existing = db.get_repartidor_by_id(repartidor_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Repartidor no encontrado")
-    
     try:
         result = db.update_repartidor(
             repartidor_id=repartidor_id,
@@ -101,9 +97,14 @@ async def update_repartidor(
             color=repartidor.color,
             activo=repartidor.activo
         )
+        # Atomic check - None means not found
+        if result is None:
+            raise HTTPException(status_code=404, detail="Repartidor no encontrado")
         return result
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail="Ya existe un repartidor con ese nombre")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             raise HTTPException(status_code=400, detail="Ya existe un repartidor con ese nombre")
@@ -118,9 +119,8 @@ async def delete_repartidor(
     current_user: dict = Depends(get_admin_user)  # Only admins can delete
 ):
     """Delete (deactivate) a repartidor"""
-    existing = db.get_repartidor_by_id(repartidor_id)
-    if not existing:
+    result = db.delete_repartidor(repartidor_id)
+    # Atomic check - None means not found
+    if result is None:
         raise HTTPException(status_code=404, detail="Repartidor no encontrado")
-    
-    db.delete_repartidor(repartidor_id)
     return {"msg": "Repartidor desactivado exitosamente"}

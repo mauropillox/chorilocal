@@ -3827,8 +3827,8 @@ def add_repartidor(nombre: str, telefono: str = None, color: str = None) -> Dict
         return {"id": repartidor_id, "nombre": nombre.strip(), "telefono": telefono, "color": color, "activo": 1}
 
 
-def update_repartidor(repartidor_id: int, nombre: str = None, telefono: str = None, color: str = None, activo: int = None) -> Dict[str, Any]:
-    """Actualiza un repartidor existente."""
+def update_repartidor(repartidor_id: int, nombre: str = None, telefono: str = None, color: str = None, activo: int = None) -> Optional[Dict[str, Any]]:
+    """Actualiza un repartidor existente. Returns None if not found."""
     with get_db_transaction() as (con, cur):
         updates = []
         params = []
@@ -3847,14 +3847,22 @@ def update_repartidor(repartidor_id: int, nombre: str = None, telefono: str = No
             params.append(activo)
         
         if not updates:
-            return get_repartidor_by_id(repartidor_id)
+            # No changes, fetch current record
+            _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores WHERE id = ?", (repartidor_id,))
+            return _fetchone_as_dict(cur)
         
         params.append(repartidor_id)
         _execute(cur, f"UPDATE repartidores SET {', '.join(updates)} WHERE id = ?", tuple(params))
         
-    return get_repartidor_by_id(repartidor_id)
+        # Check if record was found
+        if cur.rowcount == 0:
+            return None
+        
+        # Fetch updated record from same transaction
+        _execute(cur, "SELECT id, nombre, telefono, activo, color FROM repartidores WHERE id = ?", (repartidor_id,))
+        return _fetchone_as_dict(cur)
 
 
-def delete_repartidor(repartidor_id: int) -> Dict[str, Any]:
-    """Elimina un repartidor (soft delete - marca como inactivo)."""
+def delete_repartidor(repartidor_id: int) -> Optional[Dict[str, Any]]:
+    """Elimina un repartidor (soft delete - marca como inactivo). Returns None if not found."""
     return update_repartidor(repartidor_id, activo=0)
