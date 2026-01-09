@@ -481,20 +481,50 @@ async def verify_indexes():
 
 ## 🎯 Recommended Action Plan
 
-### Week 1: Quick Wins (3 hours total)
-- [ ] **P3-4:** Configure Sentry alerts (15 min)
-- [ ] **P3-3:** Add SQLite query timeout (30 min)
-- [ ] **P3-6:** Add loading states on search (1 hour)
-- [ ] **P3-1:** Remove production console logs (1.5 hours)
+### ✅ COMPLETED (Jan 8, 2026)
+- [x] **P3-1:** Remove production console logs ✅ DONE
+  - Created `frontend/src/utils/logger.js`
+  - Updated 13 files with environment-aware logging
+  - Commit: `4624eb7`
+  
+- [x] **P3-2:** Fix broad exception handlers ✅ DONE
+  - Created `backend/exceptions.py` with safe_error_handler()
+  - Updated 6 routers (dashboard, pedidos, ofertas, estadisticas, admin, migration)
+  - No internal details leaked to clients
+  - Commit: `4624eb7`
+  
+- [x] **P3-3:** SQLite query timeout ✅ ALREADY IMPLEMENTED
+  - `PRAGMA query_timeout=10000` already in db.py
+  - SQLite 3.45.1 supports this (requires 3.41+)
+  
+- [x] **P3-4:** Configure Sentry alerts ✅ DONE (by user)
+  - Alerts configured in Sentry Dashboard
+  
+- [x] **P3-6:** Loading states on search ✅ ALREADY IMPLEMENTED
+  - "Buscando..." and "No se encontraron resultados" already working
 
-### Week 2: Security & Stability (4 hours total)
-- [ ] **P3-2:** Fix broad exception handlers (2 hours)
+### 📋 DEFERRED
 - [ ] **P3-5:** Add API versioning (2 hours)
+  - **Status:** DEFERRED - Current `/api/*` structure is working correctly
+  - Frontend: `VITE_API_URL=https://api.pedidosfriosur.com/api`
+  - Backend: All routers have `prefix="/api"`
+  - Will implement `/api/v1/*` when we need breaking changes
 
-### Week 3+: Nice to Have
-- [ ] **P4-1:** Evaluate React Query adoption
-- [ ] **P4-5:** Add critical E2E tests
-- [ ] **P4-4:** Enable Sentry performance monitoring
+### Week 3+: P4 Nice to Have
+**Priority Assessment for 5-user deployment:**
+
+| Item | Effort | Value for Current Scale | Recommendation |
+|------|--------|-------------------------|----------------|
+| **P4-8:** Database Index Verification | 1h | HIGH | ✅ DO THIS - Ensures query performance |
+| **P4-4:** Sentry Performance Monitoring | 15min | HIGH | ✅ DO THIS - Already have Sentry |
+| **P4-1:** React Query | 4h | MEDIUM | Skip - Overhead for 5 users |
+| **P4-5:** E2E Tests | 8h | MEDIUM | Backlog - Manual testing sufficient |
+| **P4-2:** Zod Validation | 3h | LOW | Skip - Pydantic on backend sufficient |
+| **P4-7:** Request Retry Logic | 2h | LOW | Skip - Offline queue handles this |
+| **P4-3:** SQLite Connection Pooling | 2h | LOW | Skip - Not needed for 5 users |
+| **P4-6:** Migration Rollback Docs | 1h | LOW | Backlog |
+
+**Implementing Now:** P4-8 and P4-4 (total: ~1 hour)
 
 ---
 

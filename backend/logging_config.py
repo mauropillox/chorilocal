@@ -6,6 +6,7 @@ Provides:
 - Human-readable logs for development
 - Request ID tracking across the request lifecycle
 - Performance timing for slow operations
+- Sentry integration for error and performance monitoring
 """
 import os
 import sys
@@ -22,12 +23,21 @@ try:
 except ImportError:
     STRUCTLOG_AVAILABLE = False
 
+# Try to import Sentry
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
 # Context variable for request ID tracking
 request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = os.getenv("LOG_FORMAT", "json" if ENVIRONMENT == "production" else "console")
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 
 
 def get_request_id() -> Optional[str]:
@@ -106,6 +116,29 @@ def setup_logging():
         stream=sys.stdout,
         level=getattr(logging, LOG_LEVEL),
     )
+    
+    # Initialize Sentry if configured
+    if SENTRY_AVAILABLE and SENTRY_DSN and ENVIRONMENT == "production":
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            environment=ENVIRONMENT,
+            # Performance Monitoring - sample 10% of requests
+            traces_sample_rate=0.1,
+            # Profiling - sample 10% of transactions
+            profiles_sample_rate=0.1,
+            # Send error events for logging level WARNING and above
+            integrations=[
+                LoggingIntegration(
+                    level=logging.INFO,        # Capture info and above as breadcrumbs
+                    event_level=logging.WARNING  # Send warnings and errors as events
+                )
+            ],
+            # Set tracing options
+            _experiments={
+                "profiles_sample_rate": 0.1,
+            },
+        )
+        logging.getLogger(__name__).info("Sentry performance monitoring enabled (10% sample rate)")
     
     return structlog.get_logger()
 

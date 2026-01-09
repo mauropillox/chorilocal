@@ -293,7 +293,41 @@ async def startup_event():
         else:
             logger.info("migrations_none_pending")
         
-        # Step 3: Start backup scheduler (production only, non-blocking)
+        # Step 3: Verify database indexes (SQLite only)
+        if not db.USE_POSTGRES:
+            with db.get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Critical indexes for query performance
+                expected_indexes = {
+                    'idx_pedidos_cliente': 'CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id)',
+                    'idx_pedidos_estado': 'CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado)',
+                    'idx_pedidos_fecha': 'CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha)',
+                    'idx_productos_categoria': 'CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id)',
+                    'idx_pedido_productos_pedido': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_pedido ON pedido_productos(pedido_id)',
+                    'idx_pedido_productos_producto': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_producto ON pedido_productos(producto_id)',
+                }
+                
+                # Check existing indexes
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+                existing = {row[0] for row in cursor.fetchall()}
+                
+                # Create missing indexes
+                created = []
+                for idx_name, create_sql in expected_indexes.items():
+                    if idx_name not in existing:
+                        try:
+                            cursor.execute(create_sql)
+                            created.append(idx_name)
+                        except Exception as e:
+                            logger.warning("index_creation_failed", index=idx_name, error=str(e))
+                
+                if created:
+                    conn.commit()
+                    logger.info("indexes_created", indexes=created)
+                else:
+                    logger.info("indexes_verified", count=len(existing))
+        
+        # Step 4: Start backup scheduler (production only, non-blocking)
         if ENVIRONMENT == "production":
             from backup_scheduler import start_backup_scheduler
             start_backup_scheduler()
