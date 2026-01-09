@@ -242,3 +242,21 @@ def migrate_005_create_repartidores(cursor):
         )
     """)
     logger.info("migration_005: Created repartidores table")
+
+
+@register_migration("006_add_repartidor_to_pedidos")
+def migrate_006_add_repartidor_column(cursor):
+    """Add repartidor column to pedidos table."""
+    try:
+        # Check if column exists
+        cursor.execute("PRAGMA table_info(pedidos)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'repartidor' not in columns:
+            cursor.execute("ALTER TABLE pedidos ADD COLUMN repartidor TEXT")
+            logger.info("migration_006: Added repartidor column to pedidos")
+        else:
+            logger.info("migration_006: repartidor column already exists, skipping")
+    except Exception as e:
+        logger.error("migration_006: Failed to add repartidor column", error=str(e))
+        raise

@@ -30,7 +30,7 @@ jobs:
       
       - name: Run pytest
         run: |
-          pytest -v --tb=short
+          python -m pytest -v --tb=short -x
         env:
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci
