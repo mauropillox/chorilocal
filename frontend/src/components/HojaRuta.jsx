@@ -472,6 +472,20 @@ export default function HojaRuta() {
                 ]}
             />
 
+            {/* Tutorial paso a paso para armar rutas */}
+            <HelpBanner
+                title="📋 Paso a paso: Armar rutas de entrega"
+                icon="📍"
+                items={[
+                    { label: 'PASO 1: Crear repartidores', text: 'Abrí "⚙️ Repartidores" → Ingresá nombre (ej: Juan, Pedro) → Click "Agregar". Hacelo una vez y quedan guardados.' },
+                    { label: 'PASO 2: Organizar por zonas', text: 'Las zonas vienen de los clientes. Usá el filtro "📍 Todas las zonas" para ver solo los pedidos de una zona (ej: Morón, Castelar).' },
+                    { label: 'PASO 3: Asignar pedidos', text: 'Seleccioná una zona → Click "☑ Seleccionar todos" → Elegí un repartidor del dropdown → Listo! Todos los pedidos de esa zona quedan asignados.' },
+                    { label: 'PASO 4: Repetir por zona', text: 'Hacé lo mismo con cada zona: Morón → Juan, Castelar → Pedro, etc. Así cada repartidor tiene su ruta definida.' },
+                    { label: 'PASO 5: Imprimir hoja de ruta', text: 'Filtrá por repartidor (ej: "👤 Juan") → Aparece el botón "📄 Generar PDF" → Se descarga el PDF para imprimir.' },
+                    { label: 'PASO 6: Marcar entregas', text: 'Cuando el repartidor vuelve, filtrá por su nombre y marcá cada pedido como "Entregado". Podés hacerlo masivo con "☑ Seleccionar todos".' }
+                ]}
+            />
+
             {/* Stats Cards - Clickeables como filtros */}
             <div className="grid grid-cols-4 gap-2 mb-4">
                 {['pendiente', 'preparando', 'entregado'].map(estado => {

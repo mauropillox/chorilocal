@@ -179,3 +179,4 @@ class PedidoDetalle(BaseModel):
 
 class EstadoPedidoUpdate(BaseModel):
     estado: str
+    repartidor: Optional[str] = None

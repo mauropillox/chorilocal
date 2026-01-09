@@ -344,6 +344,7 @@ async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_cu
 @router.put("/pedidos/{pedido_id}/estado", response_model=models.Pedido)
 async def cambiar_estado_pedido(pedido_id: int, estado_update: models.EstadoPedidoUpdate, current_user: dict = Depends(get_admin_user)):
     nuevo_estado = estado_update.estado
+    repartidor = estado_update.repartidor
     # Valid states include the simplified workflow: pendiente, preparando, entregado, cancelado
     # as well as legacy states: confirmado, enviado
     valid_states = ['pendiente', 'preparando', 'confirmado', 'enviado', 'entregado', 'cancelado']
@@ -355,7 +356,11 @@ async def cambiar_estado_pedido(pedido_id: int, estado_update: models.EstadoPedi
         if cursor.fetchone() is None:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
-        cursor.execute("UPDATE pedidos SET estado = ? WHERE id = ?", (nuevo_estado, pedido_id))
+        # Update estado and optionally repartidor
+        if repartidor is not None:
+            cursor.execute("UPDATE pedidos SET estado = ?, repartidor = ? WHERE id = ?", (nuevo_estado, repartidor, pedido_id))
+        else:
+            cursor.execute("UPDATE pedidos SET estado = ? WHERE id = ?", (nuevo_estado, pedido_id))
 
         cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
         pedido_actualizado = cursor.fetchone()
