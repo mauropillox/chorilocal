@@ -387,3 +387,78 @@ async def get_migration_status():
             "error": str(e),
             "database_type": "unknown"
         }
+
+
+@router.post("/ensure-repartidores-table")
+async def ensure_repartidores_table(current_user: dict = Depends(get_admin_user)):
+    """
+    Ensure the repartidores table exists in production.
+    Only for admin users.
+    """
+    import db
+    
+    try:
+        con = db.conectar()
+        try:
+            cur = con.cursor()
+            
+            # Check if table exists
+            if db.is_postgres():
+                cur.execute("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = 'repartidores'
+                    )
+                """)
+            else:
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='repartidores'")
+            
+            table_exists = cur.fetchone()
+            table_existed = bool(table_exists and (table_exists[0] if not db.is_postgres() else table_exists[0]))
+            
+            # Create table if not exists
+            if db.is_postgres():
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS repartidores (
+                        id SERIAL PRIMARY KEY,
+                        nombre TEXT NOT NULL UNIQUE,
+                        telefono TEXT,
+                        activo INTEGER DEFAULT 1,
+                        color TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+            else:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS repartidores (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre TEXT NOT NULL UNIQUE,
+                        telefono TEXT,
+                        activo INTEGER DEFAULT 1,
+                        color TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+            
+            con.commit()
+            
+            # Verify table now exists and count rows
+            if db.is_postgres():
+                cur.execute("SELECT COUNT(*) FROM repartidores")
+            else:
+                cur.execute("SELECT COUNT(*) FROM repartidores")
+            count = cur.fetchone()[0]
+            
+            return {
+                "success": True,
+                "table_existed": table_existed,
+                "table_created": not table_existed,
+                "repartidores_count": count,
+                "message": "Repartidores table is ready"
+            }
+        finally:
+            con.close()
+            
+    except Exception as e:
+        logger.error("ensure_repartidores_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to ensure repartidores table: {str(e)}")
