@@ -1557,12 +1557,12 @@ export default function HojaRuta() {
                                         {/* Progress bar */}
                                         <div className="w-full flex items-center gap-2">
                                             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                                                <div 
-                                                    className="h-full rounded-full transition-all" 
-                                                    style={{ 
-                                                        width: `${zoneProgress.completedPercent}%`, 
-                                                        background: zoneProgress.completedPercent === 100 ? '#10b981' : '#fbbf24' 
-                                                    }} 
+                                                <div
+                                                    className="h-full rounded-full transition-all"
+                                                    style={{
+                                                        width: `${zoneProgress.completedPercent}%`,
+                                                        background: zoneProgress.completedPercent === 100 ? '#10b981' : '#fbbf24'
+                                                    }}
                                                 />
                                             </div>
                                             <span className="text-xs font-medium" style={{ minWidth: '36px' }}>{zoneProgress.completedPercent}%</span>
@@ -1671,8 +1671,8 @@ export default function HojaRuta() {
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setShowActionsForId(showActions ? null : p.id); }}
                                                                                 className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-all hover:scale-105"
-                                                                                style={{ 
-                                                                                    background: showActions ? 'var(--color-primary)' : 'var(--color-bg-tertiary)', 
+                                                                                style={{
+                                                                                    background: showActions ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
                                                                                     color: showActions ? 'white' : 'var(--color-text)',
                                                                                     border: '1px solid var(--color-border)',
                                                                                     boxShadow: isHovered || showActions ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
@@ -1724,117 +1724,117 @@ export default function HojaRuta() {
                                             ) : (
                                                 // Vista EXPANDIDA - Card-based layout con más detalles
                                                 <div className="p-2 grid gap-2 sm:grid-cols-1 md:grid-cols-2">
-                                                {pedidosZonaPaginados.map((p, rowIndex) => {
-                                                    const estado = p.estado || 'pendiente';
-                                                    const estadoInfo = getEstadoInfo(estado);
-                                                    const siguiente = getSiguienteEstado(estado);
-                                                    const isSelected = selectedIds.has(p.id);
+                                                    {pedidosZonaPaginados.map((p, rowIndex) => {
+                                                        const estado = p.estado || 'pendiente';
+                                                        const estadoInfo = getEstadoInfo(estado);
+                                                        const siguiente = getSiguienteEstado(estado);
+                                                        const isSelected = selectedIds.has(p.id);
 
-                                                    return (
-                                                        <div
-                                                            key={p.id}
-                                                            className="p-4 rounded-lg transition-all hover:shadow-md"
-                                                            style={{
-                                                                border: isSelected ? '2px solid #3b82f6' : '1px solid var(--color-border)',
-                                                                background: isSelected ? 'rgba(59, 130, 246, 0.08)' : rowIndex % 2 === 0 ? 'var(--color-bg)' : 'var(--color-bg-secondary)'
-                                                            }}
-                                                        >
-                                                            {/* Card Header: Checkbox + Cliente + Estado */}
-                                                            <div className="flex items-center gap-3 mb-3">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={() => toggleSelection(p.id)}
-                                                                    className="w-5 h-5 rounded cursor-pointer accent-blue-600"
-                                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
-                                                                />
-                                                                <span className="font-bold text-base flex-1">{p.cliente?.nombre || 'Cliente'}</span>
-                                                                <span className="px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm" style={{ background: estadoInfo.bg, color: estadoInfo.color, border: `1px solid ${estadoInfo.color}30` }}>
-                                                                    {estadoInfo.icon} {estadoInfo.label}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* Card Body: Contact Info */}
-                                                            <div className="flex flex-wrap gap-3 text-sm mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                                                                {p.cliente?.direccion && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <span>📍</span>
-                                                                        <span>{p.cliente.direccion}</span>
+                                                        return (
+                                                            <div
+                                                                key={p.id}
+                                                                className="p-4 rounded-lg transition-all hover:shadow-md"
+                                                                style={{
+                                                                    border: isSelected ? '2px solid #3b82f6' : '1px solid var(--color-border)',
+                                                                    background: isSelected ? 'rgba(59, 130, 246, 0.08)' : rowIndex % 2 === 0 ? 'var(--color-bg)' : 'var(--color-bg-secondary)'
+                                                                }}
+                                                            >
+                                                                {/* Card Header: Checkbox + Cliente + Estado */}
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => toggleSelection(p.id)}
+                                                                        className="w-5 h-5 rounded cursor-pointer accent-blue-600"
+                                                                        aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                                                    />
+                                                                    <span className="font-bold text-base flex-1">{p.cliente?.nombre || 'Cliente'}</span>
+                                                                    <span className="px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm" style={{ background: estadoInfo.bg, color: estadoInfo.color, border: `1px solid ${estadoInfo.color}30` }}>
+                                                                        {estadoInfo.icon} {estadoInfo.label}
                                                                     </span>
-                                                                )}
-                                                                {p.cliente?.telefono && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <span>📞</span>
-                                                                        <span>{p.cliente.telefono}</span>
-                                                                    </span>
-                                                                )}
-                                                                {p.repartidor && (
-                                                                    <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: '#e0e7ff', color: '#4338ca' }}>
-                                                                        👤 {p.repartidor}
-                                                                    </span>
-                                                                )}
-                                                            </div>
+                                                                </div>
 
-                                                            {/* Card Body: Productos */}
-                                                            <div className="text-sm p-3 rounded-lg mb-3" style={{ background: 'var(--color-bg-tertiary)' }}>
-                                                                <div className="font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>📦 Productos:</div>
-                                                                {p.productos?.slice(0, 4).map((prod, i) => (
-                                                                    <div key={i} className="flex justify-between py-0.5">
-                                                                        <span>{prod.nombre}</span>
-                                                                        <span className="font-semibold">×{prod.cantidad}</span>
-                                                                    </div>
-                                                                ))}
-                                                                {p.productos?.length > 4 && <div className="opacity-60 text-xs mt-1">+{p.productos.length - 4} productos más</div>}
-                                                            </div>
+                                                                {/* Card Body: Contact Info */}
+                                                                <div className="flex flex-wrap gap-3 text-sm mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                    {p.cliente?.direccion && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <span>📍</span>
+                                                                            <span>{p.cliente.direccion}</span>
+                                                                        </span>
+                                                                    )}
+                                                                    {p.cliente?.telefono && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <span>📞</span>
+                                                                            <span>{p.cliente.telefono}</span>
+                                                                        </span>
+                                                                    )}
+                                                                    {p.repartidor && (
+                                                                        <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                                            👤 {p.repartidor}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
 
-                                                            {/* Card Footer: Acciones */}
-                                                            <div className="flex gap-2 flex-wrap pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-                                                                {asignandoRepartidor === p.id ? (
-                                                                    <div className="flex gap-1 items-center">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={nuevoRepartidor}
-                                                                            onChange={e => setNuevoRepartidor(e.target.value)}
-                                                                            onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
-                                                                            placeholder="Nombre..."
-                                                                            className="px-2 py-1 border rounded text-sm w-32"
-                                                                            autoFocus
-                                                                            list="reps-list-shared"
-                                                                        />
-                                                                        <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-3 py-1.5 rounded text-white text-sm font-medium" style={{ background: '#10b981' }}>✓</button>
-                                                                        <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-3 py-1.5 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
-                                                                    </div>
-                                                                ) : (
+                                                                {/* Card Body: Productos */}
+                                                                <div className="text-sm p-3 rounded-lg mb-3" style={{ background: 'var(--color-bg-tertiary)' }}>
+                                                                    <div className="font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>📦 Productos:</div>
+                                                                    {p.productos?.slice(0, 4).map((prod, i) => (
+                                                                        <div key={i} className="flex justify-between py-0.5">
+                                                                            <span>{prod.nombre}</span>
+                                                                            <span className="font-semibold">×{prod.cantidad}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {p.productos?.length > 4 && <div className="opacity-60 text-xs mt-1">+{p.productos.length - 4} productos más</div>}
+                                                                </div>
+
+                                                                {/* Card Footer: Acciones */}
+                                                                <div className="flex gap-2 flex-wrap pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                                                                    {asignandoRepartidor === p.id ? (
+                                                                        <div className="flex gap-1 items-center">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={nuevoRepartidor}
+                                                                                onChange={e => setNuevoRepartidor(e.target.value)}
+                                                                                onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
+                                                                                placeholder="Nombre..."
+                                                                                className="px-2 py-1 border rounded text-sm w-32"
+                                                                                autoFocus
+                                                                                list="reps-list-shared"
+                                                                            />
+                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-3 py-1.5 rounded text-white text-sm font-medium" style={{ background: '#10b981' }}>✓</button>
+                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-3 py-1.5 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => setAsignandoRepartidor(p.id)}
+                                                                            className="px-3 py-1.5 rounded-md text-sm font-medium transition-all hover:shadow"
+                                                                            style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                                                                        >
+                                                                            👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
+                                                                        </button>
+                                                                    )}
+
+                                                                    {siguiente && (
+                                                                        <button
+                                                                            onClick={() => cambiarEstado(p.id, siguiente)}
+                                                                            className="px-3 py-1.5 rounded-md text-sm font-semibold text-white transition-all hover:shadow-md hover:scale-105"
+                                                                            style={{ background: ESTADOS_PEDIDO[siguiente].color }}
+                                                                        >
+                                                                            {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
+                                                                        </button>
+                                                                    )}
+
                                                                     <button
-                                                                        onClick={() => setAsignandoRepartidor(p.id)}
-                                                                        className="px-3 py-1.5 rounded-md text-sm font-medium transition-all hover:shadow"
-                                                                        style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                                                                        onClick={() => eliminarPedido(p.id, p.cliente?.nombre)}
+                                                                        className="px-3 py-1.5 rounded-md text-sm font-medium ml-auto transition-all hover:shadow"
+                                                                        style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}
                                                                     >
-                                                                        👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
+                                                                        🗑️ Eliminar
                                                                     </button>
-                                                                )}
-
-                                                                {siguiente && (
-                                                                    <button
-                                                                        onClick={() => cambiarEstado(p.id, siguiente)}
-                                                                        className="px-3 py-1.5 rounded-md text-sm font-semibold text-white transition-all hover:shadow-md hover:scale-105"
-                                                                        style={{ background: ESTADOS_PEDIDO[siguiente].color }}
-                                                                    >
-                                                                        {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
-                                                                    </button>
-                                                                )}
-
-                                                                <button
-                                                                    onClick={() => eliminarPedido(p.id, p.cliente?.nombre)}
-                                                                    className="px-3 py-1.5 rounded-md text-sm font-medium ml-auto transition-all hover:shadow"
-                                                                    style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}
-                                                                >
-                                                                    🗑️ Eliminar
-                                                                </button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </>
