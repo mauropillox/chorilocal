@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: chorilocal-backend
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # CRITICAL: Disable Render's CI to save money
+    # We use GitHub Actions instead (2000 free minutes vs Render's 500)
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - backend/**
+      ignoredPaths:
+        - docs/**
+        - frontend/**
+        - README.md
+        - "*.md"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DB_PATH
+        value: /data/ventas.db
+      - key: SENTRY_DSN
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://www.pedidosfriosur.com,https://pedidosfriosur.com
+
+  - type: web
+    name: chorilocal-frontend
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    # CRITICAL: Disable Render's CI to save money
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - frontend/**
+      ignoredPaths:
+        - docs/**
+        - backend/**
+        - README.md
+        - "*.md"
+    envVars:
+      - key: VITE_API_URL
+        value: https://api.pedidosfriosur.com/api

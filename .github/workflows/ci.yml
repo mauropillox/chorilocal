@@ -3,12 +3,22 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'README.md'
+      - '.gitignore'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
 
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    # Only run if backend files changed
+    if: contains(github.event.head_commit.message, '[backend]') || contains(github.event.head_commit.modified, 'backend/')
     defaults:
       run:
         working-directory: backend
@@ -38,6 +48,8 @@ jobs:
 
   frontend-lint:
     runs-on: ubuntu-latest
+    # Only run if frontend files changed
+    if: contains(github.event.head_commit.message, '[frontend]') || contains(github.event.head_commit.modified, 'frontend/')
     defaults:
       run:
         working-directory: frontend
