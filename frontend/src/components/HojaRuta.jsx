@@ -636,6 +636,8 @@ export default function HojaRuta() {
                     onClick={() => setShowRepartidoresManager(!showRepartidoresManager)}
                     className="px-3 py-2 text-sm rounded flex items-center gap-1"
                     style={{ background: showRepartidoresManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showRepartidoresManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                    aria-label="Gestionar repartidores"
+                    aria-expanded={showRepartidoresManager}
                 >
                     ⚙️ Repartidores
                 </button>
@@ -645,6 +647,7 @@ export default function HojaRuta() {
                         onClick={() => { setFiltroEstado(''); setFiltroZona(''); setFiltroRepartidor(''); }}
                         className="px-3 py-2 text-sm rounded"
                         style={{ background: 'var(--color-danger)', color: 'white' }}
+                        aria-label="Limpiar todos los filtros"
                     >
                         ✕ Limpiar
                     </button>
@@ -658,6 +661,8 @@ export default function HojaRuta() {
                     onClick={() => setShowZonasManager(!showZonasManager)}
                     className="px-3 py-2 text-sm rounded font-medium"
                     style={{ background: showZonasManager ? 'var(--color-primary)' : 'var(--color-bg)', color: showZonasManager ? 'white' : 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                    aria-label="Gestionar zonas de clientes"
+                    aria-expanded={showZonasManager}
                 >
                     🗺️ Zonas
                 </button>
@@ -668,6 +673,7 @@ export default function HojaRuta() {
                     className="px-3 py-2 text-sm rounded"
                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
                     title="Seleccionar todos los pedidos visibles"
+                    aria-label="Seleccionar todos los pedidos visibles"
                 >
                     ☑️ Seleccionar todos
                 </button>
@@ -697,6 +703,8 @@ export default function HojaRuta() {
                     onClick={() => setVistaCompacta(!vistaCompacta)}
                     className="px-3 py-2 rounded text-sm ml-auto"
                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                    aria-label={vistaCompacta ? 'Cambiar a vista expandida' : 'Cambiar a vista compacta'}
+                    aria-pressed={vistaCompacta}
                 >
                     {vistaCompacta ? '📋 Vista Expandida' : '📑 Vista Compacta'}
                 </button>

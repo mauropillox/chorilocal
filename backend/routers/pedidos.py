@@ -42,11 +42,11 @@ class PreviewStockRequest(BaseModel):
     pedido_ids: List[int]
 
 
-@router.get("/pedidos/antiguos")
+@router.get("/pedidos/antiguos", tags=["pedidos"], summary="Obtener pedidos antiguos", description="Obtiene pedidos pendientes o en preparación que tienen más de N horas de antigüedad")
 @limiter.limit(RATE_LIMIT_READ)
 async def get_pedidos_antiguos(
     request: Request,
-    horas: int = Query(default=24, ge=1, le=168),
+    horas: int = Query(default=24, ge=1, le=168, description="Horas de antigüedad mínima"),
     current_user: dict = Depends(get_current_user)
 ):
     """Get old pending orders (older than N hours)"""
@@ -82,7 +82,7 @@ async def get_pedidos_antiguos(
         raise safe_error_handler(e, "pedidos", "obtener pedidos antiguos")
 
 
-@router.post("/pedidos", response_model=models.Pedido)
+@router.post("/pedidos", response_model=models.Pedido, tags=["pedidos"], summary="Crear pedido", description="Crea un nuevo pedido para un cliente con productos")
 @limiter.limit(RATE_LIMIT_WRITE)
 async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_user: dict = Depends(get_current_user)):
     if current_user["rol"] not in ["admin", "vendedor", "administrador", "oficina"]:
@@ -389,10 +389,11 @@ async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin
 
 
 class EliminarPedidosRequest(BaseModel):
-    pedido_ids: List[int] = Field(..., min_length=1, max_length=100)
+    """Request body para eliminación masiva de pedidos"""
+    pedido_ids: List[int] = Field(..., min_length=1, max_length=100, description="Lista de IDs de pedidos a eliminar (máximo 100)")
 
 
-@router.post("/pedidos/bulk-delete", status_code=200)
+@router.post("/pedidos/bulk-delete", status_code=200, tags=["pedidos"], summary="Eliminar pedidos en lote", description="Elimina múltiples pedidos de forma atómica. Requiere rol admin. Máximo 100 pedidos por operación.")
 @limiter.limit(RATE_LIMIT_WRITE)
 async def eliminar_pedidos_bulk(
     request: Request,
