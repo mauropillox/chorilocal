@@ -85,9 +85,10 @@ async def get_estadisticas_ventas(
                 SELECT 
                     DATE(p.fecha) as dia,
                     COUNT(p.id) as total_pedidos,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as monto_total
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as monto_total
                 FROM pedidos p
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) >= ?
                 GROUP BY DATE(p.fecha)
                 ORDER BY dia ASC
@@ -104,7 +105,7 @@ async def get_estadisticas_ventas(
                 SELECT 
                     pr.nombre,
                     SUM(dp.cantidad) as cantidad,
-                    SUM(dp.cantidad * dp.precio_unitario) as monto
+                    SUM(dp.cantidad * pr.precio) as monto
                 FROM detalles_pedido dp
                 JOIN productos pr ON pr.id = dp.producto_id
                 JOIN pedidos p ON p.id = dp.pedido_id

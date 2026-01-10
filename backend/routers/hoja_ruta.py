@@ -132,6 +132,5 @@ async def generar_hoja_ruta_pdf(
         )
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+        from exceptions import safe_error_handler
+        raise safe_error_handler(e, "hoja_ruta", "generar PDF")
