@@ -29,7 +29,7 @@ export function withErrorBoundary(WrappedComponent, componentName = 'Component')
  */
 export function ComponentErrorBoundary({ children, name = 'componente', fallback = null }) {
     return (
-        <ErrorBoundary 
+        <ErrorBoundary
             fallbackMessage={`Error cargando ${name}`}
             fallback={fallback}
         >

@@ -106,14 +106,14 @@ export function SkeletonHojaRuta() {
                     <SkeletonBox key={i} height="60px" className="rounded-lg" />
                 ))}
             </div>
-            
+
             {/* Toolbar skeleton */}
             <div className="flex gap-3 p-3 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
                 <SkeletonBox width="150px" height="36px" className="rounded" />
                 <SkeletonBox width="150px" height="36px" className="rounded" />
                 <SkeletonBox width="100px" height="36px" className="rounded" />
             </div>
-            
+
             {/* Pedidos skeleton */}
             <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map(i => (

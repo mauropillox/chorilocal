@@ -1,29 +1,40 @@
 {
-  "env": {
-    "browser": true,
-    "es2021": true,
-    "node": true
-  },
-  "extends": [
-    "eslint:recommended"
-  ],
-  "parserOptions": {
-    "ecmaVersion": "latest",
-    "sourceType": "module",
-    "ecmaFeatures": {
-      "jsx": true
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "eslint:recommended"
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "jsx": true
+        }
+    },
+    "rules": {
+        "no-unused-vars": [
+            "warn",
+            {
+                "argsIgnorePattern": "^_"
+            }
+        ],
+        "no-console": "off",
+        "prefer-const": "warn",
+        "no-var": "error",
+        "eqeqeq": [
+            "warn",
+            "always"
+        ],
+        "curly": [
+            "warn",
+            "multi-line"
+        ],
+        "no-duplicate-imports": "error"
+    },
+    "globals": {
+        "React": "readonly"
     }
-  },
-  "rules": {
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "no-console": "off",
-    "prefer-const": "warn",
-    "no-var": "error",
-    "eqeqeq": ["warn", "always"],
-    "curly": ["warn", "multi-line"],
-    "no-duplicate-imports": "error"
-  },
-  "globals": {
-    "React": "readonly"
-  }
 }
