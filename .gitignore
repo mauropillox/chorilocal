@@ -187,13 +187,18 @@ playwright-report/
 *.test.pdf
 MUESTRA_PDF_GENERADO.pdf
 
-# Test scripts and results (keep tests locally but not in repo)
+# Test scripts and results (keep comprehensive tests locally but not in repo)
 scripts/test/
 scripts/smoke_test.sh
 scripts/concurrency_test.sh
 frontend/tests/
 frontend/src/test/
-# NOTE: backend/tests/ and backend/pytest.ini removed - these should be in repo
+# Backend tests - keep comprehensive suite local, only CI health test in repo
+backend/tests/
+backend/test_*.py
+!backend/test_ci_health.py
+# Keep pytest config for CI
+# backend/pytest.ini - keep this one for CI
 quick-b2b-test.sh
 test-complete-workflow.sh
 test-p1-security.sh
