@@ -21,27 +21,47 @@ export default function Reportes() {
   const [reporteRendimiento, setReporteRendimiento] = useState(null);
   const [reporteComparativo, setReporteComparativo] = useState(null);
 
-  // Export to CSV utility
-  const exportToCSV = (data, filename, headers) => {
+  // Export to CSV utility with proper formatting
+  const exportToCSV = (data, filename, columnConfig) => {
     if (!data || data.length === 0) {
       toast('No hay datos para exportar', 'warn');
       return;
     }
 
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(h => {
-        // Get value directly from row using header as key
-        const val = row[h] ?? '';
-        // Escape commas and quotes
-        const strVal = String(val);
+    // Build header row with Spanish column names
+    const headerRow = columnConfig.map(col => col.label).join(',');
+    
+    // Build data rows
+    const dataRows = data.map(row => {
+      return columnConfig.map(col => {
+        let val;
+        
+        // Use custom getter if provided, otherwise get from key
+        if (col.getValue) {
+          val = col.getValue(row);
+        } else {
+          val = row[col.key];
+        }
+        
+        // Apply formatter if provided
+        if (col.format && val != null) {
+          val = col.format(val);
+        }
+        
+        // Convert to string and handle empty values
+        const strVal = val != null ? String(val) : '';
+        
+        // Escape values with commas, quotes, or newlines
         if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
+        
         return strVal;
-      }).join(','))
-    ].join('\n');
+      }).join(',');
+    }).join('\n');
 
+    const csvContent = `${headerRow}\n${dataRows}`;
+    
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -54,43 +74,44 @@ export default function Reportes() {
   const exportVentas = () => {
     if (!reporteVentas?.top_productos) return;
     exportToCSV(
-      reporteVentas.top_productos.map(p => ({
-        nombre: p.nombre,
-        cantidad_vendida: p.cantidad_vendida,
-        total_vendido: p.total_vendido
-      })),
-      'reporte_ventas',
-      ['nombre', 'cantidad_vendida', 'total_vendido']
+      reporteVentas.top_productos,
+      'ventas_top_productos',
+      [
+        { key: 'nombre', label: 'Producto' },
+        { key: 'cantidad_vendida', label: 'Cantidad Vendida' },
+        { key: 'total_vendido', label: 'Total Vendido ($)', format: (v) => v.toFixed(2) }
+      ]
     );
   };
 
   const exportInventario = () => {
     if (!reporteInventario?.productos) return;
     exportToCSV(
-      reporteInventario.productos.map(p => ({
-        nombre: p.nombre,
-        stock: p.stock,
-        stock_minimo: p.stock_minimo,
-        precio: p.precio,
-        valor_stock: p.stock * p.precio
-      })),
-      'reporte_inventario',
-      ['nombre', 'stock', 'stock_minimo', 'precio', 'valor_stock']
+      reporteInventario.productos,
+      'inventario_productos',
+      [
+        { key: 'nombre', label: 'Producto' },
+        { key: 'stock', label: 'Stock Actual' },
+        { key: 'stock_minimo', label: 'Stock Mínimo' },
+        { key: 'precio', label: 'Precio ($)', format: (v) => v.toFixed(2) },
+        { label: 'Valor Total ($)', getValue: (row) => (row.stock * row.precio).toFixed(2) }
+      ]
     );
   };
 
   const exportClientes = () => {
     if (!reporteClientes?.clientes) return;
     exportToCSV(
-      reporteClientes.clientes.map(c => ({
-        nombre: c.nombre,
-        telefono: c.telefono || '',
-        direccion: c.direccion || '',
-        total_pedidos: c.total_pedidos || 0,
-        total_gastado: c.total_gastado || 0
-      })),
-      'reporte_clientes',
-      ['nombre', 'telefono', 'direccion', 'total_pedidos', 'total_gastado']
+      reporteClientes.clientes,
+      'clientes_completo',
+      [
+        { key: 'nombre', label: 'Cliente' },
+        { key: 'telefono', label: 'Teléfono', format: (v) => v || 'Sin teléfono' },
+        { key: 'direccion', label: 'Dirección', format: (v) => v || 'Sin dirección' },
+        { key: 'total_pedidos', label: 'Total Pedidos' },
+        { key: 'total_gastado', label: 'Total Gastado ($)', format: (v) => v.toFixed(2) },
+        { key: 'ultimo_pedido', label: 'Último Pedido', format: (v) => v || 'Nunca' }
+      ]
     );
   };
 
