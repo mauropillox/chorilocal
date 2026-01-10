@@ -940,7 +940,7 @@ export default function HojaRuta() {
                                         style={{ background: '#f59e0b', color: 'white' }}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-sm">⚠️ Clientes sin zona asignada</span>
+                                            <span className="font-semibold text-sm">⚠️ Clientes sin zona asignada:</span>
                                             <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
                                                 {totalClientesSinZona} cliente{totalClientesSinZona !== 1 ? 's' : ''}
                                             </span>
