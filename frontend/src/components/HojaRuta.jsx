@@ -1532,36 +1532,36 @@ export default function HojaRuta() {
                                     {/* Header zona - clickeable para expandir/colapsar */}
                                     <button
                                         onClick={() => setExpandedPedidoZona(expandedPedidoZona === zona ? null : zona)}
-                                        className="w-full px-3 py-3 flex flex-col gap-2 cursor-pointer"
+                                        className="w-full px-4 py-3.5 flex flex-col gap-2.5 cursor-pointer hover:brightness-110 transition-all"
                                         style={{ background: 'var(--color-primary)', color: 'white' }}
                                     >
-                                        <div className="flex items-center justify-between w-full">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">{isZonaExpanded ? '▼' : '▶'}</span>
-                                                <span className="font-bold text-base">📍 {zona}</span>
+                                        <div className="flex items-center justify-between w-full gap-4">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="text-base">{isZonaExpanded ? '▼' : '▶'}</span>
+                                                <span className="font-bold text-lg">📍 {zona}</span>
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-4 flex-wrap">
                                                 {/* Status summary badges */}
-                                                <div className="flex items-center gap-1.5 text-xs">
+                                                <div className="flex items-center gap-2 text-xs">
                                                     {zoneProgress.pendiente > 0 && (
-                                                        <span className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.3)' }}>📝 {zoneProgress.pendiente}</span>
+                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(59,130,246,0.3)' }}>📝 {zoneProgress.pendiente}</span>
                                                     )}
                                                     {zoneProgress.preparando > 0 && (
-                                                        <span className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.3)' }}>🔧 {zoneProgress.preparando}</span>
+                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(245,158,11,0.3)' }}>🔧 {zoneProgress.preparando}</span>
                                                     )}
                                                     {zoneProgress.entregado > 0 && (
-                                                        <span className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(16,185,129,0.3)' }}>✅ {zoneProgress.entregado}</span>
+                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(16,185,129,0.3)' }}>✅ {zoneProgress.entregado}</span>
                                                     )}
                                                 </div>
                                                 {totalPedidoPages > 1 && isZonaExpanded && (
-                                                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                                                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded font-medium">
                                                         pág {currentPedidoPage}/{totalPedidoPages}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         {/* Progress bar */}
-                                        <div className="w-full flex items-center gap-2">
+                                        <div className="w-full flex items-center gap-2.5">
                                             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
                                                 <div
                                                     className="h-full rounded-full transition-all"
