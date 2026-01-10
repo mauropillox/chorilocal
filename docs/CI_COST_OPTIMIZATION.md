@@ -204,3 +204,10 @@ If CI minutes are still high after these changes, check:
 3. Are builds failing and retrying? (Check logs)
 
 **Target:** <200 pipeline minutes/month (free tier covers this)
+
+## Cost Optimization Test
+
+This commit should NOT trigger any builds on Render (0 builds = $0).
+
+Test performed on: Sat Jan 10 10:48:26 -03 2026
+
