@@ -652,7 +652,7 @@ export default function HojaRuta() {
             />
 
             {/* Stats Cards - Clickeables como filtros */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="grid grid-cols-3 gap-2 mb-4">
                 {['pendiente', 'preparando', 'entregado'].map(estado => {
                     const info = getEstadoInfo(estado);
                     const isActive = filtroEstado === estado;
@@ -1249,14 +1249,17 @@ export default function HojaRuta() {
                         <div
                             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                             onClick={() => setEditingClienteZona(null)}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="zona-modal-title"
                         >
                             <div
                                 className="p-6 rounded-lg max-w-md w-full mx-4"
                                 style={{ background: 'var(--color-bg)' }}
                                 onClick={e => e.stopPropagation()}
                             >
-                                <h3 className="font-semibold mb-4">
-                                    Asignar zona a {clientes.find(c => c.id === editingClienteZona)?.nombre}
+                                <h3 id="zona-modal-title" className="font-semibold mb-4">
+                                    Asignar zona a {clientes.find(c => c.id === editingClienteZona)?.nombre || 'cliente'}
                                 </h3>
 
                                 {/* Zonas predefinidas de Uruguay */}
@@ -1604,8 +1607,8 @@ export default function HojaRuta() {
                                                         const estado = p.estado || 'pendiente';
                                                         const estadoInfo = getEstadoInfo(estado);
                                                         const siguiente = getSiguienteEstado(estado);
-                                                        const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
-                                                        const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
+                                                        const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre?.substring(0, 15) || '?'}${(prod.nombre?.length || 0) > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
+                                                        const masProductos = (p.productos?.length || 0) > 2 ? ` +${(p.productos?.length || 0) - 2} más` : '';
                                                         const isSelected = selectedIds.has(p.id);
                                                         const isHovered = hoveredPedidoId === p.id;
                                                         const showActions = showActionsForId === p.id;
@@ -1616,8 +1619,8 @@ export default function HojaRuta() {
                                                                 key={p.id}
                                                                 className="px-3 py-2.5 flex items-center gap-3 transition-all cursor-pointer group"
                                                                 style={{
-                                                                    background: isSelected ? 'rgba(59, 130, 246, 0.15)' : isHovered ? 'var(--color-bg-hover)' : isEvenRow ? 'var(--color-bg)' : 'var(--color-bg-secondary)',
-                                                                    borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent'
+                                                                    background: isSelected ? 'var(--color-primary-bg, rgba(59, 130, 246, 0.15))' : isHovered ? 'var(--color-bg-hover, var(--color-bg-secondary))' : isEvenRow ? 'var(--color-bg)' : 'var(--color-bg-secondary)',
+                                                                    borderLeft: isSelected ? '4px solid var(--color-primary, #3b82f6)' : '4px solid transparent'
                                                                 }}
                                                                 onMouseEnter={() => setHoveredPedidoId(p.id)}
                                                                 onMouseLeave={() => setHoveredPedidoId(null)}
