@@ -31,10 +31,11 @@ export default function Reportes() {
     const csvContent = [
       headers.join(','),
       ...data.map(row => headers.map(h => {
-        const val = row[h.toLowerCase().replace(/ /g, '_')] ?? row[h] ?? '';
+        // Get value directly from row using header as key
+        const val = row[h] ?? '';
         // Escape commas and quotes
         const strVal = String(val);
-        if (strVal.includes(',') || strVal.includes('"')) {
+        if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
         return strVal;
