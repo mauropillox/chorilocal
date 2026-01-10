@@ -1443,36 +1443,39 @@ export default function HojaRuta() {
             ) : (
                 <>
                     {/* Paginación de zonas en lista de pedidos */}
-                    <div className="flex items-center justify-between mb-3 px-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 px-2">
                         <span className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                            {pedidosPorZona.length} zona{pedidosPorZona.length !== 1 ? 's' : ''} con pedidos
+                            📍 {pedidosPorZona.length} zona{pedidosPorZona.length !== 1 ? 's' : ''} con pedidos
                         </span>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Pedidos/zona:</span>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>Mostrar por zona:</span>
                                 <select
                                     value={pedidosDentroZonaPerPage}
                                     onChange={e => { setPedidosDentroZonaPerPage(Number(e.target.value)); setPedidosDentroZonaPage({}); }}
                                     className="px-2 py-1 rounded border text-xs"
                                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                    title="Pedidos a mostrar dentro de cada zona"
                                 >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>50</option>
+                                    <option value={5}>5 pedidos</option>
+                                    <option value={10}>10 pedidos</option>
+                                    <option value={25}>25 pedidos</option>
+                                    <option value={50}>50 pedidos</option>
                                 </select>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Zonas:</span>
+                            <div className="h-4 w-px" style={{ background: 'var(--color-border)' }}></div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>Ver zonas:</span>
                                 <select
                                     value={pedidosZonasPerPage}
                                     onChange={e => { setPedidosZonasPerPage(Number(e.target.value)); setPedidosZonaPage(1); }}
                                     className="px-2 py-1 rounded border text-xs"
                                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                    title="Cuántas zonas mostrar a la vez"
                                 >
-                                    <option value={3}>3</option>
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
+                                    <option value={3}>3 zonas</option>
+                                    <option value={5}>5 zonas</option>
+                                    <option value={10}>10 zonas</option>
                                     <option value={25}>Todas</option>
                                 </select>
                             </div>
