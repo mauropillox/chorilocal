@@ -676,7 +676,7 @@ export default function HojaRuta() {
             </div>
 
             {/* Barra de acciones */}
-            <div className="flex flex-wrap gap-3 mb-4 p-3 rounded-lg items-center" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+            <div className="flex flex-wrap gap-4 mb-4 p-4 rounded-lg items-center" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
                 {/* Filtros */}
                 <select
                     value={filtroZona}
@@ -726,7 +726,7 @@ export default function HojaRuta() {
                 )}
 
                 {/* Separador */}
-                <div className="h-8 w-px mx-2" style={{ background: 'var(--color-border)' }}></div>
+                <div className="h-8 w-px mx-3" style={{ background: 'var(--color-border)' }}></div>
 
                 {/* Zonas Manager Button */}
                 <button
@@ -1536,7 +1536,7 @@ export default function HojaRuta() {
                                         style={{ background: 'var(--color-primary)', color: 'white' }}
                                     >
                                         {/* Contenedor con dos secciones */}
-                                        <div className="px-4 py-3 flex flex-col gap-2.5">
+                                        <div className="px-5 py-4 flex flex-col gap-3.5">
                                             {/* Fila 1: Icon + Nombre + Badges */}
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="flex items-center gap-2.5">
@@ -1545,7 +1545,7 @@ export default function HojaRuta() {
                                                 </div>
 
                                                 {/* Badges compactos */}
-                                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                <div className="flex items-center gap-2.5 flex-wrap justify-end">
                                                     {zoneProgress.pendiente > 0 && (
                                                         <span
                                                             className="px-2 py-0.5 rounded text-xs font-semibold cursor-help"
