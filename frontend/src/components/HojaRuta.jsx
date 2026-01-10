@@ -13,16 +13,27 @@ const ESTADOS_PEDIDO = {
     // Legacy states for backward compatibility
     confirmado: { label: 'Confirmado', icon: '✔️', color: '#3b82f6', bg: '#dbeafe' },
     enviado: { label: 'Enviado', icon: '🚚', color: '#8b5cf6', bg: '#ede9fe' },
+    listo: { label: 'Listo', icon: '📦', color: '#10b981', bg: '#d1fae5' },
+    en_preparacion: { label: 'En Preparación', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
+    // Case variations
     Pendiente: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
     Confirmado: { label: 'Confirmado', icon: '✔️', color: '#3b82f6', bg: '#dbeafe' },
     'En Preparación': { label: 'En Preparación', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
+    'en preparación': { label: 'En Preparación', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
+    'En preparacion': { label: 'En Preparación', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
     Listo: { label: 'Listo', icon: '📦', color: '#10b981', bg: '#d1fae5' },
     Entregado: { label: 'Entregado', icon: '✅', color: '#10b981', bg: '#d1fae5' },
-    Cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' }
+    Cancelado: { label: 'Cancelado', icon: '❌', color: '#ef4444', bg: '#fee2e2' },
+    Preparando: { label: 'Preparando', icon: '🔧', color: '#f59e0b', bg: '#fef3c7' },
+    Enviado: { label: 'Enviado', icon: '🚚', color: '#8b5cf6', bg: '#ede9fe' },
+    // Null/empty/undefined handling
+    null: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
+    undefined: { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' },
+    '': { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' }
 };
 
-// Default state info for unknown states
-const DEFAULT_ESTADO_INFO = { label: 'Desconocido', icon: '❓', color: '#6b7280', bg: '#f3f4f6' };
+// Default state info for unknown states - treat as Pendiente
+const DEFAULT_ESTADO_INFO = { label: 'Pendiente', icon: '📝', color: '#3b82f6', bg: '#dbeafe' };
 
 // Helper to get estado info safely
 const getEstadoInfo = (estado) => ESTADOS_PEDIDO[estado] || DEFAULT_ESTADO_INFO;
@@ -83,6 +94,10 @@ export default function HojaRuta() {
     const [pedidosZonaPage, setPedidosZonaPage] = useState(1);
     const [pedidosZonasPerPage, setPedidosZonasPerPage] = useState(5);
     const [expandedPedidoZona, setExpandedPedidoZona] = useState(null);
+    
+    // Paginación de pedidos DENTRO de cada zona
+    const [pedidosDentroZonaPage, setPedidosDentroZonaPage] = useState({});
+    const [pedidosDentroZonaPerPage, setPedidosDentroZonaPerPage] = useState(10);
 
     useEffect(() => {
         cargarDatos();
@@ -831,10 +846,10 @@ export default function HojaRuta() {
             {showZonasManager && (
                 <div
                     className="mb-4 p-4 rounded-lg"
-                    style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+                    style={{ background: 'var(--color-bg-secondary)', border: '2px solid var(--color-primary)' }}
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold flex items-center gap-2">
+                        <h3 className="font-semibold flex items-center gap-2 text-lg">
                             🗺️ Gestionar Zonas de Clientes
                         </h3>
                         <div className="flex items-center gap-2">
@@ -847,10 +862,11 @@ export default function HojaRuta() {
                             </button>
                             <button
                                 onClick={() => setShowZonasManager(false)}
-                                className="text-sm px-2 py-1 rounded"
-                                style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                className="text-sm px-3 py-1.5 rounded font-medium flex items-center gap-1"
+                                style={{ background: '#ef4444', color: 'white' }}
+                                title="Cerrar panel de zonas"
                             >
-                                ✕
+                                ✕ Cerrar
                             </button>
                         </div>
                     </div>
@@ -1363,13 +1379,13 @@ export default function HojaRuta() {
                 </div>
             )}
 
-            {/* Lista de pedidos */}
-            {pedidosPorZona.length === 0 ? (
+            {/* Lista de pedidos - SOLO si no está el panel de zonas abierto */}
+            {!showZonasManager && (pedidosPorZona.length === 0 ? (
                 <div className="text-center py-12 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
                     <div className="text-4xl mb-2">📭</div>
                     <div className="font-semibold mb-1">No hay pedidos</div>
                     <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        {filtroEstado ? `No hay pedidos "${ESTADOS_PEDIDO[filtroEstado].label}"` : 'Ajustá los filtros'}
+                        {filtroEstado ? `No hay pedidos "${ESTADOS_PEDIDO[filtroEstado]?.label || filtroEstado}"` : 'Ajustá los filtros'}
                     </div>
                 </div>
             ) : (
@@ -1381,7 +1397,21 @@ export default function HojaRuta() {
                         </span>
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
-                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Zonas por página:</span>
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Pedidos/zona:</span>
+                                <select
+                                    value={pedidosDentroZonaPerPage}
+                                    onChange={e => { setPedidosDentroZonaPerPage(Number(e.target.value)); setPedidosDentroZonaPage({}); }}
+                                    className="px-2 py-1 rounded border text-xs"
+                                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Zonas:</span>
                                 <select
                                     value={pedidosZonasPerPage}
                                     onChange={e => { setPedidosZonasPerPage(Number(e.target.value)); setPedidosZonaPage(1); }}
@@ -1391,8 +1421,7 @@ export default function HojaRuta() {
                                     <option value={3}>3</option>
                                     <option value={5}>5</option>
                                     <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>Todas</option>
+                                    <option value={25}>Todas</option>
                                 </select>
                             </div>
                             {pedidosPorZona.length > pedidosZonasPerPage && (
@@ -1433,6 +1462,12 @@ export default function HojaRuta() {
                         .slice((pedidosZonaPage - 1) * pedidosZonasPerPage, pedidosZonaPage * pedidosZonasPerPage)
                         .map(([zona, pedidosZona]) => {
                             const isZonaExpanded = expandedPedidoZona === zona || expandedPedidoZona === null;
+                            const currentPedidoPage = pedidosDentroZonaPage[zona] || 1;
+                            const totalPedidoPages = Math.ceil(pedidosZona.length / pedidosDentroZonaPerPage);
+                            const pedidosZonaPaginados = pedidosZona.slice(
+                                (currentPedidoPage - 1) * pedidosDentroZonaPerPage,
+                                currentPedidoPage * pedidosDentroZonaPerPage
+                            );
 
                             return (
                                 <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
@@ -1446,14 +1481,48 @@ export default function HojaRuta() {
                                             <span className="text-sm">{isZonaExpanded ? '▼' : '▶'}</span>
                                             <span className="font-semibold text-sm">📍 {zona}</span>
                                         </div>
-                                        <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
+                                            {totalPedidoPages > 1 && isZonaExpanded && (
+                                                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                                                    pág {currentPedidoPage}/{totalPedidoPages}
+                                                </span>
+                                            )}
+                                        </div>
                                     </button>
 
                                     {/* Pedidos - Vista compacta o expandida */}
-                                    {isZonaExpanded && (vistaCompacta ? (
+                                    {isZonaExpanded && (
+                                        <>
+                                            {/* Paginación dentro de la zona */}
+                                            {totalPedidoPages > 1 && (
+                                                <div className="flex items-center justify-center gap-2 py-2 px-3" style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setPedidosDentroZonaPage({ ...pedidosDentroZonaPage, [zona]: Math.max(1, currentPedidoPage - 1) }); }}
+                                                        disabled={currentPedidoPage === 1}
+                                                        className="px-2 py-1 rounded text-xs"
+                                                        style={{ background: currentPedidoPage === 1 ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPedidoPage === 1 ? 'var(--color-text-muted)' : 'white' }}
+                                                    >
+                                                        ← Anterior
+                                                    </button>
+                                                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                                        {(currentPedidoPage - 1) * pedidosDentroZonaPerPage + 1}-{Math.min(currentPedidoPage * pedidosDentroZonaPerPage, pedidosZona.length)} de {pedidosZona.length}
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setPedidosDentroZonaPage({ ...pedidosDentroZonaPage, [zona]: Math.min(totalPedidoPages, currentPedidoPage + 1) }); }}
+                                                        disabled={currentPedidoPage >= totalPedidoPages}
+                                                        className="px-2 py-1 rounded text-xs"
+                                                        style={{ background: currentPedidoPage >= totalPedidoPages ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPedidoPage >= totalPedidoPages ? 'var(--color-text-muted)' : 'white' }}
+                                                    >
+                                                        Siguiente →
+                                                    </button>
+                                                </div>
+                                            )}
+                                            
+                                            {vistaCompacta ? (
                                         // Vista COMPACTA - Más pedidos visibles
                                         <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                                            {pedidosZona.map((p) => {
+                                            {pedidosZonaPaginados.map((p) => {
                                                 const estado = p.estado || 'pendiente';
                                                 const estadoInfo = getEstadoInfo(estado);
                                                 const siguiente = getSiguienteEstado(estado);
@@ -1544,7 +1613,7 @@ export default function HojaRuta() {
                                         </div>
                                     ) : (
                                         // Vista EXPANDIDA - Más detalles
-                                        pedidosZona.map((p) => {
+                                        pedidosZonaPaginados.map((p) => {
                                             const estado = p.estado || 'pendiente';
                                             const estadoInfo = getEstadoInfo(estado);
                                             const siguiente = getSiguienteEstado(estado);
@@ -1634,7 +1703,9 @@ export default function HojaRuta() {
                                                 </div>
                                             );
                                         })
-                                    ))}
+                                    )}
+                                        </>
+                                    )}
                                 </div>
                             );
                         })}
@@ -1694,7 +1765,7 @@ export default function HojaRuta() {
                         </div>
                     )}
                 </>
-            )}
+            ))}
         </div>
     );
 }
