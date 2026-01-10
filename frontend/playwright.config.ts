@@ -67,8 +67,8 @@ export default defineConfig({
         // },
     ],
 
-    /* Run your local dev server before starting the tests */
-    webServer: {
+    /* Run your local dev server before starting the tests (skip for production) */
+    webServer: process.env.E2E_BASE_URL ? undefined : {
         command: 'npm run start',
         url: 'http://127.0.0.1:5173',
         reuseExistingServer: !process.env.CI,
