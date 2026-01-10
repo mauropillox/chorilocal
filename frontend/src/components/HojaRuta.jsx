@@ -1535,76 +1535,75 @@ export default function HojaRuta() {
                                         className="w-full cursor-pointer hover:brightness-105 transition-all"
                                         style={{ background: 'var(--color-primary)', color: 'white' }}
                                     >
-                                        {/* Fila principal */}
-                                        <div className="px-4 py-3 flex items-center justify-between gap-3">
-                                            {/* Izquierda: expand icon + nombre zona + estado */}
-                                            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                                                <div className="flex items-center gap-3">
+                                        {/* Contenedor con dos secciones */}
+                                        <div className="px-4 py-3 flex flex-col gap-2.5">
+                                            {/* Fila 1: Icon + Nombre + Badges */}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-2.5">
                                                     <span className="text-lg flex-shrink-0">{isZonaExpanded ? '▼' : '▶'}</span>
-                                                    <span className="font-bold text-base sm:text-lg truncate">📍 {zona}</span>
+                                                    <span className="font-bold text-lg">📍 {zona}</span>
                                                 </div>
-                                                {/* Línea descriptiva de estado */}
-                                                <div className="text-xs opacity-90 pl-7">
-                                                    {zoneProgress.total} pedidos total •{' '}
-                                                    {zoneProgress.pendiente > 0 ? `${zoneProgress.pendiente} pendiente${zoneProgress.pendiente !== 1 ? 's' : ''}` : 'ninguno pendiente'} •{' '}
-                                                    {zoneProgress.completedPercent}% entregado
+
+                                                {/* Badges compactos */}
+                                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                    {zoneProgress.pendiente > 0 && (
+                                                        <span
+                                                            className="px-2 py-0.5 rounded text-xs font-semibold cursor-help"
+                                                            style={{ background: 'rgba(59,130,246,0.4)' }}
+                                                            title={`${zoneProgress.pendiente} pedido${zoneProgress.pendiente !== 1 ? 's' : ''} esperando`}
+                                                        >
+                                                            📝 {zoneProgress.pendiente}
+                                                        </span>
+                                                    )}
+                                                    {zoneProgress.preparando > 0 && (
+                                                        <span
+                                                            className="px-2 py-0.5 rounded text-xs font-semibold cursor-help"
+                                                            style={{ background: 'rgba(245,158,11,0.4)' }}
+                                                            title={`${zoneProgress.preparando} preparando`}
+                                                        >
+                                                            🔧 {zoneProgress.preparando}
+                                                        </span>
+                                                    )}
+                                                    {zoneProgress.entregado > 0 && (
+                                                        <span
+                                                            className="px-2 py-0.5 rounded text-xs font-semibold cursor-help"
+                                                            style={{ background: 'rgba(16,185,129,0.4)' }}
+                                                            title={`${zoneProgress.entregado} entregados`}
+                                                        >
+                                                            ✅ {zoneProgress.entregado}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Derecha: badges de estado */}
-                                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                {zoneProgress.pendiente > 0 && (
-                                                    <span
-                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
-                                                        style={{ background: 'rgba(59,130,246,0.35)' }}
-                                                        title={`${zoneProgress.pendiente} pedido${zoneProgress.pendiente !== 1 ? 's' : ''} esperando ser procesado`}
-                                                    >
-                                                        📝 {zoneProgress.pendiente}
-                                                    </span>
-                                                )}
-                                                {zoneProgress.preparando > 0 && (
-                                                    <span
-                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
-                                                        style={{ background: 'rgba(245,158,11,0.35)' }}
-                                                        title={`${zoneProgress.preparando} pedido${zoneProgress.preparando !== 1 ? 's' : ''} en preparación`}
-                                                    >
-                                                        🔧 {zoneProgress.preparando}
-                                                    </span>
-                                                )}
-                                                {zoneProgress.entregado > 0 && (
-                                                    <span
-                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
-                                                        style={{ background: 'rgba(16,185,129,0.35)' }}
-                                                        title={`${zoneProgress.entregado} pedido${zoneProgress.entregado !== 1 ? 's' : ''} ya entregado`}
-                                                    >
-                                                        ✅ {zoneProgress.entregado}
-                                                    </span>
-                                                )}
+                                            {/* Fila 2: Resumen descriptivo */}
+                                            <div className="text-sm opacity-95 pl-7 font-medium">
+                                                {zoneProgress.total} pedidos • {zoneProgress.pendiente} pendientes • {zoneProgress.completedPercent}% entregado
                                             </div>
-                                        </div>
 
-                                        {/* Barra de progreso - fila separada */}
-                                        <div className="px-4 pb-2.5 flex items-center gap-3">
-                                            <div
-                                                className="flex-1 h-2 rounded-full overflow-hidden cursor-help"
-                                                style={{ background: 'rgba(255,255,255,0.25)' }}
-                                                title={`${zoneProgress.entregado}/${zoneProgress.total} pedidos entregados en esta zona`}
-                                            >
+                                            {/* Barra de progreso - fila 3 */}
+                                            <div className="flex items-center gap-2 mt-1">
                                                 <div
-                                                    className="h-full rounded-full transition-all"
-                                                    style={{
-                                                        width: `${zoneProgress.completedPercent}%`,
-                                                        background: zoneProgress.completedPercent === 100 ? '#10b981' : '#fbbf24'
-                                                    }}
-                                                />
+                                                    className="flex-1 h-2 rounded-full overflow-hidden cursor-help"
+                                                    style={{ background: 'rgba(255,255,255,0.25)' }}
+                                                    title={`${zoneProgress.entregado}/${zoneProgress.total} pedidos entregados en esta zona`}
+                                                >
+                                                    <div
+                                                        className="h-full rounded-full transition-all"
+                                                        style={{
+                                                            width: `${zoneProgress.completedPercent}%`,
+                                                            background: zoneProgress.completedPercent === 100 ? '#10b981' : '#fbbf24'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span
+                                                    className="text-xs font-semibold cursor-help"
+                                                    style={{ minWidth: '32px' }}
+                                                    title={`${zoneProgress.completedPercent}% completado`}
+                                                >
+                                                    {zoneProgress.completedPercent}%
+                                                </span>
                                             </div>
-                                            <span
-                                                className="text-sm font-semibold cursor-help"
-                                                style={{ minWidth: '40px' }}
-                                                title={`${zoneProgress.completedPercent}% de todos los pedidos de la zona completados`}
-                                            >
-                                                {zoneProgress.completedPercent}%
-                                            </span>
                                         </div>
                                     </button>
 
