@@ -63,14 +63,18 @@ export default function HojaRuta() {
     const [editingClienteZona, setEditingClienteZona] = useState(null);
     const [nuevaZonaCliente, setNuevaZonaCliente] = useState('');
     const [zonasPredefinidasUY] = useState(['Montevideo Centro', 'Montevideo Este', 'Montevideo Oeste', 'Ciudad de la Costa', 'Canelones', 'San José', 'Colonia', 'Maldonado', 'Punta del Este', 'Otras zonas']);
-    
+
     // Paginación de zonas
     const [zonasPage, setZonasPage] = useState(1);
-    const zonasPerPage = 5;
+    const [zonasPerPage, setZonasPerPage] = useState(5);
     const [expandedZona, setExpandedZona] = useState(null);
     const [clientesZonaPage, setClientesZonaPage] = useState({});
-    const clientesPorZonaPage = 10;
+    const [clientesPorZonaPage, setClientesPorZonaPage] = useState(10);
     
+    // Paginación de clientes sin zona
+    const [clientesSinZonaPage, setClientesSinZonaPage] = useState(1);
+    const [clientesSinZonaPerPage, setClientesSinZonaPerPage] = useState(10);
+
     // Nueva zona state
     const [creatingZona, setCreatingZona] = useState(false);
     const [nuevaZonaNombre, setNuevaZonaNombre] = useState('');
@@ -900,43 +904,96 @@ export default function HojaRuta() {
 
                     {/* Clientes sin zona primero */}
                     <div className="mb-4">
-                        <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                            ⚠️ Clientes sin zona asignada ({clientes.filter(c => !c.zona).length})
-                        </h4>
-                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                            {clientes.filter(c => !c.zona).length === 0 ? (
-                                <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                                    ✓ Todos los clientes tienen zona asignada
-                                </span>
-                            ) : (
-                                clientes.filter(c => !c.zona).map(cliente => (
-                                    <div
-                                        key={cliente.id}
-                                        className="flex items-center justify-between px-3 py-2 rounded text-sm"
-                                        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-                                    >
-                                        <div className="flex-1">
-                                            <span className="font-medium">{cliente.nombre}</span>
-                                            {cliente.direccion && (
-                                                <span className="ml-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                                                    📍 {cliente.direccion}
-                                                </span>
-                                            )}
-                                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+                                ⚠️ Clientes sin zona asignada ({clientes.filter(c => !c.zona).length})
+                            </h4>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
+                                <select
+                                    value={clientesSinZonaPerPage}
+                                    onChange={e => { setClientesSinZonaPerPage(Number(e.target.value)); setClientesSinZonaPage(1); }}
+                                    className="px-2 py-1 rounded border text-xs"
+                                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
+                            </div>
+                        </div>
+                        {clientes.filter(c => !c.zona).length === 0 ? (
+                            <div className="text-sm p-3 rounded" style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg)' }}>
+                                ✓ Todos los clientes tienen zona asignada
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex flex-col gap-2">
+                                    {clientes
+                                        .filter(c => !c.zona)
+                                        .slice((clientesSinZonaPage - 1) * clientesSinZonaPerPage, clientesSinZonaPage * clientesSinZonaPerPage)
+                                        .map(cliente => (
+                                            <div
+                                                key={cliente.id}
+                                                className="flex items-center justify-between px-3 py-2 rounded text-sm"
+                                                style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                            >
+                                                <div className="flex-1">
+                                                    <span className="font-medium">{cliente.nombre}</span>
+                                                    {cliente.direccion && (
+                                                        <span className="ml-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                                            📍 {cliente.direccion}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingClienteZona(cliente.id);
+                                                        setNuevaZonaCliente('');
+                                                    }}
+                                                    className="px-3 py-1 rounded text-xs font-medium whitespace-nowrap ml-2"
+                                                    style={{ background: 'var(--color-primary)', color: 'white' }}
+                                                >
+                                                    Asignar zona
+                                                </button>
+                                            </div>
+                                        ))}
+                                </div>
+                                {/* Paginación de clientes sin zona */}
+                                {Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-3">
                                         <button
-                                            onClick={() => {
-                                                setEditingClienteZona(cliente.id);
-                                                setNuevaZonaCliente('');
+                                            onClick={() => setClientesSinZonaPage(p => Math.max(1, p - 1))}
+                                            disabled={clientesSinZonaPage === 1}
+                                            className="px-3 py-1 rounded text-xs"
+                                            style={{ 
+                                                background: clientesSinZonaPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                border: '1px solid var(--color-border)',
+                                                opacity: clientesSinZonaPage === 1 ? 0.5 : 1
                                             }}
-                                            className="px-3 py-1 rounded text-xs font-medium whitespace-nowrap ml-2"
-                                            style={{ background: 'var(--color-primary)', color: 'white' }}
                                         >
-                                            Asignar zona
+                                            ← Anterior
+                                        </button>
+                                        <span className="text-xs px-3" style={{ color: 'var(--color-text-muted)' }}>
+                                            Página {clientesSinZonaPage} de {Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage)}
+                                        </span>
+                                        <button
+                                            onClick={() => setClientesSinZonaPage(p => Math.min(Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage), p + 1))}
+                                            disabled={clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage)}
+                                            className="px-3 py-1 rounded text-xs"
+                                            style={{ 
+                                                background: clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                border: '1px solid var(--color-border)',
+                                                opacity: clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) ? 0.5 : 1
+                                            }}
+                                        >
+                                            Siguiente →
                                         </button>
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                )}
+                            </>
+                        )}
                     </div>
 
                     {/* Clientes por zona con paginación */}
@@ -945,37 +1002,53 @@ export default function HojaRuta() {
                             <h4 className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>
                                 Zonas ({zonasUnicas.length})
                             </h4>
-                            {zonasUnicas.length > zonasPerPage && (
+                            <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setZonasPage(p => Math.max(1, p - 1))}
-                                        disabled={zonasPage === 1}
-                                        className="px-2 py-1 rounded text-xs"
-                                        style={{ 
-                                            background: zonasPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
-                                            border: '1px solid var(--color-border)',
-                                            opacity: zonasPage === 1 ? 0.5 : 1
-                                        }}
+                                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
+                                    <select
+                                        value={zonasPerPage}
+                                        onChange={e => { setZonasPerPage(Number(e.target.value)); setZonasPage(1); }}
+                                        className="px-2 py-1 rounded border text-xs"
+                                        style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
                                     >
-                                        ←
-                                    </button>
-                                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                                        {zonasPage} / {Math.ceil(zonasUnicas.length / zonasPerPage)}
-                                    </span>
-                                    <button
-                                        onClick={() => setZonasPage(p => Math.min(Math.ceil(zonasUnicas.length / zonasPerPage), p + 1))}
-                                        disabled={zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage)}
-                                        className="px-2 py-1 rounded text-xs"
-                                        style={{ 
-                                            background: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
-                                            border: '1px solid var(--color-border)',
-                                            opacity: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 0.5 : 1
-                                        }}
-                                    >
-                                        →
-                                    </button>
+                                        <option value={5}>5</option>
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                    </select>
                                 </div>
-                            )}
+                                {zonasUnicas.length > zonasPerPage && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setZonasPage(p => Math.max(1, p - 1))}
+                                            disabled={zonasPage === 1}
+                                            className="px-2 py-1 rounded text-xs"
+                                            style={{ 
+                                                background: zonasPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                border: '1px solid var(--color-border)',
+                                                opacity: zonasPage === 1 ? 0.5 : 1
+                                            }}
+                                        >
+                                            ←
+                                        </button>
+                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                            {zonasPage} / {Math.ceil(zonasUnicas.length / zonasPerPage)}
+                                        </span>
+                                        <button
+                                            onClick={() => setZonasPage(p => Math.min(Math.ceil(zonasUnicas.length / zonasPerPage), p + 1))}
+                                            disabled={zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage)}
+                                            className="px-2 py-1 rounded text-xs"
+                                            style={{ 
+                                                background: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                border: '1px solid var(--color-border)',
+                                                opacity: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 0.5 : 1
+                                            }}
+                                        >
+                                            →
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="flex flex-col gap-2">
                             {zonasUnicas.length === 0 ? (
@@ -1012,6 +1085,23 @@ export default function HojaRuta() {
 
                                                 {isExpanded && (
                                                     <div className="px-3 pb-3">
+                                                        {/* Selector de items por página dentro de la zona */}
+                                                        {clientesEnZona.length > 10 && (
+                                                            <div className="flex items-center justify-end gap-2 mb-2">
+                                                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
+                                                                <select
+                                                                    value={clientesPorZonaPage}
+                                                                    onChange={e => setClientesPorZonaPage(Number(e.target.value))}
+                                                                    className="px-2 py-1 rounded border text-xs"
+                                                                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                                                >
+                                                                    <option value={10}>10</option>
+                                                                    <option value={25}>25</option>
+                                                                    <option value={50}>50</option>
+                                                                    <option value={100}>100</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
                                                         <div className="flex flex-col gap-1">
                                                             {clientesPaginados.map(cliente => (
                                                                 <div
@@ -1040,7 +1130,7 @@ export default function HojaRuta() {
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                        
+
                                                         {/* Paginación de clientes dentro de la zona */}
                                                         {totalClientePages > 1 && (
                                                             <div className="flex items-center justify-center gap-2 mt-2">
@@ -1048,8 +1138,8 @@ export default function HojaRuta() {
                                                                     onClick={() => setClientesZonaPage({ ...clientesZonaPage, [zona]: Math.max(1, currentClientePage - 1) })}
                                                                     disabled={currentClientePage === 1}
                                                                     className="px-2 py-1 rounded text-xs"
-                                                                    style={{ 
-                                                                        background: currentClientePage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                                    style={{
+                                                                        background: currentClientePage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                                         border: '1px solid var(--color-border)',
                                                                         opacity: currentClientePage === 1 ? 0.5 : 1
                                                                     }}
@@ -1063,8 +1153,8 @@ export default function HojaRuta() {
                                                                     onClick={() => setClientesZonaPage({ ...clientesZonaPage, [zona]: Math.min(totalClientePages, currentClientePage + 1) })}
                                                                     disabled={currentClientePage >= totalClientePages}
                                                                     className="px-2 py-1 rounded text-xs"
-                                                                    style={{ 
-                                                                        background: currentClientePage >= totalClientePages ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                                                    style={{
+                                                                        background: currentClientePage >= totalClientePages ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                                         border: '1px solid var(--color-border)',
                                                                         opacity: currentClientePage >= totalClientePages ? 0.5 : 1
                                                                     }}
