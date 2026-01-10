@@ -1542,30 +1542,46 @@ export default function HojaRuta() {
                                                 <span className="text-lg">{isZonaExpanded ? '▼' : '▶'}</span>
                                                 <span className="font-bold text-base sm:text-lg">📍 {zona}</span>
                                             </div>
-                                            
+
                                             {/* Derecha: badges de estado */}
                                             <div className="flex items-center gap-2">
                                                 {zoneProgress.pendiente > 0 && (
-                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(59,130,246,0.35)' }}>
+                                                    <span
+                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
+                                                        style={{ background: 'rgba(59,130,246,0.35)' }}
+                                                        title={`${zoneProgress.pendiente} pedido${zoneProgress.pendiente !== 1 ? 's' : ''} esperando ser procesado`}
+                                                    >
                                                         📝 {zoneProgress.pendiente}
                                                     </span>
                                                 )}
                                                 {zoneProgress.preparando > 0 && (
-                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(245,158,11,0.35)' }}>
+                                                    <span
+                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
+                                                        style={{ background: 'rgba(245,158,11,0.35)' }}
+                                                        title={`${zoneProgress.preparando} pedido${zoneProgress.preparando !== 1 ? 's' : ''} en preparación`}
+                                                    >
                                                         🔧 {zoneProgress.preparando}
                                                     </span>
                                                 )}
                                                 {zoneProgress.entregado > 0 && (
-                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(16,185,129,0.35)' }}>
+                                                    <span
+                                                        className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
+                                                        style={{ background: 'rgba(16,185,129,0.35)' }}
+                                                        title={`${zoneProgress.entregado} pedido${zoneProgress.entregado !== 1 ? 's' : ''} ya entregado`}
+                                                    >
                                                         ✅ {zoneProgress.entregado}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         {/* Barra de progreso - fila separada */}
                                         <div className="px-4 pb-2.5 flex items-center gap-3">
-                                            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.25)' }}>
+                                            <div
+                                                className="flex-1 h-2 rounded-full overflow-hidden cursor-help"
+                                                style={{ background: 'rgba(255,255,255,0.25)' }}
+                                                title={`${zoneProgress.entregado}/${zoneProgress.total} pedidos entregados en esta zona`}
+                                            >
                                                 <div
                                                     className="h-full rounded-full transition-all"
                                                     style={{
@@ -1574,7 +1590,13 @@ export default function HojaRuta() {
                                                     }}
                                                 />
                                             </div>
-                                            <span className="text-sm font-semibold" style={{ minWidth: '40px' }}>{zoneProgress.completedPercent}%</span>
+                                            <span
+                                                className="text-sm font-semibold cursor-help"
+                                                style={{ minWidth: '40px' }}
+                                                title={`${zoneProgress.completedPercent}% de todos los pedidos de la zona completados`}
+                                            >
+                                                {zoneProgress.completedPercent}%
+                                            </span>
                                         </div>
                                     </button>
 
