@@ -426,12 +426,12 @@ export default function Reportes() {
               <table className="report-table w-full text-sm">
                 <thead><tr><th>#</th><th>Cliente</th><th className="text-right">Pedidos</th><th className="text-right">Total</th><th className="text-right">Último</th></tr></thead>
                 <tbody>
-                  {reporteClientes.ranking.map((c, i) => (
+                  {(reporteClientes.ranking || reporteClientes.top_frecuentes || []).map((c, i) => (
                     <tr key={c.id}>
                       <td>{i + 1}</td>
                       <td>{c.nombre}</td>
                       <td className="text-right">{c.total_pedidos || 0}</td>
-                      <td className="text-right font-semibold text-success">{formatCurrency(c.total_compras)}</td>
+                      <td className="text-right font-semibold text-success">{formatCurrency(c.total_compras || c.total_gastado)}</td>
                       <td className="text-right text-xs text-muted">{c.ultimo_pedido || '-'}</td>
                     </tr>
                   ))}
@@ -440,7 +440,7 @@ export default function Reportes() {
             </div>
           </div>
 
-          {reporteClientes.inactivos.length > 0 && (
+          {(reporteClientes.inactivos || []).length > 0 && (
             <div className="panel">
               <h3 className="font-bold mb-4">⚠️ Clientes Inactivos (+60 días)</h3>
               <div className="overflow-x-auto">
