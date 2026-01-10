@@ -58,7 +58,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_URL: https://api.example.com
+          VITE_API_URL: https://api.pedidosfriosur.com
 
   # Optional: Run E2E tests (requires playwright setup)
   # e2e-tests:
