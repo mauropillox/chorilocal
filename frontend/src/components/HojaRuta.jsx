@@ -1528,41 +1528,44 @@ export default function HojaRuta() {
                             const zoneProgress = calcZoneProgress(pedidosZona);
 
                             return (
-                                <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-                                    {/* Header zona - clickeable para expandir/colapsar */}
+                                <div key={zona} className="mb-4 rounded-lg overflow-hidden shadow-sm" style={{ border: '1px solid var(--color-border)' }}>
+                                    {/* Header zona - diseño horizontal limpio */}
                                     <button
                                         onClick={() => setExpandedPedidoZona(expandedPedidoZona === zona ? null : zona)}
-                                        className="w-full px-4 py-3.5 flex flex-col gap-2.5 cursor-pointer hover:brightness-110 transition-all"
+                                        className="w-full cursor-pointer hover:brightness-105 transition-all"
                                         style={{ background: 'var(--color-primary)', color: 'white' }}
                                     >
-                                        <div className="flex items-center justify-between w-full gap-4">
-                                            <div className="flex items-center gap-2.5">
-                                                <span className="text-base">{isZonaExpanded ? '▼' : '▶'}</span>
-                                                <span className="font-bold text-lg">📍 {zona}</span>
+                                        {/* Fila principal */}
+                                        <div className="px-4 py-3 flex items-center justify-between">
+                                            {/* Izquierda: expand icon + nombre zona */}
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-lg">{isZonaExpanded ? '▼' : '▶'}</span>
+                                                <span className="font-bold text-base sm:text-lg">📍 {zona}</span>
                                             </div>
-                                            <div className="flex items-center gap-4 flex-wrap">
-                                                {/* Status summary badges */}
-                                                <div className="flex items-center gap-2 text-xs">
-                                                    {zoneProgress.pendiente > 0 && (
-                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(59,130,246,0.3)' }}>📝 {zoneProgress.pendiente}</span>
-                                                    )}
-                                                    {zoneProgress.preparando > 0 && (
-                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(245,158,11,0.3)' }}>🔧 {zoneProgress.preparando}</span>
-                                                    )}
-                                                    {zoneProgress.entregado > 0 && (
-                                                        <span className="px-2 py-1 rounded font-medium" style={{ background: 'rgba(16,185,129,0.3)' }}>✅ {zoneProgress.entregado}</span>
-                                                    )}
-                                                </div>
-                                                {totalPedidoPages > 1 && isZonaExpanded && (
-                                                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded font-medium">
-                                                        pág {currentPedidoPage}/{totalPedidoPages}
+                                            
+                                            {/* Derecha: badges de estado */}
+                                            <div className="flex items-center gap-2">
+                                                {zoneProgress.pendiente > 0 && (
+                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(59,130,246,0.35)' }}>
+                                                        📝 {zoneProgress.pendiente}
+                                                    </span>
+                                                )}
+                                                {zoneProgress.preparando > 0 && (
+                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(245,158,11,0.35)' }}>
+                                                        🔧 {zoneProgress.preparando}
+                                                    </span>
+                                                )}
+                                                {zoneProgress.entregado > 0 && (
+                                                    <span className="px-2.5 py-1 rounded text-sm font-medium" style={{ background: 'rgba(16,185,129,0.35)' }}>
+                                                        ✅ {zoneProgress.entregado}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Progress bar */}
-                                        <div className="w-full flex items-center gap-2.5">
-                                            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                                        
+                                        {/* Barra de progreso - fila separada */}
+                                        <div className="px-4 pb-2.5 flex items-center gap-3">
+                                            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.25)' }}>
                                                 <div
                                                     className="h-full rounded-full transition-all"
                                                     style={{
@@ -1571,7 +1574,7 @@ export default function HojaRuta() {
                                                     }}
                                                 />
                                             </div>
-                                            <span className="text-xs font-medium" style={{ minWidth: '36px' }}>{zoneProgress.completedPercent}%</span>
+                                            <span className="text-sm font-semibold" style={{ minWidth: '40px' }}>{zoneProgress.completedPercent}%</span>
                                         </div>
                                     </button>
 
