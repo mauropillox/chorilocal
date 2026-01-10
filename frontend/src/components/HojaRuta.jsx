@@ -57,6 +57,10 @@ export default function HojaRuta() {
     const [bulkRepartidor, setBulkRepartidor] = useState('');
     const [bulkDeleting, setBulkDeleting] = useState(false);
 
+    // Hover state for showing actions
+    const [hoveredPedidoId, setHoveredPedidoId] = useState(null);
+    const [showActionsForId, setShowActionsForId] = useState(null);
+
     // Paginación - default 25 para ver más
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -420,6 +424,28 @@ export default function HojaRuta() {
             setBulkDeleting(false);
         }
     }, [selectedIds, cargarDatos]);
+
+    // Individual delete pedido
+    const eliminarPedido = useCallback(async (pedidoId, clienteNombre) => {
+        if (!window.confirm(`¿Eliminar pedido de "${clienteNombre}"?`)) {
+            return;
+        }
+        try {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                toastSuccess('🗑️ Pedido eliminado');
+                await cargarDatos();
+            } else {
+                const err = await res.json().catch(() => null);
+                toastError(err?.detail || 'Error al eliminar pedido');
+            }
+        } catch (e) {
+            logger.error('Error al eliminar pedido:', e);
+            toastError('Error de conexión');
+        }
+    }, [cargarDatos]);
 
     // Paginación
     const totalPages = Math.ceil(pedidosFiltrados.length / itemsPerPage);
@@ -1532,7 +1558,7 @@ export default function HojaRuta() {
                                             )}
 
                                             {vistaCompacta ? (
-                                                // Vista COMPACTA - Más pedidos visibles
+                                                // Vista COMPACTA - Más pedidos visibles, acciones en hover
                                                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                                     {pedidosZonaPaginados.map((p) => {
                                                         const estado = p.estado || 'pendiente';
@@ -1541,15 +1567,19 @@ export default function HojaRuta() {
                                                         const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
                                                         const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
                                                         const isSelected = selectedIds.has(p.id);
+                                                        const isHovered = hoveredPedidoId === p.id;
+                                                        const showActions = showActionsForId === p.id;
 
                                                         return (
                                                             <div
                                                                 key={p.id}
-                                                                className="px-3 py-2 flex items-center gap-3 transition-all"
+                                                                className="px-3 py-2 flex items-center gap-3 transition-all cursor-pointer group"
                                                                 style={{
-                                                                    background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                                                    background: isSelected ? 'rgba(59, 130, 246, 0.1)' : isHovered ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                                     borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
                                                                 }}
+                                                                onMouseEnter={() => setHoveredPedidoId(p.id)}
+                                                                onMouseLeave={() => setHoveredPedidoId(null)}
                                                             >
                                                                 {/* Checkbox for bulk selection */}
                                                                 <input
@@ -1560,30 +1590,25 @@ export default function HojaRuta() {
                                                                     aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
                                                                 />
 
-                                                                {/* Cliente + Estado */}
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <span className="font-semibold text-sm truncate">{p.cliente?.nombre || 'Cliente'}</span>
-                                                                        <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
-                                                                            {estadoInfo.icon} {estadoInfo.label}
-                                                                        </span>
-                                                                        {p.repartidor && (
-                                                                            <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap" style={{ background: '#e0e7ff', color: '#4338ca' }}>
-                                                                                👤 {p.repartidor}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                                                                        {p.cliente?.direccion && <span>📍 {p.cliente.direccion.substring(0, 30)}{p.cliente.direccion.length > 30 ? '...' : ''}</span>}
-                                                                        {p.cliente?.telefono && <span className="ml-2">📞 {p.cliente.telefono}</span>}
-                                                                    </div>
-                                                                    <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                {/* Cliente + Estado + Producto (single line) */}
+                                                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                                    <span className="font-semibold text-sm truncate max-w-[150px]">{p.cliente?.nombre || 'Cliente'}</span>
+                                                                    <span className="text-xs opacity-60 hidden sm:inline">•</span>
+                                                                    <span className="text-xs truncate max-w-[180px] hidden sm:inline" style={{ color: 'var(--color-text-muted)' }}>
                                                                         {productosResumen}{masProductos}
-                                                                    </div>
+                                                                    </span>
+                                                                    <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap ml-auto" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
+                                                                        {estadoInfo.icon} {estadoInfo.label}
+                                                                    </span>
+                                                                    {p.repartidor && (
+                                                                        <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap hidden md:inline" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                                            👤 {p.repartidor}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
 
-                                                                {/* Acciones */}
-                                                                <div className="flex gap-1 items-center flex-shrink-0">
+                                                                {/* Action menu - visible on hover or touch */}
+                                                                <div className="flex gap-1 items-center flex-shrink-0 relative">
                                                                     {asignandoRepartidor === p.id ? (
                                                                         <div className="flex gap-1 items-center">
                                                                             <input
@@ -1600,23 +1625,50 @@ export default function HojaRuta() {
                                                                             <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
                                                                         </div>
                                                                     ) : (
-                                                                        <button
-                                                                            onClick={() => setAsignandoRepartidor(p.id)}
-                                                                            className="px-2 py-1 rounded text-xs"
-                                                                            style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
-                                                                        >
-                                                                            👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
-                                                                        </button>
-                                                                    )}
+                                                                        <>
+                                                                            {/* Dropdown toggle button - always visible on hover */}
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setShowActionsForId(showActions ? null : p.id); }}
+                                                                                className={`px-2 py-1 rounded text-xs transition-opacity ${isHovered || showActions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                                                                style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
+                                                                            >
+                                                                                ⋮ Acciones
+                                                                            </button>
 
-                                                                    {siguiente && (
-                                                                        <button
-                                                                            onClick={() => cambiarEstado(p.id, siguiente)}
-                                                                            className="px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap"
-                                                                            style={{ background: ESTADOS_PEDIDO[siguiente].color }}
-                                                                        >
-                                                                            {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
-                                                                        </button>
+                                                                            {/* Dropdown menu */}
+                                                                            {showActions && (
+                                                                                <div 
+                                                                                    className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg py-1 min-w-[160px]"
+                                                                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                                                                    onMouseLeave={() => setShowActionsForId(null)}
+                                                                                >
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setAsignandoRepartidor(p.id); setShowActionsForId(null); }}
+                                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2"
+                                                                                        style={{ color: 'var(--color-text)' }}
+                                                                                    >
+                                                                                        👤 {p.repartidor ? 'Cambiar repartidor' : 'Asignar repartidor'}
+                                                                                    </button>
+                                                                                    {siguiente && (
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); cambiarEstado(p.id, siguiente); setShowActionsForId(null); }}
+                                                                                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2"
+                                                                                            style={{ color: ESTADOS_PEDIDO[siguiente].color }}
+                                                                                        >
+                                                                                            {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <div className="border-t my-1" style={{ borderColor: 'var(--color-border)' }}></div>
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); eliminarPedido(p.id, p.cliente?.nombre); setShowActionsForId(null); }}
+                                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 flex items-center gap-2"
+                                                                                        style={{ color: '#ef4444' }}
+                                                                                    >
+                                                                                        🗑️ Eliminar pedido
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </>
                                                                     )}
                                                                 </div>
                                                             </div>
