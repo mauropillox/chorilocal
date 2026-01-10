@@ -94,7 +94,7 @@ export default function HojaRuta() {
     const [pedidosZonaPage, setPedidosZonaPage] = useState(1);
     const [pedidosZonasPerPage, setPedidosZonasPerPage] = useState(5);
     const [expandedPedidoZona, setExpandedPedidoZona] = useState(null);
-    
+
     // Paginación de pedidos DENTRO de cada zona
     const [pedidosDentroZonaPage, setPedidosDentroZonaPage] = useState({});
     const [pedidosDentroZonaPerPage, setPedidosDentroZonaPerPage] = useState(10);
@@ -1485,7 +1485,7 @@ export default function HojaRuta() {
                                             <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
                                             {totalPedidoPages > 1 && isZonaExpanded && (
                                                 <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
-                                                    pág {currentPedidoPage}/{totalPedidoPages}
+                                                    · pág {currentPedidoPage}/{totalPedidoPages}
                                                 </span>
                                             )}
                                         </div>
@@ -1518,192 +1518,192 @@ export default function HojaRuta() {
                                                     </button>
                                                 </div>
                                             )}
-                                            
+
                                             {vistaCompacta ? (
-                                        // Vista COMPACTA - Más pedidos visibles
-                                        <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                                            {pedidosZonaPaginados.map((p) => {
-                                                const estado = p.estado || 'pendiente';
-                                                const estadoInfo = getEstadoInfo(estado);
-                                                const siguiente = getSiguienteEstado(estado);
-                                                const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
-                                                const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
-                                                const isSelected = selectedIds.has(p.id);
+                                                // Vista COMPACTA - Más pedidos visibles
+                                                <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                                    {pedidosZonaPaginados.map((p) => {
+                                                        const estado = p.estado || 'pendiente';
+                                                        const estadoInfo = getEstadoInfo(estado);
+                                                        const siguiente = getSiguienteEstado(estado);
+                                                        const productosResumen = p.productos?.slice(0, 2).map(prod => `${prod.nombre.substring(0, 15)}${prod.nombre.length > 15 ? '...' : ''} x${prod.cantidad}`).join(' • ') || '';
+                                                        const masProductos = (p.productos?.length || 0) > 2 ? ` +${p.productos.length - 2} más` : '';
+                                                        const isSelected = selectedIds.has(p.id);
 
-                                                return (
-                                                    <div
-                                                        key={p.id}
-                                                        className="px-3 py-2 flex items-center gap-3 transition-all"
-                                                        style={{
-                                                            background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
-                                                            borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
-                                                        }}
-                                                    >
-                                                        {/* Checkbox for bulk selection */}
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            onChange={() => toggleSelection(p.id)}
-                                                            className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-                                                            aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
-                                                        />
+                                                        return (
+                                                            <div
+                                                                key={p.id}
+                                                                className="px-3 py-2 flex items-center gap-3 transition-all"
+                                                                style={{
+                                                                    background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                                                    borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
+                                                                }}
+                                                            >
+                                                                {/* Checkbox for bulk selection */}
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleSelection(p.id)}
+                                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                                                />
 
-                                                        {/* Cliente + Estado */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-semibold text-sm truncate">{p.cliente?.nombre || 'Cliente'}</span>
-                                                                <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
+                                                                {/* Cliente + Estado */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="font-semibold text-sm truncate">{p.cliente?.nombre || 'Cliente'}</span>
+                                                                        <span className="px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
+                                                                            {estadoInfo.icon} {estadoInfo.label}
+                                                                        </span>
+                                                                        {p.repartidor && (
+                                                                            <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                                                👤 {p.repartidor}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                                                                        {p.cliente?.direccion && <span>📍 {p.cliente.direccion.substring(0, 30)}{p.cliente.direccion.length > 30 ? '...' : ''}</span>}
+                                                                        {p.cliente?.telefono && <span className="ml-2">📞 {p.cliente.telefono}</span>}
+                                                                    </div>
+                                                                    <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                        {productosResumen}{masProductos}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Acciones */}
+                                                                <div className="flex gap-1 items-center flex-shrink-0">
+                                                                    {asignandoRepartidor === p.id ? (
+                                                                        <div className="flex gap-1 items-center">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={nuevoRepartidor}
+                                                                                onChange={e => setNuevoRepartidor(e.target.value)}
+                                                                                onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
+                                                                                placeholder="Nombre..."
+                                                                                className="px-2 py-1 border rounded text-xs w-24"
+                                                                                autoFocus
+                                                                                list="reps-list-shared"
+                                                                            />
+                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
+                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => setAsignandoRepartidor(p.id)}
+                                                                            className="px-2 py-1 rounded text-xs"
+                                                                            style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
+                                                                        >
+                                                                            👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
+                                                                        </button>
+                                                                    )}
+
+                                                                    {siguiente && (
+                                                                        <button
+                                                                            onClick={() => cambiarEstado(p.id, siguiente)}
+                                                                            className="px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap"
+                                                                            style={{ background: ESTADOS_PEDIDO[siguiente].color }}
+                                                                        >
+                                                                            {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                // Vista EXPANDIDA - Más detalles
+                                                pedidosZonaPaginados.map((p) => {
+                                                    const estado = p.estado || 'pendiente';
+                                                    const estadoInfo = getEstadoInfo(estado);
+                                                    const siguiente = getSiguienteEstado(estado);
+                                                    const isSelected = selectedIds.has(p.id);
+
+                                                    return (
+                                                        <div
+                                                            key={p.id}
+                                                            className="p-3 border-t transition-all"
+                                                            style={{
+                                                                borderColor: 'var(--color-border)',
+                                                                background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
+                                                                borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
+                                                            }}
+                                                        >
+                                                            {/* Línea 1: Checkbox + Cliente + Estado + Repartidor */}
+                                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleSelection(p.id)}
+                                                                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                                                                    aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
+                                                                />
+                                                                <span className="font-semibold">{p.cliente?.nombre || 'Cliente'}</span>
+                                                                <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
                                                                     {estadoInfo.icon} {estadoInfo.label}
                                                                 </span>
                                                                 {p.repartidor && (
-                                                                    <span className="px-1.5 py-0.5 rounded text-xs whitespace-nowrap" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                                                    <span className="px-2 py-0.5 rounded text-xs" style={{ background: '#e0e7ff', color: '#4338ca' }}>
                                                                         👤 {p.repartidor}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                                                                {p.cliente?.direccion && <span>📍 {p.cliente.direccion.substring(0, 30)}{p.cliente.direccion.length > 30 ? '...' : ''}</span>}
-                                                                {p.cliente?.telefono && <span className="ml-2">📞 {p.cliente.telefono}</span>}
+
+                                                            {/* Línea 2: Dirección y teléfono */}
+                                                            <div className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                {p.cliente?.direccion && <span>📍 {p.cliente.direccion}</span>}
+                                                                {p.cliente?.telefono && <span className="ml-3">📞 {p.cliente.telefono}</span>}
                                                             </div>
-                                                            <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                                                                {productosResumen}{masProductos}
+
+                                                            {/* Línea 3: Productos */}
+                                                            <div className="text-xs p-2 rounded mb-2" style={{ background: 'var(--color-bg-secondary)' }}>
+                                                                {p.productos?.slice(0, 4).map((prod, i) => (
+                                                                    <span key={i}>{prod.nombre} x{prod.cantidad}{i < Math.min(p.productos.length, 4) - 1 ? ' • ' : ''}</span>
+                                                                ))}
+                                                                {p.productos?.length > 4 && <span className="opacity-60"> +{p.productos.length - 4} más</span>}
+                                                            </div>
+
+                                                            {/* Línea 4: Acciones */}
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                {asignandoRepartidor === p.id ? (
+                                                                    <div className="flex gap-1 items-center">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={nuevoRepartidor}
+                                                                            onChange={e => setNuevoRepartidor(e.target.value)}
+                                                                            onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
+                                                                            placeholder="Nombre..."
+                                                                            className="px-2 py-1 border rounded text-sm w-32"
+                                                                            autoFocus
+                                                                            list="reps-list-shared"
+                                                                        />
+                                                                        <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-sm" style={{ background: '#10b981' }}>✓</button>
+                                                                        <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => setAsignandoRepartidor(p.id)}
+                                                                        className="px-3 py-1 rounded text-sm"
+                                                                        style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
+                                                                    >
+                                                                        👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
+                                                                    </button>
+                                                                )}
+
+                                                                {siguiente && (
+                                                                    <button
+                                                                        onClick={() => cambiarEstado(p.id, siguiente)}
+                                                                        className="px-3 py-1 rounded text-sm font-medium text-white"
+                                                                        style={{ background: ESTADOS_PEDIDO[siguiente].color }}
+                                                                    >
+                                                                        {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
-
-                                                        {/* Acciones */}
-                                                        <div className="flex gap-1 items-center flex-shrink-0">
-                                                            {asignandoRepartidor === p.id ? (
-                                                                <div className="flex gap-1 items-center">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={nuevoRepartidor}
-                                                                        onChange={e => setNuevoRepartidor(e.target.value)}
-                                                                        onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
-                                                                        placeholder="Nombre..."
-                                                                        className="px-2 py-1 border rounded text-xs w-24"
-                                                                        autoFocus
-                                                                        list="reps-list-shared"
-                                                                    />
-                                                                    <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
-                                                                    <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => setAsignandoRepartidor(p.id)}
-                                                                    className="px-2 py-1 rounded text-xs"
-                                                                    style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
-                                                                >
-                                                                    👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
-                                                                </button>
-                                                            )}
-
-                                                            {siguiente && (
-                                                                <button
-                                                                    onClick={() => cambiarEstado(p.id, siguiente)}
-                                                                    className="px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap"
-                                                                    style={{ background: ESTADOS_PEDIDO[siguiente].color }}
-                                                                >
-                                                                    {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        // Vista EXPANDIDA - Más detalles
-                                        pedidosZonaPaginados.map((p) => {
-                                            const estado = p.estado || 'pendiente';
-                                            const estadoInfo = getEstadoInfo(estado);
-                                            const siguiente = getSiguienteEstado(estado);
-                                            const isSelected = selectedIds.has(p.id);
-
-                                            return (
-                                                <div
-                                                    key={p.id}
-                                                    className="p-3 border-t transition-all"
-                                                    style={{
-                                                        borderColor: 'var(--color-border)',
-                                                        background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-bg)',
-                                                        borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent'
-                                                    }}
-                                                >
-                                                    {/* Línea 1: Checkbox + Cliente + Estado + Repartidor */}
-                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            onChange={() => toggleSelection(p.id)}
-                                                            className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-                                                            aria-label={`Seleccionar pedido de ${p.cliente?.nombre}`}
-                                                        />
-                                                        <span className="font-semibold">{p.cliente?.nombre || 'Cliente'}</span>
-                                                        <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: estadoInfo.bg, color: estadoInfo.color }}>
-                                                            {estadoInfo.icon} {estadoInfo.label}
-                                                        </span>
-                                                        {p.repartidor && (
-                                                            <span className="px-2 py-0.5 rounded text-xs" style={{ background: '#e0e7ff', color: '#4338ca' }}>
-                                                                👤 {p.repartidor}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Línea 2: Dirección y teléfono */}
-                                                    <div className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                                        {p.cliente?.direccion && <span>📍 {p.cliente.direccion}</span>}
-                                                        {p.cliente?.telefono && <span className="ml-3">📞 {p.cliente.telefono}</span>}
-                                                    </div>
-
-                                                    {/* Línea 3: Productos */}
-                                                    <div className="text-xs p-2 rounded mb-2" style={{ background: 'var(--color-bg-secondary)' }}>
-                                                        {p.productos?.slice(0, 4).map((prod, i) => (
-                                                            <span key={i}>{prod.nombre} x{prod.cantidad}{i < Math.min(p.productos.length, 4) - 1 ? ' • ' : ''}</span>
-                                                        ))}
-                                                        {p.productos?.length > 4 && <span className="opacity-60"> +{p.productos.length - 4} más</span>}
-                                                    </div>
-
-                                                    {/* Línea 4: Acciones */}
-                                                    <div className="flex gap-2 flex-wrap">
-                                                        {asignandoRepartidor === p.id ? (
-                                                            <div className="flex gap-1 items-center">
-                                                                <input
-                                                                    type="text"
-                                                                    value={nuevoRepartidor}
-                                                                    onChange={e => setNuevoRepartidor(e.target.value)}
-                                                                    onKeyDown={e => e.key === 'Enter' && asignarRepartidor(p.id, nuevoRepartidor)}
-                                                                    placeholder="Nombre..."
-                                                                    className="px-2 py-1 border rounded text-sm w-32"
-                                                                    autoFocus
-                                                                    list="reps-list-shared"
-                                                                />
-                                                                <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-sm" style={{ background: '#10b981' }}>✓</button>
-                                                                <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => setAsignandoRepartidor(p.id)}
-                                                                className="px-3 py-1 rounded text-sm"
-                                                                style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)' }}
-                                                            >
-                                                                👤 {p.repartidor ? 'Cambiar' : 'Asignar'}
-                                                            </button>
-                                                        )}
-
-                                                        {siguiente && (
-                                                            <button
-                                                                onClick={() => cambiarEstado(p.id, siguiente)}
-                                                                className="px-3 py-1 rounded text-sm font-medium text-white"
-                                                                style={{ background: ESTADOS_PEDIDO[siguiente].color }}
-                                                            >
-                                                                {ESTADOS_PEDIDO[siguiente].icon} Marcar {ESTADOS_PEDIDO[siguiente].label}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
+                                                    );
+                                                })
+                                            )}
                                         </>
                                     )}
                                 </div>
