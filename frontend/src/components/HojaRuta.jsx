@@ -1536,15 +1536,23 @@ export default function HojaRuta() {
                                         style={{ background: 'var(--color-primary)', color: 'white' }}
                                     >
                                         {/* Fila principal */}
-                                        <div className="px-4 py-3 flex items-center justify-between">
-                                            {/* Izquierda: expand icon + nombre zona */}
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-lg">{isZonaExpanded ? '▼' : '▶'}</span>
-                                                <span className="font-bold text-base sm:text-lg">📍 {zona}</span>
+                                        <div className="px-4 py-3 flex items-center justify-between gap-3">
+                                            {/* Izquierda: expand icon + nombre zona + estado */}
+                                            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-lg flex-shrink-0">{isZonaExpanded ? '▼' : '▶'}</span>
+                                                    <span className="font-bold text-base sm:text-lg truncate">📍 {zona}</span>
+                                                </div>
+                                                {/* Línea descriptiva de estado */}
+                                                <div className="text-xs opacity-90 pl-7">
+                                                    {zoneProgress.total} pedidos total •{' '}
+                                                    {zoneProgress.pendiente > 0 ? `${zoneProgress.pendiente} pendiente${zoneProgress.pendiente !== 1 ? 's' : ''}` : 'ninguno pendiente'} •{' '}
+                                                    {zoneProgress.completedPercent}% entregado
+                                                </div>
                                             </div>
 
                                             {/* Derecha: badges de estado */}
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5 flex-shrink-0">
                                                 {zoneProgress.pendiente > 0 && (
                                                     <span
                                                         className="px-2.5 py-1 rounded text-sm font-medium cursor-help"
