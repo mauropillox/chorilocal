@@ -1746,36 +1746,6 @@ export default function HojaRuta() {
                             </button>
                         </div>
                     )}
-
-                    {/* Paginación de pedidos */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-4 p-3 rounded" style={{ background: 'var(--color-bg-secondary)' }}>
-                            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                                {startIndex + 1}-{Math.min(startIndex + itemsPerPage, pedidosFiltrados.length)} de {pedidosFiltrados.length}
-                            </span>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1 rounded text-sm"
-                                    style={{ background: currentPage === 1 ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === 1 ? 'var(--color-text-muted)' : 'white' }}
-                                >
-                                    ← Anterior
-                                </button>
-                                <span className="px-3 py-1 text-sm">
-                                    {currentPage} / {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1 rounded text-sm"
-                                    style={{ background: currentPage === totalPages ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: currentPage === totalPages ? 'var(--color-text-muted)' : 'white' }}
-                                >
-                                    Siguiente →
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </>
             ))}
         </div>
