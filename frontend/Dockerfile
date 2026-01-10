@@ -33,3 +33,4 @@ RUN if echo "$VITE_API_URL" | grep -q "localhost"; then \
 EXPOSE 80
 EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]
+# Rebuild trigger: Sat Jan 10 18:29:35 -03 2026
