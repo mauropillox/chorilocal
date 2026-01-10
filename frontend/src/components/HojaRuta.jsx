@@ -70,7 +70,7 @@ export default function HojaRuta() {
     const [expandedZona, setExpandedZona] = useState(null);
     const [clientesZonaPage, setClientesZonaPage] = useState({});
     const [clientesPorZonaPage, setClientesPorZonaPage] = useState(10);
-    
+
     // Paginación de clientes sin zona
     const [clientesSinZonaPage, setClientesSinZonaPage] = useState(1);
     const [clientesSinZonaPerPage, setClientesSinZonaPerPage] = useState(10);
@@ -78,6 +78,11 @@ export default function HojaRuta() {
     // Nueva zona state
     const [creatingZona, setCreatingZona] = useState(false);
     const [nuevaZonaNombre, setNuevaZonaNombre] = useState('');
+    
+    // Paginación de zonas en la vista de pedidos (sin panel de zonas)
+    const [pedidosZonaPage, setPedidosZonaPage] = useState(1);
+    const [pedidosZonasPerPage, setPedidosZonasPerPage] = useState(5);
+    const [expandedPedidoZona, setExpandedPedidoZona] = useState(null);
 
     useEffect(() => {
         cargarDatos();
@@ -916,6 +921,7 @@ export default function HojaRuta() {
                                     className="px-2 py-1 rounded border text-xs"
                                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
                                 >
+                                    <option value={5}>5</option>
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
                                     <option value={50}>50</option>
@@ -967,8 +973,8 @@ export default function HojaRuta() {
                                             onClick={() => setClientesSinZonaPage(p => Math.max(1, p - 1))}
                                             disabled={clientesSinZonaPage === 1}
                                             className="px-3 py-1 rounded text-xs"
-                                            style={{ 
-                                                background: clientesSinZonaPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                            style={{
+                                                background: clientesSinZonaPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                 border: '1px solid var(--color-border)',
                                                 opacity: clientesSinZonaPage === 1 ? 0.5 : 1
                                             }}
@@ -982,8 +988,8 @@ export default function HojaRuta() {
                                             onClick={() => setClientesSinZonaPage(p => Math.min(Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage), p + 1))}
                                             disabled={clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage)}
                                             className="px-3 py-1 rounded text-xs"
-                                            style={{ 
-                                                background: clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                            style={{
+                                                background: clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                 border: '1px solid var(--color-border)',
                                                 opacity: clientesSinZonaPage >= Math.ceil(clientes.filter(c => !c.zona).length / clientesSinZonaPerPage) ? 0.5 : 1
                                             }}
@@ -1023,8 +1029,8 @@ export default function HojaRuta() {
                                             onClick={() => setZonasPage(p => Math.max(1, p - 1))}
                                             disabled={zonasPage === 1}
                                             className="px-2 py-1 rounded text-xs"
-                                            style={{ 
-                                                background: zonasPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                            style={{
+                                                background: zonasPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                 border: '1px solid var(--color-border)',
                                                 opacity: zonasPage === 1 ? 0.5 : 1
                                             }}
@@ -1038,8 +1044,8 @@ export default function HojaRuta() {
                                             onClick={() => setZonasPage(p => Math.min(Math.ceil(zonasUnicas.length / zonasPerPage), p + 1))}
                                             disabled={zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage)}
                                             className="px-2 py-1 rounded text-xs"
-                                            style={{ 
-                                                background: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)', 
+                                            style={{
+                                                background: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
                                                 border: '1px solid var(--color-border)',
                                                 opacity: zonasPage >= Math.ceil(zonasUnicas.length / zonasPerPage) ? 0.5 : 1
                                             }}
@@ -1086,7 +1092,7 @@ export default function HojaRuta() {
                                                 {isExpanded && (
                                                     <div className="px-3 pb-3">
                                                         {/* Selector de items por página dentro de la zona */}
-                                                        {clientesEnZona.length > 10 && (
+                                                        {clientesEnZona.length > 5 && (
                                                             <div className="flex items-center justify-end gap-2 mb-2">
                                                                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ver:</span>
                                                                 <select
@@ -1095,6 +1101,7 @@ export default function HojaRuta() {
                                                                     className="px-2 py-1 rounded border text-xs"
                                                                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
                                                                 >
+                                                                    <option value={5}>5</option>
                                                                     <option value={10}>10</option>
                                                                     <option value={25}>25</option>
                                                                     <option value={50}>50</option>
@@ -1367,16 +1374,83 @@ export default function HojaRuta() {
                 </div>
             ) : (
                 <>
-                    {pedidosPorZona.map(([zona, pedidosZona]) => (
-                        <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-                            {/* Header zona */}
-                            <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'var(--color-primary)', color: 'white' }}>
-                                <span className="font-semibold text-sm">📍 {zona}</span>
-                                <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
+                    {/* Paginación de zonas en lista de pedidos */}
+                    <div className="flex items-center justify-between mb-3 px-2">
+                        <span className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            {pedidosPorZona.length} zona{pedidosPorZona.length !== 1 ? 's' : ''} con pedidos
+                        </span>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Zonas por página:</span>
+                                <select
+                                    value={pedidosZonasPerPage}
+                                    onChange={e => { setPedidosZonasPerPage(Number(e.target.value)); setPedidosZonaPage(1); }}
+                                    className="px-2 py-1 rounded border text-xs"
+                                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
+                                >
+                                    <option value={3}>3</option>
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>Todas</option>
+                                </select>
                             </div>
+                            {pedidosPorZona.length > pedidosZonasPerPage && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setPedidosZonaPage(p => Math.max(1, p - 1))}
+                                        disabled={pedidosZonaPage === 1}
+                                        className="px-2 py-1 rounded text-xs"
+                                        style={{
+                                            background: pedidosZonaPage === 1 ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
+                                            border: '1px solid var(--color-border)',
+                                            opacity: pedidosZonaPage === 1 ? 0.5 : 1
+                                        }}
+                                    >
+                                        ←
+                                    </button>
+                                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                        {pedidosZonaPage} / {Math.ceil(pedidosPorZona.length / pedidosZonasPerPage)}
+                                    </span>
+                                    <button
+                                        onClick={() => setPedidosZonaPage(p => Math.min(Math.ceil(pedidosPorZona.length / pedidosZonasPerPage), p + 1))}
+                                        disabled={pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage)}
+                                        className="px-2 py-1 rounded text-xs"
+                                        style={{
+                                            background: pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage) ? 'var(--color-bg-secondary)' : 'var(--color-bg)',
+                                            border: '1px solid var(--color-border)',
+                                            opacity: pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage) ? 0.5 : 1
+                                        }}
+                                    >
+                                        →
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {pedidosPorZona
+                        .slice((pedidosZonaPage - 1) * pedidosZonasPerPage, pedidosZonaPage * pedidosZonasPerPage)
+                        .map(([zona, pedidosZona]) => {
+                            const isZonaExpanded = expandedPedidoZona === zona || expandedPedidoZona === null;
+                            
+                            return (
+                        <div key={zona} className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+                            {/* Header zona - clickeable para expandir/colapsar */}
+                            <button
+                                onClick={() => setExpandedPedidoZona(expandedPedidoZona === zona ? null : zona)}
+                                className="w-full px-3 py-2 flex items-center justify-between cursor-pointer"
+                                style={{ background: 'var(--color-primary)', color: 'white' }}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm">{isZonaExpanded ? '▼' : '▶'}</span>
+                                    <span className="font-semibold text-sm">📍 {zona}</span>
+                                </div>
+                                <span className="text-xs opacity-80">{pedidosZona.length} pedido{pedidosZona.length !== 1 ? 's' : ''}</span>
+                            </button>
 
                             {/* Pedidos - Vista compacta o expandida */}
-                            {vistaCompacta ? (
+                            {isZonaExpanded && (vistaCompacta ? (
                                 // Vista COMPACTA - Más pedidos visibles
                                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                     {pedidosZona.map((p) => {
@@ -1562,9 +1636,35 @@ export default function HojaRuta() {
                                 })
                             )}
                         </div>
-                    ))}
+                    );
+                        })}
 
-                    {/* Paginación */}
+                    {/* Paginación de zonas al final */}
+                    {pedidosPorZona.length > pedidosZonasPerPage && (
+                        <div className="flex items-center justify-center gap-3 mt-4 p-3 rounded" style={{ background: 'var(--color-bg-secondary)' }}>
+                            <button
+                                onClick={() => setPedidosZonaPage(p => Math.max(1, p - 1))}
+                                disabled={pedidosZonaPage === 1}
+                                className="px-3 py-1 rounded text-sm"
+                                style={{ background: pedidosZonaPage === 1 ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: pedidosZonaPage === 1 ? 'var(--color-text-muted)' : 'white' }}
+                            >
+                                ← Anterior
+                            </button>
+                            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                                Zonas {(pedidosZonaPage - 1) * pedidosZonasPerPage + 1}-{Math.min(pedidosZonaPage * pedidosZonasPerPage, pedidosPorZona.length)} de {pedidosPorZona.length}
+                            </span>
+                            <button
+                                onClick={() => setPedidosZonaPage(p => Math.min(Math.ceil(pedidosPorZona.length / pedidosZonasPerPage), p + 1))}
+                                disabled={pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage)}
+                                className="px-3 py-1 rounded text-sm"
+                                style={{ background: pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage) ? 'var(--color-bg-tertiary)' : 'var(--color-primary)', color: pedidosZonaPage >= Math.ceil(pedidosPorZona.length / pedidosZonasPerPage) ? 'var(--color-text-muted)' : 'white' }}
+                            >
+                                Siguiente →
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Paginación de pedidos */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between mt-4 p-3 rounded" style={{ background: 'var(--color-bg-secondary)' }}>
                             <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
