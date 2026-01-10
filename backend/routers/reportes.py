@@ -35,9 +35,10 @@ async def get_reporte_ventas(
             cur.execute("""
                 SELECT 
                     COUNT(DISTINCT p.id) as total_pedidos,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_ventas
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_ventas
                 FROM pedidos p
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) BETWEEN ? AND ?
             """, (desde, hasta))
             row = cur.fetchone()
@@ -52,7 +53,7 @@ async def get_reporte_ventas(
                     pr.id,
                     pr.nombre,
                     SUM(dp.cantidad) as cantidad_vendida,
-                    SUM(dp.cantidad * dp.precio_unitario) as total_vendido
+                    SUM(dp.cantidad * pr.precio) as total_vendido
                 FROM detalles_pedido dp
                 JOIN productos pr ON pr.id = dp.producto_id
                 JOIN pedidos p ON p.id = dp.pedido_id
@@ -74,10 +75,11 @@ async def get_reporte_ventas(
                     c.id,
                     c.nombre,
                     COUNT(DISTINCT p.id) as total_pedidos,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_compras
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_compras
                 FROM clientes c
                 JOIN pedidos p ON p.cliente_id = c.id
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) BETWEEN ? AND ?
                 GROUP BY c.id, c.nombre
                 ORDER BY total_compras DESC
@@ -225,11 +227,12 @@ async def get_reporte_clientes(
                 SELECT 
                     c.id, c.nombre, c.telefono, c.direccion,
                     COUNT(p.id) as total_pedidos,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_gastado,
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_gastado,
                     MAX(DATE(p.fecha)) as ultimo_pedido
                 FROM clientes c
                 LEFT JOIN pedidos p ON p.cliente_id = c.id
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 GROUP BY c.id, c.nombre, c.telefono, c.direccion
                 ORDER BY total_gastado DESC
             """)
@@ -288,7 +291,7 @@ async def get_reporte_productos(
                     pr.id, pr.nombre, pr.precio, pr.stock,
                     COALESCE(c.nombre, 'Sin Categoría') as categoria,
                     COALESCE(SUM(dp.cantidad), 0) as cantidad_vendida,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_vendido,
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_vendido,
                     COUNT(DISTINCT p.id) as num_pedidos
                 FROM productos pr
                 LEFT JOIN categorias c ON c.id = pr.categoria_id
@@ -321,7 +324,7 @@ async def get_reporte_productos(
                     COALESCE(c.nombre, 'Sin Categoría') as categoria,
                     COUNT(DISTINCT pr.id) as num_productos,
                     COALESCE(SUM(dp.cantidad), 0) as cantidad_vendida,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_vendido
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_vendido
                 FROM productos pr
                 LEFT JOIN categorias c ON c.id = pr.categoria_id
                 LEFT JOIN detalles_pedido dp ON dp.producto_id = pr.id
@@ -426,9 +429,10 @@ async def get_reporte_rendimiento(
             # Ticket promedio
             cur.execute("""
                 SELECT AVG(total) FROM (
-                    SELECT p.id, COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total
+                    SELECT p.id, COALESCE(SUM(dp.cantidad * pr.precio), 0) as total
                     FROM pedidos p
                     LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                    LEFT JOIN productos pr ON pr.id = dp.producto_id
                     WHERE DATE(p.fecha) >= ?
                     GROUP BY p.id
                 )
@@ -440,9 +444,10 @@ async def get_reporte_rendimiento(
                 SELECT 
                     creado_por,
                     COUNT(*) as pedidos,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as total_vendido
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as total_vendido
                 FROM pedidos p
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) >= ?
                 GROUP BY creado_por
                 ORDER BY total_vendido DESC
@@ -490,10 +495,11 @@ async def get_reporte_comparativo(
                 cur.execute("""
                     SELECT 
                         COUNT(DISTINCT p.id) as pedidos,
-                        COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as ventas,
+                        COALESCE(SUM(dp.cantidad * pr.precio), 0) as ventas,
                         COUNT(DISTINCT p.cliente_id) as clientes
                     FROM pedidos p
                     LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                    LEFT JOIN productos pr ON pr.id = dp.producto_id
                     WHERE DATE(p.fecha) BETWEEN ? AND ?
                 """, (inicio, fin))
                 row = cur.fetchone()
@@ -521,9 +527,10 @@ async def get_reporte_comparativo(
             cur.execute("""
                 SELECT 
                     DATE(p.fecha) as dia,
-                    COALESCE(SUM(dp.cantidad * dp.precio_unitario), 0) as ventas
+                    COALESCE(SUM(dp.cantidad * pr.precio), 0) as ventas
                 FROM pedidos p
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
+                LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) BETWEEN ? AND ?
                 GROUP BY DATE(p.fecha)
                 ORDER BY dia

@@ -31,6 +31,17 @@ class PrecioEspecialCreate(BaseModel):
     precio_especial: float
 
 
+def get_date_column(cur, table_name):
+    """Get the correct date column name for a table (handles legacy vs new schema)"""
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    if 'created_at' in columns:
+        return 'created_at'
+    elif 'fecha_creacion' in columns:
+        return 'fecha_creacion'
+    return None
+
+
 def ensure_tables_exist(conn):
     """Ensure listas_precios and precios_lista tables exist"""
     cur = conn.cursor()
@@ -85,8 +96,11 @@ async def get_listas_precios(
             ensure_tables_exist(conn)
             cur = conn.cursor()
             
-            cur.execute("""
-                SELECT id, nombre, descripcion, multiplicador, activa, created_at
+            # Get the correct date column name (handles legacy vs new schema)
+            date_col = get_date_column(cur, 'listas_precios') or 'NULL'
+            
+            cur.execute(f"""
+                SELECT id, nombre, descripcion, multiplicador, activa, {date_col}
                 FROM listas_precios
                 ORDER BY nombre
             """)
