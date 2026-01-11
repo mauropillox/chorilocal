@@ -1,6 +1,6 @@
-<testsuites id="" name="" tests="4" failures="3" skipped="0" errors="0" time="31.755171999999998">
-<testsuite name="auth.spec.ts" timestamp="2026-01-11T02:05:33.636Z" hostname="chromium" tests="4" failures="3" skipped="0" time="43.037" errors="0">
-<testcase name="Authentication Flow › should login with valid credentials and show success toast" classname="auth.spec.ts" time="5.632">
+<testsuites id="" name="" tests="46" failures="2" skipped="43" errors="0" time="19.620109">
+<testsuite name="auth.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="4" failures="2" skipped="1" time="31.049" errors="0">
+<testcase name="Authentication Flow › should login with valid credentials and show success toast" classname="auth.spec.ts" time="5.786">
 <failure message="auth.spec.ts:4:9 should login with valid credentials and show success toast" type="FAILURE">
 <![CDATA[  [chromium] › auth.spec.ts:4:9 › Authentication Flow › should login with valid credentials and show success toast 
 
@@ -45,50 +45,13 @@
 ]]>
 </system-out>
 </testcase>
-<testcase name="Authentication Flow › should show error toast for invalid credentials" classname="auth.spec.ts" time="31.116">
-<failure message="auth.spec.ts:21:9 should show error toast for invalid credentials" type="FAILURE">
-<![CDATA[  [chromium] › auth.spec.ts:21:9 › Authentication Flow › should show error toast for invalid credentials 
-
-    Test timeout of 30000ms exceeded.
-
-    Error: page.fill: Test timeout of 30000ms exceeded.
-    Call log:
-      - waiting for locator('input[type="email"]')
-
-
-      22 |         await page.goto('/');
-      23 |
-    > 24 |         await page.fill('input[type="email"]', 'invalid@example.com');
-         |                    ^
-      25 |         await page.fill('input[type="password"]', 'wrongpassword');
-      26 |         await page.click('button:has-text("Entrar")');
-      27 |
-        at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:24:20
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    ../test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
-    ../test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/video.webm
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: ../test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/error-context.md
-]]>
-</failure>
-<system-out>
-<![CDATA[
-[[ATTACHMENT|test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/test-failed-1.png]]
-
-[[ATTACHMENT|test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/video.webm]]
-
-[[ATTACHMENT|test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/error-context.md]]
-]]>
-</system-out>
+<testcase name="Authentication Flow › should show error toast for invalid credentials" classname="auth.spec.ts" time="18.79">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Authentication Flow › should logout and clear session" classname="auth.spec.ts" time="0.446">
+<testcase name="Authentication Flow › should logout and clear session" classname="auth.spec.ts" time="0.513">
 </testcase>
-<testcase name="Authentication Flow › should persist session on page reload" classname="auth.spec.ts" time="5.843">
+<testcase name="Authentication Flow › should persist session on page reload" classname="auth.spec.ts" time="5.96">
 <failure message="auth.spec.ts:46:9 should persist session on page reload" type="FAILURE">
 <![CDATA[  [chromium] › auth.spec.ts:46:9 › Authentication Flow › should persist session on page reload ─────
 
@@ -133,6 +96,186 @@
 [[ATTACHMENT|test-results/auth-Authentication-Flow-s-7d259-sist-session-on-page-reload-chromium/error-context.md]]
 ]]>
 </system-out>
+</testcase>
+</testsuite>
+<testsuite name="crud.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="5" failures="0" skipped="5" time="79.708" errors="0">
+<testcase name="CRUD Operations › should create product and show success toast" classname="crud.spec.ts" time="18.788">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="CRUD Operations › should load clientes with success toast" classname="crud.spec.ts" time="18.775">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="CRUD Operations › should load templates with success toast" classname="crud.spec.ts" time="18.231">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="CRUD Operations › should load usuarios with success toast" classname="crud.spec.ts" time="12.065">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="CRUD Operations › should load pedidos with success toast" classname="crud.spec.ts" time="11.849">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="navigation.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="6" failures="0" skipped="6" time="0" errors="0">
+<testcase name="Navigation and UI › should navigate between main tabs" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Navigation and UI › should show sidebar menu on desktop" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Navigation and UI › should toggle mobile menu" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Navigation and UI › should search globally" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Navigation and UI › should toggle dark mode" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Navigation and UI › should show responsive layout on tablets" classname="navigation.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="offline.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Offline Mode › should show offline indicator when network is offline" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should cache data for offline access" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should sync offline queue when reconnecting" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should persist offline queue across sessions" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should show queue item count in offline mode" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should handle offline form submission gracefully" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should load service worker in production" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Offline Mode › should have IndexedDB storage available" classname="offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="performance.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Performance Benchmarks › should load dashboard in under 3 seconds" classname="performance.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Performance Benchmarks › should respond to tab navigation in under 2 seconds" classname="performance.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Performance Benchmarks › should not have memory leaks during extended session" classname="performance.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Performance Benchmarks › should handle search responsively" classname="performance.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Performance Benchmarks › should measure API response times" classname="performance.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="reports.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Reports Generation › should generate vendido report with success toast" classname="reports.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Reports Generation › should generate inventario report" classname="reports.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Reports Generation › should export report to CSV" classname="reports.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Reports Generation › should apply date filters on report" classname="reports.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="toasts.spec.ts" timestamp="2026-01-11T02:53:14.912Z" hostname="chromium" tests="14" failures="0" skipped="14" time="0" errors="0">
+<testcase name="Toast Success Verification › should show 📊 toast for Dashboard" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📊 toast for Reportes" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📦 toast for Productos" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 👥 toast for Clientes" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📦 toast for Pedidos" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 🗺 toast for HojaRuta" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 👥 toast for Usuarios" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📋 toast for Plantillas" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 💰 toast for ListasPrecios" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 🎁 toast for Ofertas" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📂 toast for Categorías" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 👤 toast for AdminPanel" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show 📡 toast for OfflineQueue" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Toast Success Verification › should show login success toast" classname="toasts.spec.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
 </testsuite>
 </testsuites>

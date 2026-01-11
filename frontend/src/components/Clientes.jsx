@@ -62,8 +62,8 @@ export default function Clientes() {
 
   // Cargar clientes al montar y cuando cambian page o busqueda
   useEffect(() => {
-    cargarClientes();
-  }, [page, busqueda]);
+    refetchClientes();
+  }, [page, busqueda, refetchClientes]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -78,19 +78,6 @@ export default function Clientes() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nombre, telefono, direccion, creating]);
-
-
-        setTotalClientes(data.total);
-      } else {
-        // Formato legacy: array directo
-        setClientes(Array.isArray(data) ? data : []);
-        setTotalClientes(Array.isArray(data) ? data.length : 0);
-        setTotalPages(1);
-      }
-      toastSuccess('👥 Clientes cargados correctamente');
-    } catch (e) { setClientes([]); }
-    finally { setLoading(false); }
-  };
 
   // Memoized filtered client options for performance
   const clienteOptions = useMemo(() =>
@@ -115,7 +102,7 @@ export default function Clientes() {
           body: JSON.stringify({ nombre, telefono, direccion, zona })
         });
         if (res.ok) {
-          await cargarClientes();
+          await refetchClientes();
           toastSuccess('Cliente actualizado correctamente');
           setEditingClienteId(null);
           setNombre(''); setTelefono(''); setDireccion(''); setZona('');
@@ -131,7 +118,7 @@ export default function Clientes() {
         });
         if (res.ok) {
           setPage(1);
-          await cargarClientes();
+          await refetchClientes();
           setNombre(''); setTelefono(''); setDireccion(''); setZona('');
           toastSuccess('Cliente creado correctamente');
         } else {
@@ -160,7 +147,7 @@ export default function Clientes() {
       if (res.ok) {
         toastSuccess('Cliente eliminado');
         setSelectedCliente(null);
-        await cargarClientes();
+        await refetchClientes();
       } else {
         toastError('Error al eliminar cliente');
       }
@@ -213,7 +200,7 @@ export default function Clientes() {
         }
         setSelectedIds(new Set());
         setSelectedCliente(null);
-        await cargarClientes();
+        await refetchClientes();
       } else {
         const err = await res.json().catch(() => ({}));
         toastError(err.detail || 'Error al eliminar clientes');

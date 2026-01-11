@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { initTheme } from './utils'
 import { logger } from './utils/logger'
-import { ReactQueryProvider } from './utils/queryClient'
+import { ReactQueryProvider } from './utils/queryClient.jsx';
 // Este código permite que los polyfills estén disponibles globalmente
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;

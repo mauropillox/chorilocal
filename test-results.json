@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 4
+      "actualWorkers": 6
     },
     "preserveOutput": "always",
     "reporter": [
@@ -49,7 +49,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 4
+          "actualWorkers": 6
         },
         "id": "chromium",
         "name": "chromium",
@@ -65,23 +65,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 4
-        },
-        "id": "firefox",
-        "name": "firefox",
-        "testDir": "/home/mauro/dev/chorizaurio/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 30000
-      },
-      {
-        "outputDir": "/home/mauro/dev/chorizaurio/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
+          "actualWorkers": 6
         },
         "id": "webkit",
         "name": "webkit",
@@ -131,7 +115,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 5632,
+                      "duration": 5786,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*login|.*auth/i\u001b[39m\nReceived string:  \u001b[31m\"https://chorilocal.onrender.com/\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 5000ms\u001b[22m\n\u001b[2m    9 × unexpected value \"https://chorilocal.onrender.com/\"\u001b[22m\n",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*login|.*auth/i\u001b[39m\nReceived string:  \u001b[31m\"https://chorilocal.onrender.com/\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 5000ms\u001b[22m\n\u001b[2m    9 × unexpected value \"https://chorilocal.onrender.com/\"\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:6:28",
@@ -140,7 +124,7 @@
                           "column": 28,
                           "line": 6
                         },
-                        "snippet": "  4 |     test('should login with valid credentials and show success toast', async ({ page }) => {\n  5 |         await page.goto('/');\n> 6 |         await expect(page).toHaveURL(/.*login|.*auth/i);\n    |                            ^\n  7 |\n  8 |         await page.fill('input[type=\"email\"]', 'admin@example.com');\n  9 |         await page.fill('input[type=\"password\"]', 'password123');"
+                        "snippet": "\u001b[0m \u001b[90m 4 |\u001b[39m     test(\u001b[32m'should login with valid credentials and show success toast'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 5 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 6 |\u001b[39m         \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/.*login|.*auth/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m   |\u001b[39m                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 7 |\u001b[39m\n \u001b[90m 8 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 9 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
@@ -149,13 +133,13 @@
                             "column": 28,
                             "line": 6
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*login|.*auth/i\u001b[39m\nReceived string:  \u001b[31m\"https://chorilocal.onrender.com/\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 5000ms\u001b[22m\n\u001b[2m    9 × unexpected value \"https://chorilocal.onrender.com/\"\u001b[22m\n\n\n  4 |     test('should login with valid credentials and show success toast', async ({ page }) => {\n  5 |         await page.goto('/');\n> 6 |         await expect(page).toHaveURL(/.*login|.*auth/i);\n    |                            ^\n  7 |\n  8 |         await page.fill('input[type=\"email\"]', 'admin@example.com');\n  9 |         await page.fill('input[type=\"password\"]', 'password123');\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:6:28"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*login|.*auth/i\u001b[39m\nReceived string:  \u001b[31m\"https://chorilocal.onrender.com/\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 5000ms\u001b[22m\n\u001b[2m    9 × unexpected value \"https://chorilocal.onrender.com/\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 4 |\u001b[39m     test(\u001b[32m'should login with valid credentials and show success toast'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 5 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 6 |\u001b[39m         \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/.*login|.*auth/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m   |\u001b[39m                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 7 |\u001b[39m\n \u001b[90m 8 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 9 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:6:28\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-11T02:05:34.121Z",
+                      "startTime": "2026-01-11T02:53:15.496Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -191,7 +175,7 @@
             },
             {
               "title": "should show error toast for invalid credentials",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -204,29 +188,32 @@
                     {
                       "workerIndex": 1,
                       "parallelIndex": 1,
-                      "status": "timedOut",
-                      "duration": 31116,
+                      "status": "interrupted",
+                      "duration": 18790,
                       "error": {
-                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:24:20",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/auth.spec.ts",
+                          "column": 20,
+                          "line": 24
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 22 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 24 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'invalid@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 25 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'wrongpassword'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 26 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m\u001b[0m"
                       },
                       "errors": [
-                        {
-                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
-                        },
                         {
                           "location": {
                             "file": "/home/mauro/dev/chorizaurio/e2e/auth.spec.ts",
                             "column": 20,
                             "line": 24
                           },
-                          "message": "Error: page.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n  22 |         await page.goto('/');\n  23 |\n> 24 |         await page.fill('input[type=\"email\"]', 'invalid@example.com');\n     |                    ^\n  25 |         await page.fill('input[type=\"password\"]', 'wrongpassword');\n  26 |         await page.click('button:has-text(\"Entrar\")');\n  27 |\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:24:20"
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m 22 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 24 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'invalid@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 25 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'wrongpassword'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 26 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:24:20\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-11T02:05:34.139Z",
+                      "startTime": "2026-01-11T02:53:15.508Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -238,16 +225,16 @@
                           "name": "video",
                           "contentType": "video/webm",
                           "path": "/home/mauro/dev/chorizaurio/test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/mauro/dev/chorizaurio/test-results/auth-Authentication-Flow-s-22a65-ast-for-invalid-credentials-chromium/error-context.md"
                         }
-                      ]
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/auth.spec.ts",
+                        "column": 20,
+                        "line": 24
+                      }
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "skipped"
                 }
               ],
               "id": "d748ac400d08b85935ef-bb4f894f2ff38937a073",
@@ -271,12 +258,12 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 446,
+                      "duration": 513,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-11T02:05:34.144Z",
+                      "startTime": "2026-01-11T02:53:15.494Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -305,7 +292,7 @@
                       "workerIndex": 3,
                       "parallelIndex": 3,
                       "status": "failed",
-                      "duration": 5843,
+                      "duration": 5960,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('button:has-text(\"Cerrar sesión\")')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('button:has-text(\"Cerrar sesión\")')\u001b[22m\n",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('button:has-text(\"Cerrar sesión\")')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('button:has-text(\"Cerrar sesión\")')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:52:33",
@@ -314,7 +301,7 @@
                           "column": 33,
                           "line": 52
                         },
-                        "snippet": "  50 |         await page.reload();\n  51 |         const logoutBtn = page.locator('button:has-text(\"Cerrar sesión\")');\n> 52 |         await expect(logoutBtn).toBeVisible({ timeout: 5000 });\n     |                                 ^\n  53 |     });\n  54 | });\n  55 |"
+                        "snippet": "\u001b[0m \u001b[90m 50 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mreload()\u001b[33m;\u001b[39m\n \u001b[90m 51 |\u001b[39m         \u001b[36mconst\u001b[39m logoutBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button:has-text(\"Cerrar sesión\")'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 52 |\u001b[39m         \u001b[36mawait\u001b[39m expect(logoutBtn)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 53 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m 54 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 55 |\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
@@ -323,13 +310,13 @@
                             "column": 33,
                             "line": 52
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('button:has-text(\"Cerrar sesión\")')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('button:has-text(\"Cerrar sesión\")')\u001b[22m\n\n\n  50 |         await page.reload();\n  51 |         const logoutBtn = page.locator('button:has-text(\"Cerrar sesión\")');\n> 52 |         await expect(logoutBtn).toBeVisible({ timeout: 5000 });\n     |                                 ^\n  53 |     });\n  54 | });\n  55 |\n    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:52:33"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('button:has-text(\"Cerrar sesión\")')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('button:has-text(\"Cerrar sesión\")')\u001b[22m\n\n\n\u001b[0m \u001b[90m 50 |\u001b[39m         \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mreload()\u001b[33m;\u001b[39m\n \u001b[90m 51 |\u001b[39m         \u001b[36mconst\u001b[39m logoutBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button:has-text(\"Cerrar sesión\")'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 52 |\u001b[39m         \u001b[36mawait\u001b[39m expect(logoutBtn)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 53 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m 54 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 55 |\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/auth.spec.ts:52:33\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-11T02:05:34.149Z",
+                      "startTime": "2026-01-11T02:53:15.518Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -366,15 +353,1202 @@
           ]
         }
       ]
+    },
+    {
+      "title": "crud.spec.ts",
+      "file": "crud.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CRUD Operations",
+          "file": "crud.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create product and show success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
+                      "status": "interrupted",
+                      "duration": 18788,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                          "column": 24,
+                          "line": 10
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                            "column": 24,
+                            "line": 10
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T02:53:15.495Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-shoul-48e3a-duct-and-show-success-toast-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-shoul-48e3a-duct-and-show-success-toast-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                        "column": 24,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cf7a9ded24aec8272401-c4a63ee98c973f1674e1",
+              "file": "crud.spec.ts",
+              "line": 17,
+              "column": 9
+            },
+            {
+              "title": "should load clientes with success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 5,
+                      "status": "interrupted",
+                      "duration": 18775,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                          "column": 24,
+                          "line": 10
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                            "column": 24,
+                            "line": 10
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T02:53:15.499Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-clientes-with-success-toast-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-clientes-with-success-toast-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                        "column": 24,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cf7a9ded24aec8272401-b03b2a7a9d0a51ef8805",
+              "file": "crud.spec.ts",
+              "line": 48,
+              "column": 9
+            },
+            {
+              "title": "should load templates with success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "interrupted",
+                      "duration": 18231,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                          "column": 24,
+                          "line": 10
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                            "column": 24,
+                            "line": 10
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T02:53:16.124Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-shoul-d0411-emplates-with-success-toast-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-shoul-d0411-emplates-with-success-toast-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                        "column": 24,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cf7a9ded24aec8272401-6a52f7ba0473e4de3aae",
+              "file": "crud.spec.ts",
+              "line": 61,
+              "column": 9
+            },
+            {
+              "title": "should load usuarios with success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "interrupted",
+                      "duration": 12065,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                          "column": 24,
+                          "line": 10
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                            "column": 24,
+                            "line": 10
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T02:53:23.728Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-usuarios-with-success-toast-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-usuarios-with-success-toast-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                        "column": 24,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cf7a9ded24aec8272401-2c6187eea76d4448b738",
+              "file": "crud.spec.ts",
+              "line": 70,
+              "column": 9
+            },
+            {
+              "title": "should load pedidos with success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 3,
+                      "status": "interrupted",
+                      "duration": 11849,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24",
+                        "location": {
+                          "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                          "column": 24,
+                          "line": 10
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                            "column": 24,
+                            "line": 10
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"email\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m  8 |\u001b[39m         \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39m\u001b[36mawait\u001b[39m logoutBtn\u001b[33m.\u001b[39misVisible()) {\n \u001b[90m  9 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'admin@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[type=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'password123'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button:has-text(\"Entrar\")'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m             \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForNavigation()\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/mauro/dev/chorizaurio/e2e/crud.spec.ts:10:24\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-11T02:53:23.938Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-pedidos-with-success-toast-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/mauro/dev/chorizaurio/test-results/crud-CRUD-Operations-should-load-pedidos-with-success-toast-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/mauro/dev/chorizaurio/e2e/crud.spec.ts",
+                        "column": 24,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cf7a9ded24aec8272401-8f0a1cc8ec09f6ce6cc1",
+              "file": "crud.spec.ts",
+              "line": 79,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "navigation.spec.ts",
+      "file": "navigation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Navigation and UI",
+          "file": "navigation.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should navigate between main tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-f55ea7b8116b7a39c7cc",
+              "file": "navigation.spec.ts",
+              "line": 4,
+              "column": 9
+            },
+            {
+              "title": "should show sidebar menu on desktop",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-15d0a14b4c948e68653d",
+              "file": "navigation.spec.ts",
+              "line": 22,
+              "column": 9
+            },
+            {
+              "title": "should toggle mobile menu",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-0ac8bd4cdd7d87ea616c",
+              "file": "navigation.spec.ts",
+              "line": 30,
+              "column": 9
+            },
+            {
+              "title": "should search globally",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-f2aab1d6eca56aa52574",
+              "file": "navigation.spec.ts",
+              "line": 43,
+              "column": 9
+            },
+            {
+              "title": "should toggle dark mode",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-08465358ce9c251e791b",
+              "file": "navigation.spec.ts",
+              "line": 58,
+              "column": 9
+            },
+            {
+              "title": "should show responsive layout on tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-27c94f7e6a236937abbd",
+              "file": "navigation.spec.ts",
+              "line": 73,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "offline.spec.ts",
+      "file": "offline.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Offline Mode",
+          "file": "offline.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should show offline indicator when network is offline",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-4ccf60d6297b797ff868",
+              "file": "offline.spec.ts",
+              "line": 4,
+              "column": 9
+            },
+            {
+              "title": "should cache data for offline access",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-39588e93496fa57d523f",
+              "file": "offline.spec.ts",
+              "line": 25,
+              "column": 9
+            },
+            {
+              "title": "should sync offline queue when reconnecting",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-bf36a2425936b5affe9f",
+              "file": "offline.spec.ts",
+              "line": 61,
+              "column": 9
+            },
+            {
+              "title": "should persist offline queue across sessions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-43c7f1e48225f9c88181",
+              "file": "offline.spec.ts",
+              "line": 94,
+              "column": 9
+            },
+            {
+              "title": "should show queue item count in offline mode",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-c2a7bf4aba0aca095cc6",
+              "file": "offline.spec.ts",
+              "line": 130,
+              "column": 9
+            },
+            {
+              "title": "should handle offline form submission gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-c48b60deec98d733ef7a",
+              "file": "offline.spec.ts",
+              "line": 149,
+              "column": 9
+            },
+            {
+              "title": "should load service worker in production",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-3e2942f0644fe02c297a",
+              "file": "offline.spec.ts",
+              "line": 182,
+              "column": 9
+            },
+            {
+              "title": "should have IndexedDB storage available",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "586fc5283fd8ec7c7982-b72c24485f5d10ac6616",
+              "file": "offline.spec.ts",
+              "line": 198,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "performance.spec.ts",
+      "file": "performance.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Performance Benchmarks",
+          "file": "performance.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load dashboard in under 3 seconds",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b15d6361b2fc38288977-71c18371715118c445e8",
+              "file": "performance.spec.ts",
+              "line": 4,
+              "column": 9
+            },
+            {
+              "title": "should respond to tab navigation in under 2 seconds",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b15d6361b2fc38288977-f0ed1b08a6573ef23bfb",
+              "file": "performance.spec.ts",
+              "line": 13,
+              "column": 9
+            },
+            {
+              "title": "should not have memory leaks during extended session",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b15d6361b2fc38288977-d82799ef729e46f36129",
+              "file": "performance.spec.ts",
+              "line": 28,
+              "column": 9
+            },
+            {
+              "title": "should handle search responsively",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b15d6361b2fc38288977-745eab97c92ca9859e6a",
+              "file": "performance.spec.ts",
+              "line": 50,
+              "column": 9
+            },
+            {
+              "title": "should measure API response times",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b15d6361b2fc38288977-776b657335f3321d6008",
+              "file": "performance.spec.ts",
+              "line": 66,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "reports.spec.ts",
+      "file": "reports.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Reports Generation",
+          "file": "reports.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should generate vendido report with success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d2ea609703bae19dcdce-5c1166eb01a2966fa883",
+              "file": "reports.spec.ts",
+              "line": 16,
+              "column": 9
+            },
+            {
+              "title": "should generate inventario report",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d2ea609703bae19dcdce-cc2f72cb5b6590e3c9e8",
+              "file": "reports.spec.ts",
+              "line": 35,
+              "column": 9
+            },
+            {
+              "title": "should export report to CSV",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d2ea609703bae19dcdce-2f3e236303aec9990ed5",
+              "file": "reports.spec.ts",
+              "line": 49,
+              "column": 9
+            },
+            {
+              "title": "should apply date filters on report",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d2ea609703bae19dcdce-fb13fd7ae81d9a8c7884",
+              "file": "reports.spec.ts",
+              "line": 65,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "toasts.spec.ts",
+      "file": "toasts.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Toast Success Verification",
+          "file": "toasts.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should show 📊 toast for Dashboard",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-e744e993a0269a746df3",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📊 toast for Reportes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-38bdbef84cbbf77105df",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📦 toast for Productos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-feb674320503f9534cb2",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 👥 toast for Clientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-a6a511ffed9a988a7514",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📦 toast for Pedidos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-faf2cff0f5b2d245af43",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 🗺 toast for HojaRuta",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-07afe843ca2eb07cfc54",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 👥 toast for Usuarios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-28fa6e77ac14c9e7371e",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📋 toast for Plantillas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-70007b8c9cad93993509",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 💰 toast for ListasPrecios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-8bfe286d8507530ce061",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 🎁 toast for Ofertas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-02a5137aa80e3b249de6",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📂 toast for Categorías",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-1ab78a25a3d8d16fb5c2",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 👤 toast for AdminPanel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-5df4787f9f66b5d757ff",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show 📡 toast for OfflineQueue",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-7f50304b7f7efc8eb0fb",
+              "file": "toasts.spec.ts",
+              "line": 33,
+              "column": 13
+            },
+            {
+              "title": "should show login success toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "68963777715bb85a6ee3-791599f45f3993cc34b9",
+              "file": "toasts.spec.ts",
+              "line": 47,
+              "column": 9
+            }
+          ]
+        }
+      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-01-11T02:05:33.615Z",
-    "duration": 31755.172,
+    "startTime": "2026-01-11T02:53:14.875Z",
+    "duration": 19620.109,
     "expected": 1,
-    "skipped": 0,
-    "unexpected": 3,
+    "skipped": 43,
+    "unexpected": 2,
     "flaky": 0
   }
 }

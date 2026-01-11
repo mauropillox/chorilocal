@@ -31,15 +31,6 @@ export default function Usuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
-      toast('Error de conexión', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
 
   const toggleActivo = async (user) => {
     const endpoint = user.activo
