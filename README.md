@@ -235,20 +235,29 @@ python3 -m pytest tests/ --cov=. --cov-report=html
 # Instalar Playwright
 npm install
 
-# Correr E2E tests
+# Correr E2E tests LOCALES
 npm run test:e2e
 
-# Con UI
+# Correr tests de PRODUCCIÓN (read-only)
+npm run test:e2e:prod
+
+# Con UI (local)
 npm run test:e2e:ui
+
+# Con UI (producción)
+npm run test:e2e:prod:ui
 
 # Headed mode (ver browser)
 npm run test:e2e:headed
 
 # Debug mode
 npm run test:e2e:debug
+
+# Ver reporte de tests de producción
+npm run test:e2e:prod:report
 ```
 
-**E2E Files (19 files):**
+**E2E Files (19+ files):**
 - auth.spec.ts - Login, logout, permisos
 - crud.spec.ts - CRUD operations UI
 - offline.spec.ts - Offline behavior
@@ -256,6 +265,28 @@ npm run test:e2e:debug
 - performance.spec.ts - Performance benchmarks
 - reports.spec.ts - Generación reportes
 - toasts.spec.ts - Toast notifications
+- **production.spec.ts** - **PRODUCTION smoke tests (read-only)**
+
+**Production Testing:**
+Los tests de producción son **seguros** y **read-only**:
+- ✅ Verifican que el sitio carga correctamente
+- ✅ Validan navegación entre páginas
+- ✅ Comprueban que no hay errores JavaScript
+- ✅ Miden performance y bundle size
+- ❌ **NO modifican datos** (solo lectura)
+- ❌ **NO crean/editan/eliminan** entidades
+
+**Configuración para tests de producción:**
+```bash
+# 1. Set environment variables
+export PROD_TEST_USER="test@example.com"
+export PROD_TEST_PASSWORD="secure_password"
+
+# 2. Run production tests
+npm run test:e2e:prod
+```
+
+⚠️ **IMPORTANTE**: Necesitas crear un usuario de test en producción con permisos de **solo lectura** antes de correr los tests.
 
 ---
 
