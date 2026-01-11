@@ -232,7 +232,7 @@ export const SCHEMA_MAP = {
     'usuarios': UsuariosListSchema,
     'repartidores': UsuariosListSchema,
     'templates': TemplatesListSchema,
-    'listas-precios': ListasPreciosListSchema,
+    'listas-precios': ListasPreciosSchema,
 
     // Single item endpoints (patterns)
     'producto': ProductoSchema,
