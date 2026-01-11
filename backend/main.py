@@ -17,7 +17,7 @@ import db
 import models
 from deps import limiter
 from exceptions_custom import ChorizaurioException, to_http_exception
-from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta, reportes, listas_precios
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta, reportes, listas_precios, websocket
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -254,6 +254,7 @@ app.include_router(reportes.router, prefix="/api", tags=["Reportes"])
 app.include_router(listas_precios.router, prefix="/api", tags=["Listas de Precios"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.include_router(websocket.router, prefix="/api", tags=["WebSocket"])
 
 # --- Static File Serving for Uploads ---
 # NOTE: In production on Render, we use base64 data URLs stored in the database

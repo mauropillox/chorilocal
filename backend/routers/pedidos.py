@@ -1,5 +1,5 @@
 """Pedidos (Orders) Router"""
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
@@ -14,6 +14,7 @@ from deps import (
     RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
 from exceptions import safe_error_handler
+from routers.websocket import broadcast_pedido_change, WSEventType
 
 router = APIRouter()
 
@@ -345,7 +346,12 @@ async def get_pedido_detalle(pedido_id: int, current_user: dict = Depends(get_cu
     return models.PedidoDetalle(**pedido_dict)
 
 @router.put("/pedidos/{pedido_id}/estado", response_model=models.Pedido)
-async def cambiar_estado_pedido(pedido_id: int, estado_update: models.EstadoPedidoUpdate, current_user: dict = Depends(get_admin_user)):
+async def cambiar_estado_pedido(
+    pedido_id: int, 
+    estado_update: models.EstadoPedidoUpdate, 
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_admin_user)
+):
     nuevo_estado = estado_update.estado
     repartidor = estado_update.repartidor
     # Valid states include the simplified workflow: pendiente, preparando, entregado, cancelado
@@ -368,7 +374,17 @@ async def cambiar_estado_pedido(pedido_id: int, estado_update: models.EstadoPedi
         cursor.execute("SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor FROM pedidos p JOIN clientes c ON p.cliente_id = c.id WHERE p.id = ?", (pedido_id,))
         pedido_actualizado = cursor.fetchone()
 
-    return models.Pedido(id=pedido_actualizado[0], cliente_id=pedido_actualizado[1], fecha=pedido_actualizado[2], estado=pedido_actualizado[3], notas=pedido_actualizado[4], creado_por=pedido_actualizado[5], cliente_nombre=pedido_actualizado[6], pdf_generado=pedido_actualizado[7], repartidor=pedido_actualizado[8])
+    pedido = models.Pedido(id=pedido_actualizado[0], cliente_id=pedido_actualizado[1], fecha=pedido_actualizado[2], estado=pedido_actualizado[3], notas=pedido_actualizado[4], creado_por=pedido_actualizado[5], cliente_nombre=pedido_actualizado[6], pdf_generado=pedido_actualizado[7], repartidor=pedido_actualizado[8])
+    
+    # Broadcast estado change to all connected WebSocket clients
+    background_tasks.add_task(
+        broadcast_pedido_change,
+        WSEventType.PEDIDO_ESTADO_CHANGED,
+        {"id": pedido_id, "estado": nuevo_estado, "repartidor": repartidor},
+        current_user.get("sub")
+    )
+    
+    return pedido
 
 @router.delete("/pedidos/{pedido_id}", status_code=204)
 async def eliminar_pedido(pedido_id: int, current_user: dict = Depends(get_admin_user)):

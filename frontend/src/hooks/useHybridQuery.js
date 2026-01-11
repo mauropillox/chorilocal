@@ -8,9 +8,14 @@
  * - React Query handles fetching, refetching, staleness, background updates
  * - Zustand provides global state accessible outside React components
  * - Single source of truth for catalog data
+ * 
+ * Toast Behavior:
+ * - Shows toast when component mounts and data is ready (cache or fresh)
+ * - Uses useEffect to ensure toast shows every time user enters a tab
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { authFetchJson } from '../authFetch';
 import { CACHE_KEYS } from '../utils/queryClient';
@@ -23,6 +28,7 @@ import { toastSuccess } from '../toast';
 export const useProductosQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setProductosInStore = useAppStore(state => state.setProductos);
+    const toastShown = useRef(false);
 
     const query = useQuery({
         queryKey: CACHE_KEYS.productos,
@@ -32,9 +38,6 @@ export const useProductosQuery = (options = {}) => {
                 const productos = Array.isArray(data) ? data : (data?.data || []);
                 // Sync to Zustand store
                 setProductosInStore?.(productos);
-                if (options.showToast !== false) {
-                    toastSuccess('📦 Productos cargados');
-                }
                 return productos;
             }
             return [];
@@ -42,6 +45,14 @@ export const useProductosQuery = (options = {}) => {
         staleTime: 1000 * 60 * 5, // 5 minutes
         ...options,
     });
+
+    // Show toast when data is ready (either from cache or fresh fetch)
+    useEffect(() => {
+        if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
+            toastSuccess('📦 Productos cargados');
+            toastShown.current = true;
+        }
+    }, [query.isLoading, query.data, options.showToast]);
 
     return {
         ...query,
@@ -55,6 +66,7 @@ export const useProductosQuery = (options = {}) => {
 export const useClientesQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setClientesInStore = useAppStore(state => state.setClientes);
+    const toastShown = useRef(false);
 
     const query = useQuery({
         queryKey: CACHE_KEYS.clientes,
@@ -62,11 +74,7 @@ export const useClientesQuery = (options = {}) => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
             if (res.ok) {
                 const clientes = Array.isArray(data) ? data : (data?.data || []);
-                // Sync to Zustand store
                 setClientesInStore?.(clientes);
-                if (options.showToast !== false) {
-                    toastSuccess('👥 Clientes cargados');
-                }
                 return clientes;
             }
             return [];
@@ -74,6 +82,13 @@ export const useClientesQuery = (options = {}) => {
         staleTime: 1000 * 60 * 5,
         ...options,
     });
+
+    useEffect(() => {
+        if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
+            toastSuccess('👥 Clientes cargados');
+            toastShown.current = true;
+        }
+    }, [query.isLoading, query.data, options.showToast]);
 
     return {
         ...query,
@@ -87,6 +102,7 @@ export const useClientesQuery = (options = {}) => {
 export const useCategoriasQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setCategoriasInStore = useAppStore(state => state.setCategorias);
+    const toastShown = useRef(false);
 
     const query = useQuery({
         queryKey: CACHE_KEYS.categorias,
@@ -94,18 +110,21 @@ export const useCategoriasQuery = (options = {}) => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/categorias`);
             if (res.ok) {
                 const categorias = Array.isArray(data) ? data : [];
-                // Sync to Zustand store
                 setCategoriasInStore?.(categorias);
-                if (options.showToast !== false) {
-                    toastSuccess('🏷️ Categorías cargadas');
-                }
                 return categorias;
             }
             return [];
         },
-        staleTime: 1000 * 60 * 10, // 10 minutes
+        staleTime: 1000 * 60 * 10,
         ...options,
     });
+
+    useEffect(() => {
+        if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
+            toastSuccess('🏷️ Categorías cargadas');
+            toastShown.current = true;
+        }
+    }, [query.isLoading, query.data, options.showToast]);
 
     return {
         ...query,
@@ -119,6 +138,7 @@ export const useCategoriasQuery = (options = {}) => {
 export const usePedidosQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setPedidosInStore = useAppStore(state => state.setPedidos);
+    const toastShown = useRef(false);
 
     const query = useQuery({
         queryKey: CACHE_KEYS.pedidos,
@@ -126,18 +146,21 @@ export const usePedidosQuery = (options = {}) => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`);
             if (res.ok) {
                 const pedidos = Array.isArray(data) ? data : [];
-                // Sync to Zustand store
                 setPedidosInStore?.(pedidos);
-                if (options.showToast !== false) {
-                    toastSuccess('📋 Pedidos cargados');
-                }
                 return pedidos;
             }
             return [];
         },
-        staleTime: 1000 * 60 * 2, // 2 minutes - more dynamic
+        staleTime: 1000 * 60 * 2,
         ...options,
     });
+
+    useEffect(() => {
+        if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
+            toastSuccess('📋 Pedidos cargados');
+            toastShown.current = true;
+        }
+    }, [query.isLoading, query.data, options.showToast]);
 
     return {
         ...query,
@@ -151,6 +174,7 @@ export const usePedidosQuery = (options = {}) => {
 export const useOfertasQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setOfertasInStore = useAppStore(state => state.setOfertas);
+    const toastShown = useRef(false);
 
     const query = useQuery({
         queryKey: CACHE_KEYS.ofertas,
@@ -158,11 +182,7 @@ export const useOfertasQuery = (options = {}) => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`);
             if (res.ok) {
                 const ofertas = Array.isArray(data) ? data : [];
-                // Sync to Zustand store
                 setOfertasInStore?.(ofertas);
-                if (options.showToast !== false) {
-                    toastSuccess('💰 Ofertas cargadas');
-                }
                 return ofertas;
             }
             return [];
@@ -170,6 +190,13 @@ export const useOfertasQuery = (options = {}) => {
         staleTime: 1000 * 60 * 5,
         ...options,
     });
+
+    useEffect(() => {
+        if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
+            toastSuccess('💰 Ofertas cargadas');
+            toastShown.current = true;
+        }
+    }, [query.isLoading, query.data, options.showToast]);
 
     return {
         ...query,
