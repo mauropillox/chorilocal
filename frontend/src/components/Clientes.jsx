@@ -15,6 +15,7 @@ export default function Clientes() {
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
       if (!res.ok) return [];
+      toastSuccess('👥 Clientes cargados correctamente');
       return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 1000 * 60 * 5,

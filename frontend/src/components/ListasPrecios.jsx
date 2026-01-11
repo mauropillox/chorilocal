@@ -11,6 +11,7 @@ export default function ListasPrecios() {
     queryKey: CACHE_KEYS.listas,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/listas-precios`);
+      if (res.ok) toastSuccess('💰 Listas de precios cargadas');
       return res.ok ? (data || []) : [];
     },
     staleTime: 1000 * 60 * 5,

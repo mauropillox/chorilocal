@@ -18,6 +18,7 @@ export default function Ofertas() {
     queryKey: CACHE_KEYS.ofertas,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`);
+      if (res.ok) toastSuccess('⭐ Ofertas cargadas correctamente');
       return res.ok ? (data || []) : [];
     },
     staleTime: 1000 * 60 * 5,

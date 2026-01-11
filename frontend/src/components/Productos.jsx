@@ -16,6 +16,7 @@ export default function Productos() {
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
       if (!res.ok) return [];
+      toastSuccess('📦 Productos cargados correctamente');
       return Array.isArray(data) ? data : [];
     },
     staleTime: 1000 * 60 * 5,

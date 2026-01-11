@@ -13,6 +13,7 @@ export default function Templates() {
     queryKey: CACHE_KEYS.templates,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/templates`);
+      if (res.ok) toastSuccess('📋 Plantillas cargadas correctamente');
       return res.ok ? (data || []) : [];
     },
     staleTime: 1000 * 60 * 5,
