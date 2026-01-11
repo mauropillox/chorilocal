@@ -1,18 +1,34 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
 
 export default function Pedidos() {
-  const [clientes, setClientes] = useState([]);
+  const { data: clientes = [], isLoading: clientesLoading } = useQuery({
+    queryKey: CACHE_KEYS.clientes,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+      if (!res.ok) return [];
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: productos = [], isLoading: productosLoading } = useQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      if (!res.ok) return [];
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
   const [clienteId, setClienteId] = useState('');
-  const [productos, setProductos] = useState([]);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('');
-  const [loadingProductos, setLoadingProductos] = useState(false);
-  const [loadingClientes, setLoadingClientes] = useState(false);
   const [sortBy, setSortBy] = useState('nombre_asc');
   const [showAll, setShowAll] = useState(false);
   const [ofertasActivas, setOfertasActivas] = useState([]);
