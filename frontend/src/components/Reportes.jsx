@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { authFetchJson } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
+import { logger } from '../utils/logger';
 import HelpBanner from './HelpBanner';
 
 export default function Reportes() {
@@ -158,7 +159,7 @@ export default function Reportes() {
 
   // Helper function to handle API errors with proper messages
   const handleApiError = (error, res = null) => {
-    console.error('API Error:', error, res);
+    logger.error('API Error:', error, res);
 
     // Handle network errors
     if (!navigator.onLine) {

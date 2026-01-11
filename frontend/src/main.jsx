@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { initTheme } from './utils'
+import { logger } from './utils/logger'
 // Este código permite que los polyfills estén disponibles globalmente
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
@@ -29,7 +30,7 @@ if (SENTRY_DSN && typeof window !== 'undefined') {
         environment: import.meta.env.MODE,
       });
     } catch (e) {
-      console.warn("Sentry not available:", e.message);
+      logger.warn("Sentry not available:", e.message);
     }
   };
   loadSentry();
@@ -59,12 +60,12 @@ createRoot(document.getElementById('root')).render(
 
 // Register service worker and online handler for queue processing
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').catch(e => console.warn('SW registration failed', e));
+  navigator.serviceWorker.register('/service-worker.js').catch(e => logger.warn('SW registration failed', e));
 }
 
 import { processQueue } from './offline/sync';
 window.addEventListener('online', () => {
-  try { processQueue(); } catch (e) { console.warn('processQueue failed', e); }
+  try { processQueue(); } catch (e) { logger.warn('processQueue failed', e); }
 });
 
 // Try processing any queued items on load
