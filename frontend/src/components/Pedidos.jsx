@@ -16,8 +16,17 @@ export default function Pedidos() {
   const [showAll, setShowAll] = useState(false);
   const [ofertasActivas, setOfertasActivas] = useState([]);
   const [notas, setNotas] = useState(''); // Notas/observaciones del pedido
+  const [dataLoaded, setDataLoaded] = useState(false);
   const searchInputRef = useRef(null);
   const guardarPedidoRef = useRef(null);
+
+  // Show single toast when all data is loaded
+  useEffect(() => {
+    if (!clientesLoading && !productosLoading && !dataLoaded) {
+      toastSuccess('📦 Datos del pedido cargados');
+      setDataLoaded(true);
+    }
+  }, [clientesLoading, productosLoading, dataLoaded]);
 
   // Keyboard shortcuts effect - uses ref to avoid stale closure
   useEffect(() => {
@@ -59,8 +68,6 @@ export default function Pedidos() {
       } catch (e) {
         logger.error('Error cargando ofertas:', e);
       }
-
-      toastSuccess('📦 Clientes, productos y ofertas cargados correctamente');
     })();
 
     // Restore draft from localStorage
