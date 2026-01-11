@@ -51,15 +51,15 @@ export const ClientesListSchema = z.array(ClienteSchema);
 
 // Pedidos schemas
 export const PedidoSchema = z.object({
-    id: z.number(),
+    id: z.union([z.number(), z.string()]).optional(),
     numero: z.union([z.string(), z.number()]).optional(),
-    cliente_id: z.number().optional(),
-    estado: z.string().optional(),
-    total: z.number().optional(),
-    fecha_pedido: z.string().optional(),
-    fecha_entrega: z.string().optional(),
-    created_at: TimestampSchema,
-    updated_at: TimestampSchema,
+    cliente_id: z.union([z.number(), z.string()]).nullable().optional(),
+    estado: z.any().optional(),
+    total: z.union([z.number(), z.string()]).nullable().optional(),
+    fecha_pedido: z.any().optional(),
+    fecha_entrega: z.any().optional(),
+    created_at: z.any().optional(),
+    updated_at: z.any().optional(),
 }).passthrough();
 
 export const PedidosListSchema = z.array(PedidoSchema);

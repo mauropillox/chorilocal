@@ -43,7 +43,7 @@ function getWebSocketUrl() {
 
     // Convert http(s) to ws(s) and handle /api suffix
     let wsUrl = apiUrl.replace(/^http/, 'ws');
-    
+
     // If API URL already ends with /api, use /ws directly
     // Otherwise add /api/ws
     if (wsUrl.endsWith('/api')) {
