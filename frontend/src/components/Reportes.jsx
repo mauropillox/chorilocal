@@ -30,38 +30,38 @@ export default function Reportes() {
 
     // Build header row with Spanish column names
     const headerRow = columnConfig.map(col => col.label).join(',');
-    
+
     // Build data rows
     const dataRows = data.map(row => {
       return columnConfig.map(col => {
         let val;
-        
+
         // Use custom getter if provided, otherwise get from key
         if (col.getValue) {
           val = col.getValue(row);
         } else {
           val = row[col.key];
         }
-        
+
         // Apply formatter if provided
         if (col.format && val != null) {
           val = col.format(val);
         }
-        
+
         // Convert to string and handle empty values
         const strVal = val != null ? String(val) : '';
-        
+
         // Escape values with commas, quotes, or newlines
         if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
-        
+
         return strVal;
       }).join(',');
     }).join('\n');
 
     const csvContent = `${headerRow}\n${dataRows}`;
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
