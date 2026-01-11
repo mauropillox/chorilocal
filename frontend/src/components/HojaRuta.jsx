@@ -82,11 +82,11 @@ export default function HojaRuta() {
         },
         staleTime: 1000 * 60 * 5,
     });
-    
+
     // Mutation hooks for optimistic estado updates
     const updateEstadoMutation = useUpdatePedidoEstado();
     const bulkUpdateEstadoMutation = useBulkUpdatePedidosEstado();
-    
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); // Error state for UX
     const [filtroRepartidor, setFiltroRepartidor] = useState('');

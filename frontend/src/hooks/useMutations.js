@@ -162,6 +162,51 @@ export const useDeleteProducto = () => {
     });
 };
 
+/**
+ * Update producto stock with optimistic update
+ * Uses PATCH /productos/:id/stock endpoint
+ */
+export const useUpdateProductoStock = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, stock, stock_tipo }) => {
+            const res = await authFetch(`${API_URL}/productos/${id}/stock`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stock: parseFloat(stock) || 0, stock_tipo }),
+            });
+            if (!res.ok) {
+                const error = await res.json().catch(() => ({}));
+                throw new Error(error.detail || 'Error al actualizar stock');
+            }
+            return res.json();
+        },
+        onMutate: async ({ id, stock, stock_tipo }) => {
+            await queryClient.cancelQueries({ queryKey: CACHE_KEYS.productos });
+
+            const previousProductos = queryClient.getQueryData(CACHE_KEYS.productos);
+
+            // Optimistically update stock
+            queryClient.setQueryData(CACHE_KEYS.productos, (old = []) =>
+                old.map(p => p.id === id ? { ...p, stock: parseFloat(stock) || 0, stock_tipo, _optimistic: true } : p)
+            );
+
+            return { previousProductos };
+        },
+        onError: (err, variables, context) => {
+            queryClient.setQueryData(CACHE_KEYS.productos, context?.previousProductos);
+            toastError(`❌ ${err.message}`);
+        },
+        onSuccess: () => {
+            toastSuccess('📦 Stock actualizado');
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: CACHE_KEYS.productos });
+        },
+    });
+};
+
 // ==================== CLIENTES ====================
 
 /**
@@ -478,8 +523,8 @@ export const useBulkUpdatePedidosEstado = () => {
 
             // Optimistically update all selected pedidos
             queryClient.setQueryData(CACHE_KEYS.pedidos, (old = []) =>
-                old.map(p => 
-                    ids.includes(p.id) 
+                old.map(p =>
+                    ids.includes(p.id)
                         ? { ...p, estado: nuevoEstado }
                         : p
                 )
@@ -505,13 +550,13 @@ export const useBulkUpdatePedidosEstado = () => {
             // Show success message based on ESTADOS_PEDIDO icons (defined in HojaRuta)
             const iconMap = {
                 'pendiente': '📝',
-                'preparando': '👨‍🍳', 
+                'preparando': '👨‍🍳',
                 'listo': '✅',
                 'entregado': '🚚',
                 'cancelado': '❌'
             };
             const icon = iconMap[nuevoEstado] || '✅';
-            
+
             if (failedCount > 0) {
                 toastSuccess(`${icon} ${successCount} pedidos actualizados (${failedCount} fallaron)`);
             } else {

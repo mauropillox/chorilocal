@@ -19,6 +19,7 @@ export {
     // Productos
     useCreateProducto,
     useUpdateProducto,
+    useUpdateProductoStock,
     useDeleteProducto,
     // Clientes
     useCreateCliente,
