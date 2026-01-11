@@ -449,6 +449,7 @@ export default function Templates() {
                       onClick={() => editarTemplate(template)}
                       className="btn-secondary text-xs px-3 py-1.5"
                       style={{ minHeight: 'auto' }}
+                      aria-label={`Editar template ${template.nombre}`}
                     >
                       ✏️ Editar
                     </button>

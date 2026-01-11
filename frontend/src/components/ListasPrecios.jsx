@@ -427,6 +427,7 @@ export default function ListasPrecios() {
                             onClick={() => eliminarPrecioEspecial(p.producto_id)}
                             className="btn-danger text-xs px-2 py-1"
                             style={{ minHeight: 'auto' }}
+                            aria-label={`Eliminar precio especial de ${p.nombre}`}
                           >
                             🗑
                           </button>

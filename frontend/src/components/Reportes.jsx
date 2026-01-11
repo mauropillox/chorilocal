@@ -389,7 +389,7 @@ export default function Reportes() {
                 <label className="block text-sm font-medium mb-1">Hasta</label>
                 <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} />
               </div>
-              <button onClick={cargarReporteVentas} className="btn-primary">🔄 Actualizar</button>
+              <button onClick={cargarReporteVentas} className="btn-primary" aria-label="Actualizar reporte de ventas">🔄 Actualizar</button>
               {reporteVentas && (
                 <button onClick={exportVentas} className="btn-export">📥 Exportar CSV</button>
               )}
@@ -457,7 +457,7 @@ export default function Reportes() {
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">📦 Reporte de Inventario</h3>
               <div className="flex gap-2">
-                <button onClick={cargarReporteInventario} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={cargarReporteInventario} className="btn-primary" aria-label="Actualizar reporte de inventario">🔄 Actualizar</button>
                 <button onClick={exportInventario} className="btn-export">📥 Exportar CSV</button>
               </div>
             </div>
@@ -560,7 +560,7 @@ export default function Reportes() {
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">👥 Reporte de Clientes</h3>
               <div className="flex gap-2">
-                <button onClick={cargarReporteClientes} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={cargarReporteClientes} className="btn-primary" aria-label="Actualizar reporte de clientes">🔄 Actualizar</button>
                 <button onClick={exportClientes} className="btn-export">📥 Exportar CSV</button>
               </div>
             </div>
@@ -646,7 +646,7 @@ export default function Reportes() {
                 <label className="block text-sm font-medium mb-1">Hasta</label>
                 <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} />
               </div>
-              <button onClick={cargarReporteProductos} className="btn-primary">🔄 Actualizar</button>
+              <button onClick={cargarReporteProductos} className="btn-primary" aria-label="Actualizar reporte de productos">🔄 Actualizar</button>
               {reporteProductos && (
                 <button onClick={exportProductos} className="btn-export">📥 Exportar CSV</button>
               )}
@@ -761,7 +761,7 @@ export default function Reportes() {
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">⚡ Reporte de Rendimiento</h3>
               <div className="flex gap-2">
-                <button onClick={cargarReporteRendimiento} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={cargarReporteRendimiento} className="btn-primary" aria-label="Actualizar reporte de rendimiento">🔄 Actualizar</button>
                 <button onClick={exportRendimiento} className="btn-export">📥 Exportar CSV</button>
               </div>
             </div>
@@ -842,7 +842,7 @@ export default function Reportes() {
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">📈 Reporte Comparativo</h3>
               <div className="flex gap-2">
-                <button onClick={cargarReporteComparativo} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={cargarReporteComparativo} className="btn-primary" aria-label="Actualizar reporte comparativo">🔄 Actualizar</button>
                 <button onClick={exportComparativo} className="btn-export">📥 Exportar CSV</button>
               </div>
             </div>

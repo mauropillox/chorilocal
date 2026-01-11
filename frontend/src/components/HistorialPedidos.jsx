@@ -786,8 +786,8 @@ export default function HistorialPedidos() {
                                     autoFocus
                                     onKeyDown={(e) => e.key === 'Enter' && actualizarNotas(p.id)}
                                   />
-                                  <button onClick={() => actualizarNotas(p.id)} className="btn-primary text-xs px-2 py-1" style={{ minHeight: 'auto' }}>💾</button>
-                                  <button onClick={() => { setEditandoNotas(null); setNotasTemp(''); }} className="btn-secondary text-xs px-2 py-1" style={{ minHeight: 'auto' }}>✕</button>
+                                  <button onClick={() => actualizarNotas(p.id)} className="btn-primary text-xs px-2 py-1" style={{ minHeight: 'auto' }} aria-label="Guardar notas">💾</button>
+                                  <button onClick={() => { setEditandoNotas(null); setNotasTemp(''); }} className="btn-secondary text-xs px-2 py-1" style={{ minHeight: 'auto' }} aria-label="Cancelar edición de notas">✕</button>
                                 </div>
                               ) : (
                                 <div className="mt-1 flex items-center gap-2">
@@ -846,7 +846,7 @@ export default function HistorialPedidos() {
                                       <option value="unidad">U</option>
                                       <option value="caja">C</option>
                                     </select>
-                                    <button onClick={() => eliminarItem(p.id, item.id)} className="btn-danger text-xs px-2 py-1">✕</button>
+                                    <button onClick={() => eliminarItem(p.id, item.id)} className="btn-danger text-xs px-2 py-1" aria-label={`Eliminar ${item.nombre} del pedido`}>✕</button>
                                   </div>
                                 ))}
                               </div>
@@ -866,7 +866,7 @@ export default function HistorialPedidos() {
                                   <option value="unidad">Unidad</option>
                                   <option value="caja">Caja</option>
                                 </select>
-                                <button onClick={() => agregarItem(p.id)} className="btn-primary text-sm px-3 py-2">➕ Agregar</button>
+                                <button onClick={() => agregarItem(p.id)} className="btn-primary text-sm px-3 py-2" aria-label="Agregar producto al pedido">➕ Agregar</button>
                                 <button onClick={() => setEditandoPedido(null)} className="btn-secondary text-sm px-3 py-2">Listo</button>
                               </div>
                             </div>

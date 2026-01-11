@@ -625,7 +625,8 @@ export default function Ofertas() {
                         <button
                           onClick={() => editarOferta(oferta)}
                           className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}>
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          aria-label={`Editar oferta ${oferta.titulo}`}>
                           Editar
                         </button>
                         <button

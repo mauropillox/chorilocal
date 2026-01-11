@@ -1677,8 +1677,8 @@ export default function HojaRuta() {
                                                                                 autoFocus
                                                                                 list="reps-list-shared"
                                                                             />
-                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }}>✓</button>
-                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-2 py-1 rounded text-white text-xs" style={{ background: '#10b981' }} aria-label="Confirmar asignación de repartidor">✓</button>
+                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)' }} aria-label="Cancelar asignación">✕</button>
                                                                         </div>
                                                                     ) : (
                                                                         <>
@@ -1816,8 +1816,8 @@ export default function HojaRuta() {
                                                                                 autoFocus
                                                                                 list="reps-list-shared"
                                                                             />
-                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-3 py-1.5 rounded text-white text-sm font-medium" style={{ background: '#10b981' }}>✓</button>
-                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-3 py-1.5 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }}>✕</button>
+                                                                            <button onClick={() => asignarRepartidor(p.id, nuevoRepartidor)} className="px-3 py-1.5 rounded text-white text-sm font-medium" style={{ background: '#10b981' }} aria-label="Confirmar asignación de repartidor">✓</button>
+                                                                            <button onClick={() => { setAsignandoRepartidor(null); setNuevoRepartidor(''); }} className="px-3 py-1.5 rounded text-sm" style={{ background: 'var(--color-bg-secondary)' }} aria-label="Cancelar asignación">✕</button>
                                                                         </div>
                                                                     ) : (
                                                                         <button
