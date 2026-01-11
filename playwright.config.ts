@@ -13,7 +13,7 @@ export default defineConfig({
         ['list'],
     ],
     use: {
-        baseURL: 'http://localhost:5173',
+        baseURL: process.env.PLAYWRIGHT_URL || 'https://chorilocal.onrender.com',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
@@ -33,11 +33,4 @@ export default defineConfig({
             use: { ...devices['Desktop Safari'] },
         },
     ],
-
-    webServer: {
-        command: 'npm run dev',
-        url: 'http://localhost:5173',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000,
-    },
 });
