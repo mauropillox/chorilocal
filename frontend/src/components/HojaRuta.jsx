@@ -52,7 +52,7 @@ const calcZoneProgress = (pedidosZona) => {
 };
 
 export default function HojaRuta() {
-    const { data: pedidos = [] } = useQuery({
+    const { data: pedidos = [], refetch: refetchPedidos, isLoading: pedidosLoading } = useQuery({
         queryKey: CACHE_KEYS.pedidos,
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`);
@@ -60,7 +60,7 @@ export default function HojaRuta() {
         },
         staleTime: 1000 * 60 * 5,
     });
-    const { data: clientes = [] } = useQuery({
+    const { data: clientes = [], refetch: refetchClientes } = useQuery({
         queryKey: CACHE_KEYS.clientes,
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
@@ -68,7 +68,7 @@ export default function HojaRuta() {
         },
         staleTime: 1000 * 60 * 5,
     });
-    const { data: repartidores = [] } = useQuery({
+    const { data: repartidores = [], refetch: refetchRepartidores } = useQuery({
         queryKey: [...CACHE_KEYS.usuarios, 'repartidores'],
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/repartidores`);
@@ -137,50 +137,22 @@ export default function HojaRuta() {
     const [pedidosDentroZonaPage, setPedidosDentroZonaPage] = useState({});
     const [pedidosDentroZonaPerPage, setPedidosDentroZonaPerPage] = useState(10);
 
-    useEffect(() => {
-        cargarDatos();
-    }, []);
-
     // Reset página cuando cambian filtros
     useEffect(() => {
         setCurrentPage(1);
         setSelectedIds(new Set()); // Clear selection on filter change
     }, [filtroEstado, filtroZona, filtroRepartidor]);
 
+    // Unified refresh function using React Query refetch
     const cargarDatos = async () => {
         setLoading(true);
         setError(null);
         try {
-            const [pedRes, cliRes, repRes] = await Promise.all([
-                authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`),
-                authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
-                authFetchJson(`${import.meta.env.VITE_API_URL}/repartidores`)
+            await Promise.all([
+                refetchPedidos(),
+                refetchClientes(),
+                refetchRepartidores()
             ]);
-
-            // Check pedidos
-            if (pedRes.res.ok) {
-                const pedidosData = Array.isArray(pedRes.data) ? pedRes.data : [];
-                setPedidos(pedidosData);
-            } else {
-                logger.error('Error cargando pedidos:', pedRes.res.status);
-            }
-
-            if (cliRes.res.ok) {
-                const cliData = cliRes.data;
-                if (cliData.data) setClientes(cliData.data);
-                else setClientes(Array.isArray(cliData) ? cliData : []);
-            }
-
-            // Load repartidores from API (with fallback to pedidos-based list)
-            if (repRes.res.ok && Array.isArray(repRes.data)) {
-                setRepartidores(repRes.data);
-            } else {
-                // Fallback: extract from pedidos
-                const pedidosData = Array.isArray(pedRes.data) ? pedRes.data : [];
-                const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
-                setRepartidores(reps.map(r => ({ nombre: r, id: null })));
-            }
-            // Clear any previous errors on success
             setError(null);
             toastSuccess('🗺️ Hoja de ruta cargada correctamente');
         } catch (e) {
@@ -607,7 +579,7 @@ export default function HojaRuta() {
         return flujo[estadoActual] || null;
     };
 
-    if (loading) {
+    if (loading || pedidosLoading) {
         return (
             <div className="flex items-center justify-center p-8">
                 <div className="text-center">
