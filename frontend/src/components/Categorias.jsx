@@ -215,10 +215,12 @@ export default function Categorias() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</div>
+        <Skeleton count={4} height={100} />
       ) : categorias.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
-          No hay categorías creadas
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
+          <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No hay categorías creadas</p>
+          <p style={{ fontSize: '0.9rem' }}>¡Crea tu primera categoría para organizar tus productos!</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>

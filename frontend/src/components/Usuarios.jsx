@@ -337,9 +337,12 @@ export default function Usuarios() {
             <div className="empty-icon">👥</div>
             <div className="empty-text">
               {usuarios.length === 0
-                ? 'No hay usuarios registrados'
+                ? 'No hay usuarios registrados aún'
                 : 'No se encontraron usuarios con esos filtros'}
             </div>
+            {usuarios.length === 0 && (
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Crea usuarios para gestionar el acceso al sistema</p>
+            )}
           </div>
         )}
       </div>

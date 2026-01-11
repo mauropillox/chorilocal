@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Select from 'react-select';
 import { authFetch, authFetchJson } from '../authFetch';
@@ -123,53 +123,64 @@ export default function HistorialPedidos() {
   }, [searchParams]);
 
   // Ordenar pedidos: más nuevos primero (ID descendente)
-  const pedidosOrdenados = [...pedidos].sort((a, b) => b.id - a.id);
+  const pedidosOrdenados = useMemo(() => {
+    return [...pedidos].sort((a, b) => b.id - a.id);
+  }, [pedidos]);
 
   // Filtrado por estado
-  const pendientes = pedidosOrdenados.filter(p => !p.pdf_generado);
-  const generados = pedidosOrdenados.filter(p => p.pdf_generado);
+  const pendientes = useMemo(() => {
+    return pedidosOrdenados.filter(p => !p.pdf_generado);
+  }, [pedidosOrdenados]);
+
+  const generados = useMemo(() => {
+    return pedidosOrdenados.filter(p => p.pdf_generado);
+  }, [pedidosOrdenados]);
 
   // Datos según tab activo
   const datosActuales = activeTab === 'pendientes' ? pendientes : generados;
 
   // Filtrado de búsqueda
-  const coincideTexto = (p) => {
+  const coincideTexto = useCallback((p) => {
     const q = busquedaTexto.trim().toLowerCase();
     if (!q) return true;
     const cliente = clientes.find(c => c.id === p.cliente_id);
     const clienteNombre = (cliente?.nombre || '').toLowerCase();
     const productosStr = (p.productos || []).map(x => x.nombre.toLowerCase()).join(' ');
     return clienteNombre.includes(q) || productosStr.includes(q);
-  };
+  }, [busquedaTexto, clientes]);
 
   // Filtro de pedidos antiguos (+24 horas)
-  const esAntiguo = (p) => {
+  const esAntiguo = useCallback((p) => {
     if (!filtroAntiguos) return true;
     const fecha = new Date(p.fecha_creacion || p.fecha);
     const ahora = new Date();
     const diffHoras = (ahora - fecha) / (1000 * 60 * 60);
     return diffHoras >= 24;
-  };
+  }, [filtroAntiguos]);
 
   // Filtro por ID específico
-  const coincideId = (p) => {
+  const coincideId = useCallback((p) => {
     if (!filtroPedidoId) return true;
     return p.id === filtroPedidoId;
-  };
+  }, [filtroPedidoId]);
 
   // Filtro por usuario creador (solo para admin/oficina)
-  const coincideCreador = (p) => {
+  const coincideCreador = useCallback((p) => {
     if (!filtroCreador) return true;
     return (p.creado_por || '') === filtroCreador;
-  };
+  }, [filtroCreador]);
 
-  const datosFiltrados = datosActuales.filter(p => coincideTexto(p) && esAntiguo(p) && coincideId(p) && coincideCreador(p));
+  const datosFiltrados = useMemo(() => {
+    return datosActuales.filter(p => coincideTexto(p) && esAntiguo(p) && coincideId(p) && coincideCreador(p));
+  }, [datosActuales, coincideTexto, esAntiguo, coincideId, coincideCreador]);
 
   // Paginación
   const totalPages = Math.ceil(datosFiltrados.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const datosPaginados = datosFiltrados.slice(startIndex, endIndex);
+  const datosPaginados = useMemo(() => {
+    return datosFiltrados.slice(startIndex, endIndex);
+  }, [datosFiltrados, startIndex, endIndex]);
 
   // Reset a página 1 cuando cambia tab, búsqueda o filtro
   useEffect(() => {

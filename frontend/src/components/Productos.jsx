@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
@@ -258,7 +258,7 @@ export default function Productos() {
       setNewStock('');
     } catch (error) {
       // Error handling is done in mutation hook
-      console.error('Stock update failed:', error);
+      logger.error('Stock update failed:', error);
     }
   };
 
@@ -564,7 +564,7 @@ export default function Productos() {
     }
   };
 
-  const productosFiltrados = (() => {
+  const productosFiltrados = useMemo(() => {
     if (!busqueda.trim() && !showAll) return [];
     const q = busqueda.trim().toLowerCase();
     let list = q ? productos.filter(p => p.nombre.toLowerCase().includes(q)) : productos.slice();
@@ -592,13 +592,15 @@ export default function Productos() {
       if (!Number.isNaN(max)) list = list.filter(p => (p.precio || 0) <= max);
     }
     return list;
-  })();
+  }, [productos, busqueda, showAll, filtroStockBajo, filtroTipo, categoriaFiltro, tagFiltro, productosTags, precioMin, precioMax]);
 
-  const stockBajo = productos.filter(p => {
-    const stock_actual = p.stock || 0;
-    const stock_min = p.stock_minimo || 10;
-    return stock_actual < stock_min;
-  });
+  const stockBajo = useMemo(() => {
+    return productos.filter(p => {
+      const stock_actual = p.stock || 0;
+      const stock_min = p.stock_minimo || 10;
+      return stock_actual < stock_min;
+    });
+  }, [productos]);
 
   const mostrarVistaStock = vistaStock && busqueda === '' && showAll;
 

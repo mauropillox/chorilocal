@@ -280,8 +280,8 @@ export default function ListasPrecios() {
           {listas.length === 0 ? (
             <div className="text-center py-8 text-muted">
               <div className="text-4xl mb-2">📋</div>
-              <p>No hay listas de precios.</p>
-              <p className="text-xs mt-1">Crea una para ofrecer precios diferenciados.</p>
+              <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No hay listas de precios</p>
+              <p className="text-xs mt-1">Crea listas personalizadas para diferentes tipos de clientes</p>
             </div>
           ) : (
             <div className="space-y-3">

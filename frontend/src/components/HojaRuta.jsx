@@ -332,7 +332,7 @@ export default function HojaRuta() {
             setSelectedIds(new Set());
         } catch (error) {
             // Error handling is done in mutation hook
-            console.error('Bulk estado update failed:', error);
+            logger.error('Bulk estado update failed:', error);
         }
     }, [selectedIds, pedidos, bulkUpdateEstadoMutation]);
 

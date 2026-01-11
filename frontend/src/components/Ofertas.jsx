@@ -203,7 +203,11 @@ export default function Ofertas() {
   }, [productos, productosSeleccionados]);
 
   if (loading) {
-    return <div className="text-center p-8">Cargando...</div>;
+    return (
+      <div className="p-4" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <Skeleton count={5} height={120} />
+      </div>
+    );
   }
 
   return (

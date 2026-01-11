@@ -410,8 +410,8 @@ export default function Templates() {
           {templates.length === 0 ? (
             <div className="text-center py-8 text-muted">
               <div className="text-4xl mb-2">📋</div>
-              <p>No hay templates guardados.</p>
-              <p className="text-xs mt-1">Crea uno para agilizar tus pedidos frecuentes.</p>
+              <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No hay templates guardados</p>
+              <p className="text-xs mt-1">Crea templates para agilizar pedidos frecuentes y recurrentes</p>
             </div>
           ) : (
             <div className="space-y-3">
