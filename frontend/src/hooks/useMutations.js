@@ -436,3 +436,90 @@ export const useDeletePedido = () => {
         },
     });
 };
+
+/**
+ * Bulk update estado for multiple pedidos with optimistic update
+ * Used in HojaRuta for mass estado changes
+ */
+export const useBulkUpdatePedidosEstado = () => {
+    const queryClient = useQueryClient();
+    const setPedidos = useAppStore(state => state.setPedidos);
+
+    return useMutation({
+        mutationFn: async ({ ids, nuevoEstado, pedidosMap }) => {
+            // Execute all requests in parallel
+            const results = await Promise.allSettled(
+                ids.map(id => {
+                    const pedido = pedidosMap.get(id);
+                    return authFetch(`${API_URL}/pedidos/${id}/estado`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            estado: nuevoEstado,
+                            repartidor: pedido?.repartidor
+                        })
+                    });
+                })
+            );
+
+            const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
+            const failedCount = results.length - successCount;
+
+            if (successCount === 0) {
+                throw new Error('Todos los pedidos fallaron al actualizar');
+            }
+
+            return { successCount, failedCount, nuevoEstado };
+        },
+        onMutate: async ({ ids, nuevoEstado }) => {
+            await queryClient.cancelQueries({ queryKey: CACHE_KEYS.pedidos });
+
+            const previousPedidos = queryClient.getQueryData(CACHE_KEYS.pedidos);
+
+            // Optimistically update all selected pedidos
+            queryClient.setQueryData(CACHE_KEYS.pedidos, (old = []) =>
+                old.map(p => 
+                    ids.includes(p.id) 
+                        ? { ...p, estado: nuevoEstado }
+                        : p
+                )
+            );
+
+            // Sync to Zustand
+            const updatedPedidos = queryClient.getQueryData(CACHE_KEYS.pedidos);
+            if (updatedPedidos) {
+                setPedidos(updatedPedidos);
+            }
+
+            return { previousPedidos };
+        },
+        onError: (err, variables, context) => {
+            // Rollback on error
+            queryClient.setQueryData(CACHE_KEYS.pedidos, context?.previousPedidos);
+            if (context?.previousPedidos) {
+                setPedidos(context.previousPedidos);
+            }
+            toastError(`❌ ${err.message}`);
+        },
+        onSuccess: ({ successCount, failedCount, nuevoEstado }) => {
+            // Show success message based on ESTADOS_PEDIDO icons (defined in HojaRuta)
+            const iconMap = {
+                'pendiente': '📝',
+                'preparando': '👨‍🍳', 
+                'listo': '✅',
+                'entregado': '🚚',
+                'cancelado': '❌'
+            };
+            const icon = iconMap[nuevoEstado] || '✅';
+            
+            if (failedCount > 0) {
+                toastSuccess(`${icon} ${successCount} pedidos actualizados (${failedCount} fallaron)`);
+            } else {
+                toastSuccess(`${icon} ${successCount} pedidos actualizados`);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: CACHE_KEYS.pedidos });
+        },
+    });
+};

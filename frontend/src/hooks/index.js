@@ -27,5 +27,6 @@ export {
     // Pedidos
     useCreatePedido,
     useUpdatePedidoEstado,
+    useBulkUpdatePedidosEstado,
     useDeletePedido,
 } from './useMutations';

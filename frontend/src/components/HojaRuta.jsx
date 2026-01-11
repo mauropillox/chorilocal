@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
-import { useUpdatePedidoEstado } from '../hooks/useMutations';
+import { useUpdatePedidoEstado, useBulkUpdatePedidosEstado } from '../hooks/useMutations';
 import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
@@ -83,8 +83,9 @@ export default function HojaRuta() {
         staleTime: 1000 * 60 * 5,
     });
     
-    // Mutation hook for optimistic estado updates
+    // Mutation hooks for optimistic estado updates
     const updateEstadoMutation = useUpdatePedidoEstado();
+    const bulkUpdateEstadoMutation = useBulkUpdatePedidosEstado();
     
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); // Error state for UX
@@ -319,39 +320,21 @@ export default function HojaRuta() {
         setSelectedIds(new Set());
     }, []);
 
-    // Bulk change estado - using parallel requests for better performance
+    // Bulk change estado - with optimistic updates for instant feedback
     const bulkChangeEstado = useCallback(async (nuevoEstado) => {
         const ids = Array.from(selectedIds);
         if (ids.length === 0) return;
 
-        // Create a pedidos map for O(1) lookup
         const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
 
-        // Execute all requests in parallel
-        const results = await Promise.allSettled(
-            ids.map(id => {
-                const pedido = pedidosMap.get(id);
-                return authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${id}/estado`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        estado: nuevoEstado,
-                        repartidor: pedido?.repartidor
-                    })
-                });
-            })
-        );
-
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
-
-        if (successCount > 0) {
-            toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${successCount} pedidos actualizados`);
-            await cargarDatos();
+        try {
+            await bulkUpdateEstadoMutation.mutateAsync({ ids, nuevoEstado, pedidosMap });
             setSelectedIds(new Set());
-        } else {
-            toastError('Error al actualizar pedidos');
+        } catch (error) {
+            // Error handling is done in mutation hook
+            console.error('Bulk estado update failed:', error);
         }
-    }, [selectedIds, pedidos, cargarDatos]);
+    }, [selectedIds, pedidos, bulkUpdateEstadoMutation]);
 
     // Bulk assign repartidor - using parallel requests
     const bulkAsignarRepartidor = useCallback(async () => {
