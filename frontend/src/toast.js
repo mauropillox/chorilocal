@@ -1,11 +1,11 @@
 export function toast(message, type = 'info', duration = 3000, options = {}) {
-  const event = new CustomEvent('toast', { 
-    detail: { 
-      message, 
-      type, 
+  const event = new CustomEvent('toast', {
+    detail: {
+      message,
+      type,
       duration,
       ...options
-    } 
+    }
   });
   window.dispatchEvent(event);
 }
@@ -17,8 +17,8 @@ export const toastInfo = (msg, d) => toast(msg, 'info', d);
 
 // Toast with undo action
 export const toastWithUndo = (message, undoCallback, duration = 5000) => {
-  toast(message, 'info', duration, { 
+  toast(message, 'info', duration, {
     undoCallback,
-    showUndo: true 
+    showUndo: true
   });
 };

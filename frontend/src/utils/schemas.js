@@ -226,14 +226,14 @@ export const SCHEMA_MAP = {
     'productos': ProductosListSchema,
     'clientes': ClientesListSchema,
     'pedidos': PedidosListSchema,
-    'categorias': CategoriasListSchema,
+    'categorias': CategoriasSchema,
     'ofertas': OfertasListSchema,
     'ofertas/activas': OfertasListSchema,
     'usuarios': UsuariosListSchema,
     'repartidores': UsuariosListSchema,
     'templates': TemplatesListSchema,
     'listas-precios': ListasPreciosListSchema,
-    
+
     // Single item endpoints (patterns)
     'producto': ProductoSchema,
     'cliente': ClienteSchema,
@@ -254,32 +254,32 @@ export const SCHEMA_MAP = {
 export function validateResponse(endpoint, data, options = { strict: false, silent: false }) {
     const endpointKey = extractEndpointKey(endpoint);
     const schema = SCHEMA_MAP[endpointKey];
-    
+
     if (!schema) {
         // No schema defined - skip validation
         return { success: true, data };
     }
-    
+
     const result = schema.safeParse(data);
-    
+
     if (!result.success) {
         const errorMessage = result.error.issues
             .slice(0, 3) // Limit to first 3 errors
             .map(issue => `${issue.path.join('.')}: ${issue.message}`)
             .join(', ');
-        
+
         if (!options.silent) {
             console.warn(`[Zod] Validation warning for ${endpointKey}:`, errorMessage);
         }
-        
+
         // In non-strict mode, return original data with warning
-        return { 
-            success: false, 
+        return {
+            success: false,
             error: errorMessage,
             data: options.strict ? null : data
         };
     }
-    
+
     return { success: true, data: result.data };
 }
 
@@ -289,16 +289,16 @@ export function validateResponse(endpoint, data, options = { strict: false, sile
 function extractEndpointKey(url) {
     let path = url.replace(/^https?:\/\/[^\/]+/, '').split('?')[0];
     path = path.replace(/^\/?(api)?\//, '');
-    
+
     if (path.match(/ofertas\/activas/i)) return 'ofertas/activas';
     if (path.match(/repartidores/i)) return 'repartidores';
     if (path.match(/listas-precios/i)) return 'listas-precios';
-    
+
     const segments = path.split('/').filter(Boolean);
     if (segments.length >= 2 && /^\d+$/.test(segments[segments.length - 1])) {
         const resource = segments[segments.length - 2];
         return resource.replace(/s$/, '');
     }
-    
+
     return segments[0] || '';
 }

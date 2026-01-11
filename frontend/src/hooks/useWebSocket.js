@@ -40,7 +40,7 @@ function getWebSocketUrl() {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     const token = obtenerToken();
     if (!token) return null;
-    
+
     // Convert http(s) to ws(s)
     const wsUrl = apiUrl.replace(/^http/, 'ws');
     return `${wsUrl}/ws/${token}`;
@@ -55,33 +55,33 @@ function getWebSocketUrl() {
  */
 export function useWebSocket(options = {}) {
     const { enabled = true, showNotifications = true } = options;
-    
+
     const queryClient = useQueryClient();
     const wsRef = useRef(null);
     const reconnectAttemptRef = useRef(0);
     const pingIntervalRef = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [connectionCount, setConnectionCount] = useState(0);
-    
+
     // Handle incoming WebSocket messages
     const handleMessage = useCallback((event) => {
         try {
             const message = JSON.parse(event.data);
             const { type, data, user_id } = message;
-            
+
             logger.debug('[WS] Received:', type, data);
-            
+
             switch (type) {
                 case WSEventType.CONNECTED:
                     setConnectionCount(message.connections || 0);
                     logger.info('[WS] Connected, total connections:', message.connections);
                     break;
-                    
+
                 case WSEventType.PEDIDO_ESTADO_CHANGED:
                     // Update pedido in cache optimistically
                     queryClient.setQueryData(CACHE_KEYS.pedidos, (old = []) =>
-                        old.map(p => 
-                            p.id === data.id 
+                        old.map(p =>
+                            p.id === data.id
                                 ? { ...p, estado: data.estado, repartidor: data.repartidor }
                                 : p
                         )
@@ -91,7 +91,7 @@ export function useWebSocket(options = {}) {
                         toastInfo(`🔄 Pedido #${data.id} actualizado a ${data.estado}`);
                     }
                     break;
-                    
+
                 case WSEventType.PEDIDO_CREATED:
                     // Invalidate to refetch full list
                     queryClient.invalidateQueries({ queryKey: CACHE_KEYS.pedidos });
@@ -99,29 +99,29 @@ export function useWebSocket(options = {}) {
                         toastInfo(`📦 Nuevo pedido #${data.id} creado`);
                     }
                     break;
-                    
+
                 case WSEventType.PEDIDO_DELETED:
                     // Remove from cache
                     queryClient.setQueryData(CACHE_KEYS.pedidos, (old = []) =>
                         old.filter(p => p.id !== data.id)
                     );
                     break;
-                    
+
                 case WSEventType.PRODUCTO_STOCK_UPDATED:
                     // Update product stock in cache
                     queryClient.setQueryData(CACHE_KEYS.productos, (old = []) =>
-                        old.map(p => 
-                            p.id === data.producto_id 
+                        old.map(p =>
+                            p.id === data.producto_id
                                 ? { ...p, stock: data.stock }
                                 : p
                         )
                     );
                     break;
-                    
+
                 case WSEventType.PONG:
                     // Heartbeat response - connection is alive
                     break;
-                    
+
                 default:
                     logger.debug('[WS] Unknown message type:', type);
             }
@@ -129,7 +129,7 @@ export function useWebSocket(options = {}) {
             logger.warn('[WS] Failed to parse message:', e);
         }
     }, [queryClient, showNotifications]);
-    
+
     // Connect to WebSocket
     const connect = useCallback(() => {
         const wsUrl = getWebSocketUrl();
@@ -137,23 +137,23 @@ export function useWebSocket(options = {}) {
             logger.debug('[WS] No token, skipping connection');
             return;
         }
-        
+
         // Close existing connection
         if (wsRef.current) {
             wsRef.current.close();
         }
-        
+
         logger.info('[WS] Connecting to:', wsUrl.split('/').slice(0, -1).join('/') + '/***');
-        
+
         try {
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
-            
+
             ws.onopen = () => {
                 logger.info('[WS] Connected');
                 setIsConnected(true);
                 reconnectAttemptRef.current = 0;
-                
+
                 // Start ping interval
                 pingIntervalRef.current = setInterval(() => {
                     if (ws.readyState === WebSocket.OPEN) {
@@ -161,14 +161,14 @@ export function useWebSocket(options = {}) {
                     }
                 }, WS_PING_INTERVAL);
             };
-            
+
             ws.onmessage = handleMessage;
-            
+
             ws.onclose = (event) => {
                 logger.info('[WS] Disconnected:', event.code, event.reason);
                 setIsConnected(false);
                 clearInterval(pingIntervalRef.current);
-                
+
                 // Reconnect with exponential backoff
                 if (enabled && event.code !== 4001) { // Don't reconnect on auth failure
                     const delay = Math.min(
@@ -180,29 +180,29 @@ export function useWebSocket(options = {}) {
                     setTimeout(connect, delay);
                 }
             };
-            
+
             ws.onerror = (error) => {
                 logger.warn('[WS] Error:', error);
             };
-            
+
         } catch (e) {
             logger.error('[WS] Failed to connect:', e);
         }
     }, [enabled, handleMessage]);
-    
+
     // Send message through WebSocket
     const sendMessage = useCallback((message) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify(message));
         }
     }, []);
-    
+
     // Connect on mount, disconnect on unmount
     useEffect(() => {
         if (enabled) {
             connect();
         }
-        
+
         return () => {
             clearInterval(pingIntervalRef.current);
             if (wsRef.current) {
@@ -210,7 +210,7 @@ export function useWebSocket(options = {}) {
             }
         };
     }, [enabled, connect]);
-    
+
     // Reconnect when token changes (login/logout)
     useEffect(() => {
         const handleAuth = () => {
@@ -219,11 +219,11 @@ export function useWebSocket(options = {}) {
                 setTimeout(connect, 100);
             }
         };
-        
+
         window.addEventListener('auth-changed', handleAuth);
         return () => window.removeEventListener('auth-changed', handleAuth);
     }, [enabled, connect]);
-    
+
     return {
         isConnected,
         connectionCount,

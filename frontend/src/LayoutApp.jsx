@@ -44,13 +44,13 @@ export default function LayoutApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  
+
   // WebSocket for real-time sync (connects when user is authenticated)
-  const { isConnected: wsConnected } = useWebSocket({ 
-    enabled: !!user, 
-    showNotifications: true 
+  const { isConnected: wsConnected } = useWebSocket({
+    enabled: !!user,
+    showNotifications: true
   });
-  
+
   // Role-based access: admin has full access, oficina and vendedor have limited tabs
   // Accept both 'admin' and 'administrador' roles for backwards compatibility
   const isAdmin = user?.rol === 'admin' || user?.rol === 'administrador';

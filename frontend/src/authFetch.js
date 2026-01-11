@@ -184,7 +184,7 @@ async function authFetchJson(input, init = {}, options = {}) {
   const contentType = res.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
     const data = await res.json();
-    
+
     // Validate response with Zod if enabled (default: true for GET requests)
     const shouldValidate = options.validate !== false && (init.method || 'GET').toUpperCase() === 'GET';
     if (shouldValidate && res.ok && data) {
@@ -193,7 +193,7 @@ async function authFetchJson(input, init = {}, options = {}) {
         logger.warn(`[Zod] API response validation warning for ${input}`);
       }
     }
-    
+
     return { res, data };
   }
   return { res, data: null };

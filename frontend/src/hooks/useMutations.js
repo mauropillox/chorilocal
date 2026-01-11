@@ -30,11 +30,11 @@ const API_URL = import.meta.env.VITE_API_URL;
  */
 function parseErrorMessage(err, defaultMsg = 'Error desconocido') {
     if (!err) return defaultMsg;
-    
+
     // Server error with detail
     if (err.detail) return err.detail;
     if (err.message) return err.message;
-    
+
     // Network errors
     if (err.name === 'TypeError' && err.message?.includes('fetch')) {
         return 'Error de conexión. Verificá tu internet.';
@@ -42,7 +42,7 @@ function parseErrorMessage(err, defaultMsg = 'Error desconocido') {
     if (err.name === 'AbortError') {
         return 'La operación tardó demasiado. Intentá de nuevo.';
     }
-    
+
     return defaultMsg;
 }
 
