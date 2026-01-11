@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { useProductosQuery } from '../hooks/useHybridQuery';
+import { useDeleteProducto } from '../hooks/useMutations';
 import { CACHE_KEYS } from '../utils/queryClient';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
@@ -13,6 +14,7 @@ import { logger } from '../utils/logger';
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { productos, isLoading: productsLoading, refetch: refetchProductos } = useProductosQuery();
+  const deleteProductoMutation = useDeleteProducto();
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
   const [stock, setStock] = useState('0');
@@ -336,24 +338,15 @@ export default function Productos() {
     }
   };
 
-  // Eliminar producto
+  // Eliminar producto con optimistic update
   const eliminarProducto = async () => {
     if (!confirmDelete) return;
     setDeleting(true);
     try {
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/${confirmDelete.id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        await refetchProductos();
-        setConfirmDelete(null);
-        toastSuccess('Producto eliminado correctamente');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toastError(err.detail || 'Error al eliminar producto');
-      }
+      await deleteProductoMutation.mutateAsync(confirmDelete.id);
+      setConfirmDelete(null);
     } catch (e) {
-      toastError('Error de conexión al eliminar');
+      // Error already handled by mutation hook
     } finally {
       setDeleting(false);
     }

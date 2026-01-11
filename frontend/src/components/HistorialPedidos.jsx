@@ -219,7 +219,7 @@ export default function HistorialPedidos() {
           if (creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
         } catch (e) { logger.error('Error loading creators:', e); }
       }
-      
+
       // Show success toast only on initial load
       if (!pedidos.length) {
         toastSuccess('📜 Historial cargado');

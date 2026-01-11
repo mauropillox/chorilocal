@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { useClientesQuery } from '../hooks/useHybridQuery';
+import { useDeleteCliente } from '../hooks/useMutations';
 import { getSelectStyles } from '../selectStyles';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -10,6 +11,7 @@ import HelpBanner from './HelpBanner';
 export default function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { clientes, isLoading: clientesLoading, refetch: refetchClientes } = useClientesQuery();
+  const deleteClienteMutation = useDeleteCliente();
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -129,20 +131,14 @@ export default function Clientes() {
     if (!selectedCliente) return;
     setDeleting(true);
     try {
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/${selectedCliente.value}`, { method: "DELETE" });
-      if (res.ok) {
-        toastSuccess('Cliente eliminado');
-        setSelectedCliente(null);
-        await refetchClientes();
-      } else {
-        toastError('Error al eliminar cliente');
-      }
+      await deleteClienteMutation.mutateAsync(selectedCliente.value);
+      setSelectedCliente(null);
     } catch (e) {
-      toastError('Error de conexión');
+      // Error already handled by mutation hook
     }
     setDeleting(false);
     setConfirmOpen(false);
-  }, [selectedCliente]);
+  }, [selectedCliente, deleteClienteMutation]);
 
   // Toggle selection for multi-select
   const toggleSelection = (id) => {
