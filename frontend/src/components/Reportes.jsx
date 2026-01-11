@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetchJson } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
 import { logger } from '../utils/logger';
+import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 
 export default function Reportes() {
@@ -15,12 +17,36 @@ export default function Reportes() {
   });
   const [hasta, setHasta] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const [reporteVentas, setReporteVentas] = useState(null);
-  const [reporteInventario, setReporteInventario] = useState(null);
-  const [reporteClientes, setReporteClientes] = useState(null);
-  const [reporteProductos, setReporteProductos] = useState(null);
-  const [reporteRendimiento, setReporteRendimiento] = useState(null);
-  const [reporteComparativo, setReporteComparativo] = useState(null);
+  const { data: reporteVentas = null } = useQuery({
+    queryKey: CACHE_KEYS.reportes,
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: reporteInventario = null } = useQuery({
+    queryKey: [...CACHE_KEYS.reportes, 'inventario'],
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: reporteClientes = null } = useQuery({
+    queryKey: [...CACHE_KEYS.reportes, 'clientes'],
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: reporteProductos = null } = useQuery({
+    queryKey: [...CACHE_KEYS.reportes, 'productos'],
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: reporteRendimiento = null } = useQuery({
+    queryKey: [...CACHE_KEYS.reportes, 'rendimiento'],
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: reporteComparativo = null } = useQuery({
+    queryKey: [...CACHE_KEYS.reportes, 'comparativo'],
+    queryFn: async () => null,
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Export to CSV utility with proper formatting
   const exportToCSV = (data, filename, columnConfig) => {
