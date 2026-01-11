@@ -33,11 +33,11 @@ if ENVIRONMENT == "production":
     from deps import validate_production_secrets
     validate_production_secrets()
     if db.USE_POSTGRES:
-        logger.info("startup", message="Starting in PRODUCTION mode with PostgreSQL")
+        logger.info("Starting in PRODUCTION mode with PostgreSQL")
     else:
-        logger.info("startup", message="Starting in PRODUCTION mode with SQLite")
+        logger.info("Starting in PRODUCTION mode with SQLite")
 else:
-    logger.info("startup", message="Starting in DEVELOPMENT mode", environment=ENVIRONMENT)
+    logger.info(f"Starting in DEVELOPMENT mode - Environment: {ENVIRONMENT}")
 
 # --- App Initialization ---
 app = FastAPI(
@@ -268,7 +268,7 @@ if ENVIRONMENT != "production":
         if os.path.exists(UPLOAD_DIR):
             app.mount("/media/uploads", StaticFiles(directory=UPLOAD_DIR), name="media")
     except Exception as e:
-        logger.warning("upload_dir_creation", message=f"Could not create upload directory: {e}")
+        logger.warning(f"Could not create upload directory: {e}")
 
 # Backward-compatible routes without /api prefix (for legacy clients/tests)
 app.include_router(auth.router, tags=["Autenticación (Legacy)"])
@@ -297,7 +297,7 @@ async def startup_event():
     IMPORTANT: We do NOT run data-mutating queries here that affect users.
     All such changes must go through the controlled migration system.
     """
-    logger.info("startup", message="Starting application initialization...")
+    logger.info("Starting application initialization...")
     
     try:
         # Step 1: SQLite hardening (connection-level settings)
@@ -311,18 +311,15 @@ async def startup_event():
                 cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
                 # Enable foreign key enforcement
                 cursor.execute("PRAGMA foreign_keys=ON")
-                logger.info("sqlite_hardening", 
-                           journal_mode=journal, 
-                           busy_timeout="30000ms",
-                           foreign_keys="ON")
+                logger.info(f"SQLite hardening: journal_mode={journal}, busy_timeout=30000ms, foreign_keys=ON")
         
         # Step 2: Run controlled migrations (one-time, tracked)
         from migrations import run_pending_migrations
         executed = run_pending_migrations()
         if executed:
-            logger.info("migrations_executed", count=len(executed), names=executed)
+            logger.info(f"Migrations executed: {len(executed)} - {executed}")
         else:
-            logger.info("migrations_none_pending")
+            logger.info("No pending migrations")
         
         # Step 3: Verify database indexes (SQLite only)
         if not db.USE_POSTGRES:
@@ -350,24 +347,24 @@ async def startup_event():
                             cursor.execute(create_sql)
                             created.append(idx_name)
                         except Exception as e:
-                            logger.warning("index_creation_failed", index=idx_name, error=str(e))
+                            logger.warning(f"Index creation failed for {idx_name}: {str(e)}")
                 
                 if created:
                     conn.commit()
-                    logger.info("indexes_created", indexes=created)
+                    logger.info(f"Indexes created: {created}")
                 else:
-                    logger.info("indexes_verified", count=len(existing))
+                    logger.info(f"Indexes verified: {len(existing)} existing")
         
         # Step 4: Start backup scheduler (production only, non-blocking)
         if ENVIRONMENT == "production":
             from backup_scheduler import start_backup_scheduler
             start_backup_scheduler()
-            logger.info("backup_scheduler", status="started")
+            logger.info("Backup scheduler started")
         
-        logger.info("startup", message="Application initialization completed successfully")
+        logger.info("Application initialization completed successfully")
         
     except Exception as e:
-        logger.error("startup_failed", error=str(e), exception_type=type(e).__name__)
+        logger.error(f"Startup failed: {type(e).__name__} - {str(e)}")
         # In production, we may want to fail fast
         if ENVIRONMENT == "production":
             raise
@@ -391,7 +388,7 @@ def health_check():
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
-        logger.error("health_check_failed", error=str(e), request_id=request_id)
+        logger.error(f"Health check failed [req_id={request_id}]: {str(e)}")
     
     db_info = db.get_database_info()
     
