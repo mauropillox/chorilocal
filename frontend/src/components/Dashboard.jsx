@@ -1,27 +1,76 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import authFetch from '../authFetch';
 import { toastSuccess } from '../toast';
 import { DashboardSkeleton } from './Skeleton';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
+import { CACHE_KEYS } from '../utils/queryClient';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState(null);
-  const [pedidosPorDia, setPedidosPorDia] = useState([]);
-  const [alertas, setAlertas] = useState([]);
-  const [estadisticasUsuarios, setEstadisticasUsuarios] = useState(null);
-  const [pedidosAntiguos, setPedidosAntiguos] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [productosEnOferta, setProductosEnOferta] = useState(new Set());
 
+  // React Query hooks for dashboard data
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: CACHE_KEYS.dashboard,
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`);
+      if (!res.ok) throw new Error('Failed to fetch metrics');
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: pedidosPorDia = [], isLoading: pedidosLoading } = useQuery({
+    queryKey: ['dashboard', 'pedidos_por_dia'],
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/pedidos_por_dia?dias=30`);
+      if (!res.ok) throw new Error('Failed to fetch pedidos');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: alertas = [], isLoading: alertasLoading } = useQuery({
+    queryKey: ['dashboard', 'alertas'],
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/alertas`);
+      if (!res.ok) throw new Error('Failed to fetch alertas');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: estadisticasUsuarios, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard', 'estadisticas_usuarios'],
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/estadisticas/usuarios`);
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: pedidosAntiguos = [], isLoading: antiguosLoading } = useQuery({
+    queryKey: ['dashboard', 'pedidos_antiguos'],
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/antiguos?horas=24`);
+      if (!res.ok) throw new Error('Failed to fetch antiguos');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const loading = metricsLoading || pedidosLoading || alertasLoading || statsLoading || antiguosLoading;
+
+  // Load ofertas on mount
   useEffect(() => {
-    cargarDatos();
     cargarOfertas();
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(cargarDatos, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const cargarOfertas = async () => {
@@ -30,7 +79,6 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         const ids = new Set();
-        // Handle case where data might be null/undefined or not an array
         if (Array.isArray(data)) {
           data.forEach(o => {
             if (o.productos_ids && Array.isArray(o.productos_ids)) {
@@ -42,69 +90,6 @@ export default function Dashboard() {
       }
     } catch (e) {
       logger.error('Error cargando ofertas:', e);
-    }
-  };
-
-  const cargarDatos = async () => {
-    try {
-      const [metricsRes, pedidosRes, alertasRes, statsRes, antiguosRes] = await Promise.all([
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`).catch(() => null),
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/pedidos_por_dia?dias=30`).catch(() => null),
-        authFetch(`${import.meta.env.VITE_API_URL}/dashboard/alertas`).catch(() => null),
-        authFetch(`${import.meta.env.VITE_API_URL}/estadisticas/usuarios`).catch(() => null),
-        authFetch(`${import.meta.env.VITE_API_URL}/pedidos/antiguos?horas=24`).catch(() => null)
-      ]);
-
-      // Parse responses safely - default to empty/null if failed
-      let metricsData = null;
-      let pedidosData = [];
-      let alertasData = [];
-      let statsData = null;
-      let antiguosData = [];
-
-      try {
-        if (metricsRes?.ok) {
-          metricsData = await metricsRes.json();
-        }
-      } catch { /* metrics failed */ }
-
-      try {
-        if (pedidosRes?.ok) {
-          const data = await pedidosRes.json();
-          pedidosData = Array.isArray(data) ? data : [];
-        }
-      } catch { /* pedidos failed */ }
-
-      try {
-        if (alertasRes?.ok) {
-          const data = await alertasRes.json();
-          alertasData = Array.isArray(data) ? data : [];
-        }
-      } catch { /* alertas failed */ }
-
-      try {
-        if (statsRes?.ok) {
-          statsData = await statsRes.json();
-        }
-      } catch { /* stats failed */ }
-
-      try {
-        if (antiguosRes?.ok) {
-          const data = await antiguosRes.json();
-          antiguosData = Array.isArray(data) ? data : [];
-        }
-      } catch { /* antiguos failed */ }
-
-      setMetrics(metricsData);
-      setPedidosPorDia(pedidosData);
-      setAlertas(alertasData);
-      setEstadisticasUsuarios(statsData);
-      setPedidosAntiguos(antiguosData);
-      setLoading(false);
-      toastSuccess('📊 Dashboard actualizado correctamente');
-    } catch (error) {
-      logger.error('Error cargando dashboard:', error);
-      setLoading(false);
     }
   };
 
