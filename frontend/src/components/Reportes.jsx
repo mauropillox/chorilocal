@@ -120,12 +120,12 @@ export default function Reportes() {
       reporteProductos.mas_vendidos,
       'productos_mas_vendidos',
       [
-        { key: 'nombre', label: 'Producto' },
-        { key: 'categoria', label: 'Categoría', format: (v) => v || 'Sin categoría' },
-        { key: 'precio', label: 'Precio ($)', format: (v) => (v || 0).toFixed(2) },
-        { key: 'total_vendido', label: 'Unidades Vendidas' },
-        { key: 'total_facturado', label: 'Total Facturado ($)', format: (v) => (v || 0).toFixed(2) },
-        { key: 'veces_pedido', label: 'Veces Pedido' }
+        { key: 'nombre', label: 'nombre' },
+        { key: 'categoria', label: 'categoria', format: (v) => v || 'Sin categoría' },
+        { key: 'precio', label: 'precio', format: (v) => (v || 0).toFixed(2) },
+        { key: 'total_vendido', label: 'unidades_vendidas' },
+        { key: 'total_facturado', label: 'total_facturado', format: (v) => (v || 0).toFixed(2) },
+        { key: 'veces_pedido', label: 'veces_pedido' }
       ]
     );
   };
