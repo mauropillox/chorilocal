@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { authFetchJson } from '../authFetch';
-import { toast, toastSuccess } from '../toast';
+import { toast, toastSuccess, toastError, toastWarn } from '../toast';
 import { logger } from '../utils/logger';
 import HelpBanner from './HelpBanner';
 
@@ -25,7 +25,7 @@ export default function Reportes() {
   // Export to CSV utility with proper formatting
   const exportToCSV = (data, filename, columnConfig) => {
     if (!data || data.length === 0) {
-      toast('No hay datos para exportar', 'warn');
+      toastWarn('No hay datos para exportar');
       return;
     }
 
@@ -163,13 +163,13 @@ export default function Reportes() {
 
     // Handle network errors
     if (!navigator.onLine) {
-      toast('❌ Sin conexión a internet. Por favor, verifica tu conexión.', 'error');
+      toastError('❌ Sin conexión a internet. Por favor, verifica tu conexión.');
       return;
     }
 
     // Handle timeout errors
     if (error?.name === 'AbortError') {
-      toast('⏱️ La solicitud tardó demasiado. Por favor, intenta de nuevo.', 'error');
+      toastError('⏱️ La solicitud tardó demasiado. Por favor, intenta de nuevo.');
       return;
     }
 
@@ -177,27 +177,27 @@ export default function Reportes() {
     if (res) {
       switch (res.status) {
         case 401:
-          toast('🔐 Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+          toastError('🔐 Sesión expirada. Por favor, inicia sesión nuevamente.');
           break;
         case 403:
-          toast('🚫 No tienes permiso para acceder a este recurso.', 'error');
+          toastError('🚫 No tienes permiso para acceder a este recurso.');
           break;
         case 404:
-          toast('📍 El recurso solicitado no fue encontrado.', 'error');
+          toastError('📍 El recurso solicitado no fue encontrado.');
           break;
         case 500:
-          toast('⚠️ Error del servidor. Por favor, intenta más tarde.', 'error');
+          toastError('⚠️ Error del servidor. Por favor, intenta más tarde.');
           break;
         case 503:
-          toast('🔧 El servidor está en mantenimiento. Intenta más tarde.', 'error');
+          toastError('🔧 El servidor está en mantenimiento. Intenta más tarde.');
           break;
         default:
           if (res.status >= 400 && res.status < 500) {
-            toast(`❌ Error de cliente (${res.status}). Verifica los parámetros.`, 'error');
+            toastError(`❌ Error de cliente (${res.status}). Verifica los parámetros.`);
           } else if (res.status >= 500) {
-            toast(`⚠️ Error del servidor (${res.status}). Intenta más tarde.`, 'error');
+            toastError(`⚠️ Error del servidor (${res.status}). Intenta más tarde.`);
           } else {
-            toast(`⚠️ Error inesperado (${res.status}).`, 'error');
+            toastError(`⚠️ Error inesperado (${res.status}).`);
           }
       }
       return;
@@ -205,11 +205,11 @@ export default function Reportes() {
 
     // Handle other errors
     if (error?.message === 'Failed to fetch') {
-      toast('🌐 Error de conexión. Verifica tu conexión a internet.', 'error');
+      toastError('🌐 Error de conexión. Verifica tu conexión a internet.');
       return;
     }
 
-    toast('❌ Error desconocido. Por favor, intenta de nuevo.', 'error');
+    toastError('❌ Error desconocido. Por favor, intenta de nuevo.');
   };
 
   const cargarReporteVentas = async () => {

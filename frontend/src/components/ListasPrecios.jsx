@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
-import { toast, toastSuccess } from '../toast';
+import { toast, toastSuccess, toastError } from '../toast';
 import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -48,7 +48,7 @@ export default function ListasPrecios() {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/listas-precios/${listaId}`);
       if (res.ok) setVistaDetalle(data);
     } catch (e) {
-      toast('Error cargando detalle', 'error');
+      toastError('Error cargando detalle');
     }
   };
 
@@ -62,7 +62,7 @@ export default function ListasPrecios() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nombre.trim()) {
-      toast('El nombre es requerido', 'error');
+      toastError('El nombre es requerido');
       return;
     }
 
@@ -82,15 +82,15 @@ export default function ListasPrecios() {
       });
 
       if (res.ok) {
-        toast(editando ? 'Lista actualizada' : 'Lista creada', 'success');
+        toastSuccess(editando ? '✅ Lista actualizada' : '✅ Lista creada');
         resetForm();
         refetchListas();
       } else {
         const err = await res.json();
-        toast(err.detail || 'Error', 'error');
+        toastError(err.detail || 'Error');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     }
   };
 
@@ -114,12 +114,12 @@ export default function ListasPrecios() {
         method: 'DELETE'
       });
       if (res.ok) {
-        toast('Lista eliminada', 'success');
+        toastSuccess('🗑️ Lista eliminada');
         refetchListas();
         if (vistaDetalle?.id === itemToDelete.id) setVistaDetalle(null);
       }
     } catch (e) {
-      toast('Error', 'error');
+      toastError('Error');
     } finally {
       setConfirmOpen(false);
       setItemToDelete(null);
@@ -140,13 +140,13 @@ export default function ListasPrecios() {
       });
 
       if (res.ok) {
-        toast('Precio especial agregado', 'success');
+        toastSuccess('✅ Precio especial agregado');
         setProductoId('');
         setPrecioEspecial('');
         cargarDetalle(vistaDetalle.id);
       }
     } catch (e) {
-      toast('Error', 'error');
+      toastError('Error');
     }
   };
 
@@ -158,11 +158,11 @@ export default function ListasPrecios() {
         { method: 'DELETE' }
       );
       if (res.ok) {
-        toast('Precio eliminado', 'success');
+        toastSuccess('🗑️ Precio eliminado');
         cargarDetalle(vistaDetalle.id);
       }
     } catch (e) {
-      toast('Error', 'error');
+      toastError('Error');
     }
   };
 

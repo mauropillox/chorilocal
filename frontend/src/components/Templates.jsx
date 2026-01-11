@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
-import { toast, toastSuccess } from '../toast';
+import { toast, toastSuccess, toastError } from '../toast';
 import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -104,11 +104,11 @@ export default function Templates() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nombre.trim()) {
-      toast('El nombre es requerido', 'error');
+      toastError('El nombre es requerido');
       return;
     }
     if (productosSeleccionados.length === 0) {
-      toast('Selecciona al menos un producto', 'error');
+      toastError('Selecciona al menos un producto');
       return;
     }
 
@@ -129,15 +129,15 @@ export default function Templates() {
       });
 
       if (res.ok) {
-        toast(editando ? 'Template actualizado' : 'Template creado', 'success');
+        toastSuccess(editando ? '✅ Template actualizado' : '✅ Template creado');
         resetForm();
         refetchTemplates();
       } else {
         const err = await res.json();
-        toast(err.detail || 'Error', 'error');
+        toastError(err.detail || 'Error');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     }
   };
 
@@ -157,7 +157,7 @@ export default function Templates() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (e) {
-      toast('Error cargando template', 'error');
+      toastError('Error cargando template');
     }
   };
 
@@ -173,11 +173,11 @@ export default function Templates() {
         method: 'DELETE'
       });
       if (res.ok) {
-        toast('Template eliminado', 'success');
+        toastSuccess('🗑️ Template eliminado');
         refetchTemplates();
       }
     } catch (e) {
-      toast('Error', 'error');
+      toastError('Error');
     } finally {
       setConfirmOpen(false);
       setItemToDelete(null);
@@ -191,11 +191,11 @@ export default function Templates() {
       });
       if (res.ok) {
         const data = await res.json();
-        toast('Pedido creado correctamente', 'success');
+        toastSuccess('✅ Pedido creado correctamente');
         navigate(`/pedidos?nuevo=${data.pedido_id}`);
       }
     } catch (e) {
-      toast('Error al crear pedido', 'error');
+      toastError('Error al crear pedido');
     } finally {
       setConfirmEjecutar(null);
     }

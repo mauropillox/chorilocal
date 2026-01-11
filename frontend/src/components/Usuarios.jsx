@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authFetchJson } from '../authFetch';
-import { toast, toastSuccess } from '../toast';
+import { toast, toastSuccess, toastError } from '../toast';
 import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -15,9 +15,9 @@ export default function Usuarios() {
         toastSuccess('👥 Usuarios cargados correctamente');
         return data || [];
       } else if (res.status === 403) {
-        toast('Solo administradores pueden acceder a esta sección', 'error');
+        toastError('Solo administradores pueden acceder a esta sección');
       } else {
-        toast('Error cargando usuarios', 'error');
+        toastError('Error cargando usuarios');
       }
       return [];
     },
@@ -40,13 +40,13 @@ export default function Usuarios() {
     try {
       const { res } = await authFetchJson(endpoint, { method: 'PUT' });
       if (res.ok) {
-        toast(user.activo ? 'Usuario desactivado' : 'Usuario activado', 'success');
+        toastSuccess(user.activo ? '🔴 Usuario desactivado' : '✅ Usuario activado');
         refetchUsuarios();
       } else {
-        toast('Error al cambiar estado', 'error');
+        toastError('Error al cambiar estado');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     }
   };
 
@@ -60,13 +60,13 @@ export default function Usuarios() {
         { method: 'PUT', body: formData }
       );
       if (res.ok) {
-        toast(`Rol cambiado a ${nuevoRol}`, 'success');
+        toastSuccess(`✅ Rol cambiado a ${nuevoRol}`);
         refetchUsuarios();
       } else {
-        toast('Error al cambiar rol', 'error');
+        toastError('Error al cambiar rol');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     }
   };
 
@@ -79,13 +79,13 @@ export default function Usuarios() {
         { method: 'DELETE' }
       );
       if (res.ok) {
-        toast('Usuario eliminado', 'success');
-        refetchUsuarios();
+        toastSuccess('🗑️ Usuario eliminado');
+        await refetchUsuarios();
       } else {
-        toast('Error al eliminar usuario', 'error');
+        toastError('Error al eliminar usuario');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     } finally {
       setConfirmDelete({ open: false, user: null });
     }
@@ -93,21 +93,21 @@ export default function Usuarios() {
 
   const handleResetPassword = async () => {
     if (!resetPassword.user || !resetPassword.newPassword) {
-      toast('Ingrese una nueva contraseña', 'error');
+      toastError('Ingrese una nueva contraseña');
       return;
     }
 
     const pw = resetPassword.newPassword;
     if (pw.length < 8) {
-      toast('La contraseña debe tener al menos 8 caracteres', 'error');
+      toastError('La contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (!/[A-Za-z]/.test(pw)) {
-      toast('La contraseña debe contener al menos una letra', 'error');
+      toastError('La contraseña debe contener al menos una letra');
       return;
     }
     if (!/\d/.test(pw)) {
-      toast('La contraseña debe contener al menos un número', 'error');
+      toastError('La contraseña debe contener al menos un número');
       return;
     }
 
@@ -121,13 +121,13 @@ export default function Usuarios() {
       );
 
       if (res.ok) {
-        toast(`Contraseña de ${resetPassword.user.username} reseteada`, 'success');
+        toastSuccess(`✅ Contraseña de ${resetPassword.user.username} reseteada`);
         setResetPassword({ open: false, user: null, newPassword: '' });
       } else {
-        toast(data?.detail || 'Error al resetear contraseña', 'error');
+        toastError(data?.detail || 'Error al resetear contraseña');
       }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      toastError('Error de conexión');
     }
   };
 

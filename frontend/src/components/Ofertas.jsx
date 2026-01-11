@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import authFetch, { authFetchJson } from '../authFetch';
 import ConfirmDialog from './ConfirmDialog';
-import { toast, toastSuccess } from '../toast';
+import { toast, toastSuccess, toastError } from '../toast';
 import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { useAuth } from './AuthContext';
@@ -69,7 +69,7 @@ export default function Ofertas() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!titulo || !desde || !hasta || productosSeleccionados.length === 0) {
-      toast('Complete todos los campos y seleccione al menos un producto', 'error');
+      toastError('Complete todos los campos y seleccione al menos un producto');
       return;
     }
 
@@ -91,17 +91,17 @@ export default function Ofertas() {
       const res = await authFetch(url, { method, body: formData });
 
       if (res.ok) {
-        toast(editando ? 'Oferta actualizada' : 'Oferta creada', 'success');
+        toastSuccess(editando ? '✅ Oferta actualizada' : '✅ Oferta creada');
         resetForm();
         refetchOfertas();
       } else {
         const errorData = await res.json().catch(() => ({}));
         logger.error('Error response:', errorData);
-        toast('Error al guardar oferta: ' + (errorData.detail || 'Error desconocido'), 'error');
+        toastError('Error al guardar oferta: ' + (errorData.detail || 'Error desconocido'));
       }
     } catch (e) {
       logger.error('Error saving oferta:', e);
-      toast('Error al guardar oferta', 'error');
+      toastError('Error al guardar oferta');
     }
   };
 
@@ -131,14 +131,14 @@ export default function Ofertas() {
       });
 
       if (res.ok) {
-        toast('Oferta eliminada', 'success');
+        toastSuccess('🗑️ Oferta eliminada');
         refetchOfertas();
       } else {
-        toast('Error al eliminar oferta', 'error');
+        toastError('Error al eliminar oferta');
       }
     } catch (e) {
       logger.error('Error deleting oferta:', e);
-      toast('Error al eliminar oferta', 'error');
+      toastError('Error al eliminar oferta');
     } finally {
       setConfirmOpen(false);
       setOfertaToDelete(null);
@@ -154,17 +154,17 @@ export default function Ofertas() {
       if (res.ok) {
         const data = await res.json();
         if (data.fechas_actualizadas) {
-          toast(`Oferta activada y fechas actualizadas: ${data.desde} - ${data.hasta}`, 'success');
+          toastSuccess(`✅ Oferta activada y fechas actualizadas: ${data.desde} - ${data.hasta}`);
         } else {
-          toast(oferta.activa ? 'Oferta desactivada' : 'Oferta activada', 'success');
+          toastSuccess(oferta.activa ? '🔴 Oferta desactivada' : '✅ Oferta activada');
         }
         refetchOfertas();
       } else {
-        toast('Error al cambiar estado', 'error');
+        toastError('Error al cambiar estado');
       }
     } catch (e) {
       logger.error('Error toggling oferta:', e);
-      toast('Error al cambiar estado', 'error');
+      toastError('Error al cambiar estado');
     }
   };
 
