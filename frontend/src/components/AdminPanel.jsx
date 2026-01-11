@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { fetchConToken } from "../auth";
 import { toastSuccess, toastError } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../utils/logger';
 
 export default function AdminPanel() {
-  const [usuarios, setUsuarios] = useState([]);
+  const { data: usuarios = [] } = useQuery({
+    queryKey: CACHE_KEYS.admin,
+    queryFn: async () => {
+      try {
+        const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios`);
+        return res.ok ? (await res.json()) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
   const [rolesEdit, setRolesEdit] = useState({});
   const [resetPasswords, setResetPasswords] = useState({});
   const [mostrarPasswordReset, setMostrarPasswordReset] = useState(false);
@@ -15,14 +28,6 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState({});
   const [confirmDelete, setConfirmDelete] = useState({ open: false, username: null });
-
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
-
-  const cargarUsuarios = async () => {
-    try {
-      const res = await fetchConToken(`${import.meta.env.VITE_API_URL}/usuarios`);
       if (res.ok) {
         const data = await res.json();
         setUsuarios(data);
