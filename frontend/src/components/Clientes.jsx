@@ -90,6 +90,7 @@ export default function Clientes() {
         setTotalClientes(Array.isArray(data) ? data.length : 0);
         setTotalPages(1);
       }
+      toastSuccess('👥 Clientes cargados correctamente');
     } catch (e) { setClientes([]); }
     finally { setLoading(false); }
   };

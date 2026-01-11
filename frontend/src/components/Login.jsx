@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { guardarToken } from '../auth';
 import { useAuth } from './AuthContext';
+import { toastSuccess, toastError } from '../toast';
 import { logger } from '../utils/logger';
 
 export default function Login({ onLoginSuccess }) {
@@ -20,6 +21,7 @@ export default function Login({ onLoginSuccess }) {
       // Use AuthContext login to update user state
       await login(username, password);
       try { window.dispatchEvent(new CustomEvent('auth_changed')); } catch (e) { }
+      toastSuccess(`🔓 ¡Bienvenido ${username}!`);
       onLoginSuccess(); // dispara setLogueado(true)
       setLoading(false);
     } catch (err) {
@@ -27,8 +29,10 @@ export default function Login({ onLoginSuccess }) {
       // Handle specific error messages from backend
       if (err.message) {
         setError(err.message);
+        toastError(`❌ ${err.message}`);
       } else {
         setError('Error de conexión');
+        toastError('❌ Error de conexión');
       }
       setLoading(false);
     }
