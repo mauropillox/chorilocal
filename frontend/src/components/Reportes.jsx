@@ -109,8 +109,50 @@ export default function Reportes() {
         { key: 'telefono', label: 'Teléfono', format: (v) => v || 'Sin teléfono' },
         { key: 'direccion', label: 'Dirección', format: (v) => v || 'Sin dirección' },
         { key: 'total_pedidos', label: 'Total Pedidos' },
-        { key: 'total_gastado', label: 'Total Gastado ($)', format: (v) => v.toFixed(2) },
+        { key: 'total_gastado', label: 'Total Gastado ($)', format: (v) => (v || 0).toFixed(2) },
         { key: 'ultimo_pedido', label: 'Último Pedido', format: (v) => v || 'Nunca' }
+      ]
+    );
+  };
+
+  const exportProductos = () => {
+    if (!reporteProductos?.mas_vendidos) return;
+    exportToCSV(
+      reporteProductos.mas_vendidos,
+      'productos_mas_vendidos',
+      [
+        { key: 'nombre', label: 'Producto' },
+        { key: 'categoria', label: 'Categoría', format: (v) => v || 'Sin categoría' },
+        { key: 'precio', label: 'Precio ($)', format: (v) => (v || 0).toFixed(2) },
+        { key: 'total_vendido', label: 'Unidades Vendidas' },
+        { key: 'total_facturado', label: 'Total Facturado ($)', format: (v) => (v || 0).toFixed(2) },
+        { key: 'veces_pedido', label: 'Veces Pedido' }
+      ]
+    );
+  };
+
+  const exportRendimiento = () => {
+    if (!reporteRendimiento?.usuarios_activos) return;
+    exportToCSV(
+      reporteRendimiento.usuarios_activos,
+      'rendimiento_usuarios',
+      [
+        { key: 'usuario', label: 'Usuario' },
+        { key: 'pedidos_creados', label: 'Pedidos Creados' },
+        { key: 'total_vendido', label: 'Total Vendido ($)', format: (v) => (v || 0).toFixed(2) }
+      ]
+    );
+  };
+
+  const exportComparativo = () => {
+    if (!reporteComparativo?.ultimos_7_dias) return;
+    exportToCSV(
+      reporteComparativo.ultimos_7_dias,
+      'comparativo_7_dias',
+      [
+        { key: 'dia', label: 'Día' },
+        { key: 'pedidos', label: 'Pedidos' },
+        { key: 'facturado', label: 'Facturado ($)', format: (v) => (v || 0).toFixed(2) }
       ]
     );
   };
@@ -327,8 +369,11 @@ export default function Reportes() {
 
       {tab === 'inventario' && !loading && reporteInventario && (
         <div className="space-y-6">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-12px' }}>
-            <button onClick={exportInventario} className="btn-export">📥 Exportar CSV</button>
+          <div className="panel">
+            <div className="flex gap-4 items-center justify-between flex-wrap">
+              <h3 className="font-semibold">📦 Reporte de Inventario</h3>
+              <button onClick={exportInventario} className="btn-export">📥 Exportar CSV</button>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="stat-card">
@@ -424,8 +469,11 @@ export default function Reportes() {
 
       {tab === 'clientes' && !loading && reporteClientes && (
         <div className="space-y-6">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-12px' }}>
-            <button onClick={exportClientes} className="btn-export">📥 Exportar CSV</button>
+          <div className="panel">
+            <div className="flex gap-4 items-center justify-between flex-wrap">
+              <h3 className="font-semibold">👥 Reporte de Clientes</h3>
+              <button onClick={exportClientes} className="btn-export">📥 Exportar CSV</button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="stat-card">
@@ -509,6 +557,9 @@ export default function Reportes() {
                 <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} />
               </div>
               <button onClick={cargarReporteProductos} className="btn-primary">🔄 Actualizar</button>
+              {reporteProductos && (
+                <button onClick={exportProductos} className="btn-export">📥 Exportar CSV</button>
+              )}
             </div>
           </div>
 
@@ -616,6 +667,12 @@ export default function Reportes() {
       {/* REPORTE DE RENDIMIENTO */}
       {tab === 'rendimiento' && !loading && reporteRendimiento && (
         <div className="space-y-6">
+          <div className="panel">
+            <div className="flex gap-4 items-center justify-between flex-wrap">
+              <h3 className="font-semibold">⚡ Reporte de Rendimiento</h3>
+              <button onClick={exportRendimiento} className="btn-export">📥 Exportar CSV</button>
+            </div>
+          </div>
           {/* Métricas */}
           <div className="grid grid-cols-2 gap-4">
             <div className="stat-card">
@@ -688,6 +745,12 @@ export default function Reportes() {
       {/* REPORTE COMPARATIVO */}
       {tab === 'comparativo' && !loading && reporteComparativo && (
         <div className="space-y-6">
+          <div className="panel">
+            <div className="flex gap-4 items-center justify-between flex-wrap">
+              <h3 className="font-semibold">📈 Reporte Comparativo</h3>
+              <button onClick={exportComparativo} className="btn-export">📥 Exportar CSV</button>
+            </div>
+          </div>
           {/* Este mes vs anterior */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="panel">
