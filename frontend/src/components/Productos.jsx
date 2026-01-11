@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { useProductosQuery } from '../hooks/useHybridQuery';
+import { CACHE_KEYS } from '../utils/queryClient';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
