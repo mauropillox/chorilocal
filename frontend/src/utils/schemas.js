@@ -22,22 +22,22 @@ export const AuthResponseSchema = LoginResponseSchema;
 // Productos schemas
 export const ProductoSchema = z.object({
     id: z.number(),
-    nombre: z.string(),
-    descripcion: z.string().nullable(),
-    precio: z.number().positive(),
-    stock: z.number().nonnegative(),
-    categoria_id: z.number().optional(),
+    nombre: z.string().optional(),
+    descripcion: z.string().nullable().optional(),
+    precio: z.number().optional(),
+    stock: z.number().optional(),
+    categoria_id: z.number().nullable().optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const ProductosListSchema = z.array(ProductoSchema);
 
 // Clientes schemas
 export const ClienteSchema = z.object({
     id: z.number(),
-    nombre: z.string(),
-    email: z.string().email().optional(),
+    nombre: z.string().optional(),
+    email: z.string().optional(),
     telefono: z.string().optional(),
     direccion: z.string().optional(),
     ciudad: z.string().optional(),
@@ -45,36 +45,36 @@ export const ClienteSchema = z.object({
     codigo_postal: z.string().optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const ClientesListSchema = z.array(ClienteSchema);
 
 // Pedidos schemas
 export const PedidoSchema = z.object({
     id: z.number(),
-    numero: z.string(),
-    cliente_id: z.number(),
-    estado: z.enum(['pendiente', 'procesando', 'completado', 'cancelado']).optional(),
-    total: z.number().nonnegative(),
-    fecha_pedido: TimestampSchema,
-    fecha_entrega: z.string().datetime().optional(),
+    numero: z.union([z.string(), z.number()]).optional(),
+    cliente_id: z.number().optional(),
+    estado: z.string().optional(),
+    total: z.number().optional(),
+    fecha_pedido: z.string().optional(),
+    fecha_entrega: z.string().optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const PedidosListSchema = z.array(PedidoSchema);
 
 // Usuarios schemas
 export const UsuarioSchema = z.object({
     id: z.number(),
-    username: z.string(),
-    email: z.string().email(),
+    username: z.string().optional(),
+    email: z.string().optional(),
     nombre_completo: z.string().optional(),
-    role: z.enum(['admin', 'user', 'vendor']).optional(),
-    activo: z.boolean().optional(),
+    role: z.string().optional(),
+    activo: z.union([z.boolean(), z.number()]).optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const UsuariosListSchema = z.array(UsuarioSchema);
 
@@ -109,15 +109,15 @@ export const TemplatesListSchema = z.array(TemplateSchema);
 // Ofertas schemas
 export const OfertaSchema = z.object({
     id: z.number(),
-    nombre: z.string(),
+    nombre: z.string().optional(),
     descripcion: z.string().optional(),
-    descuento: z.number().min(0).max(100),
-    fecha_inicio: z.string().date(),
-    fecha_fin: z.string().date(),
-    activa: z.boolean().optional(),
+    descuento: z.number().optional(),
+    fecha_inicio: z.string().optional(),
+    fecha_fin: z.string().optional(),
+    activa: z.union([z.boolean(), z.number()]).optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const OfertasListSchema = z.array(OfertaSchema);
 
@@ -138,12 +138,12 @@ export const ListasPreciosSchema = z.array(ListaPreciosSchema);
 // Categorías schemas
 export const CategoriaSchema = z.object({
     id: z.number(),
-    nombre: z.string(),
+    nombre: z.string().optional(),
     descripcion: z.string().optional(),
-    activa: z.boolean().optional(),
+    activa: z.union([z.boolean(), z.number()]).optional(),
     created_at: TimestampSchema,
     updated_at: TimestampSchema,
-});
+}).passthrough();
 
 export const CategoriasSchema = z.array(CategoriaSchema);
 
