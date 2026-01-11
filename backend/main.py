@@ -16,6 +16,7 @@ import traceback
 import db
 import models
 from deps import limiter
+from exceptions_custom import ChorizaurioException, to_http_exception
 from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta, reportes, listas_precios
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
@@ -108,6 +109,29 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={
             "error": exc.detail,
             "code": error_code,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+
+
+@app.exception_handler(ChorizaurioException)
+async def chorizaurio_exception_handler(request: Request, exc: ChorizaurioException):
+    """Handle custom Chorizaurio exceptions with standardized format"""
+    request_id = get_request_id()
+    logger.warning(
+        "chorizaurio_exception",
+        error=exc.message,
+        exception_type=type(exc).__name__,
+        path=request.url.path,
+        request_id=request_id
+    )
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "code": type(exc).__name__,
+            "request_id": request_id,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
