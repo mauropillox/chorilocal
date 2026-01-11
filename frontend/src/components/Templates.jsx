@@ -1,16 +1,39 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Templates() {
   const navigate = useNavigate();
-  const [templates, setTemplates] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: templates = [] } = useQuery({
+    queryKey: CACHE_KEYS.templates,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/templates`);
+      return res.ok ? (data || []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: clientes = [] } = useQuery({
+    queryKey: CACHE_KEYS.clientes,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+      return res.ok ? (Array.isArray(data) ? data : (data.data || [])) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: productos = [] } = useQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      return res.ok ? (Array.isArray(data) ? data : []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const [loading, setLoading] = useState(false);
   const [editando, setEditando] = useState(null);
 
   // Form
