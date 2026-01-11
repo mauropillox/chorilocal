@@ -41,8 +41,14 @@ function getWebSocketUrl() {
     const token = obtenerToken();
     if (!token) return null;
 
-    // Convert http(s) to ws(s)
-    const wsUrl = apiUrl.replace(/^http/, 'ws');
+    // Convert http(s) to ws(s) and handle /api suffix
+    let wsUrl = apiUrl.replace(/^http/, 'ws');
+    
+    // If API URL already ends with /api, use /ws directly
+    // Otherwise add /api/ws
+    if (wsUrl.endsWith('/api')) {
+        return `${wsUrl}/ws/${token}`;
+    }
     return `${wsUrl}/api/ws/${token}`;
 }
 
