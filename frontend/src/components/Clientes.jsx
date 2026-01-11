@@ -60,11 +60,6 @@ export default function Clientes() {
     }
   }, [searchParams]);
 
-  // Cargar clientes al montar y cuando cambian page o busqueda
-  useEffect(() => {
-    refetchClientes();
-  }, [page, busqueda]);
-
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === '/' && !e.ctrlKey && !e.metaKey) {

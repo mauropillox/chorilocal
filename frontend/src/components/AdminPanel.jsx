@@ -8,7 +8,7 @@ import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../utils/logger';
 
 export default function AdminPanel() {
-  const { data: usuarios = [] } = useQuery({
+  const { data: usuarios = [], refetch: refetchUsuarios } = useQuery({
     queryKey: CACHE_KEYS.admin,
     queryFn: async () => {
       try {
@@ -28,22 +28,21 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState({});
   const [confirmDelete, setConfirmDelete] = useState({ open: false, username: null });
-      if (res.ok) {
-        const data = await res.json();
-        setUsuarios(data);
-        const rolesIniciales = {};
-        data.forEach((u) => {
-          rolesIniciales[u.username] = u.rol;
-        });
-        setRolesEdit(rolesIniciales);
-        toastSuccess('👤 Usuarios y roles cargados correctamente');
-      } else {
-        logger.error("Error al obtener usuarios");
-      }
-    } catch (err) {
-      logger.error("Fallo al cargar usuarios:", err);
-    }
+
+  // Refetch usuarios after mutations
+  const cargarUsuarios = () => {
+    refetchUsuarios();
   };
+
+  // Initialize rolesEdit when usuarios load
+  useEffect(() => {
+    const rolesIniciales = {};
+    usuarios.forEach((u) => {
+      rolesIniciales[u.username] = u.rol;
+    });
+    setRolesEdit(rolesIniciales);
+    toastSuccess('👤 Usuarios cargados correctamente');
+  }, [usuarios]);
 
   const marcarCargando = (username, estado) => {
     setLoadingUsuarios((prev) => ({ ...prev, [username]: estado }));

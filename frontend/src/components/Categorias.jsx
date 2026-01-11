@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Categorias() {
-  const { data: categorias = [] } = useQuery({
+  const { data: categorias = [], refetch: refetchCategorias } = useQuery({
     queryKey: CACHE_KEYS.categorias,
     queryFn: async () => {
       try {
@@ -70,7 +70,7 @@ export default function Categorias() {
       if (res.ok) {
         toastSuccess(editingId ? 'Categoría actualizada' : 'Categoría creada');
         resetForm();
-        cargarCategorias();
+        refetchCategorias();
       } else {
         const err = await res.json();
         toastError(err.detail || 'Error al guardar');
@@ -98,7 +98,7 @@ export default function Categorias() {
       if (res.ok) {
         const data = await res.json();
         toastSuccess(data.message || 'Categoría eliminada');
-        cargarCategorias();
+        refetchCategorias();
       } else {
         const err = await res.json().catch(() => ({}));
         toastError(err.detail || 'Error al eliminar');

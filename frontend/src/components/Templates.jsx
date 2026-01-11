@@ -9,7 +9,7 @@ import HelpBanner from './HelpBanner';
 
 export default function Templates() {
   const navigate = useNavigate();
-  const { data: templates = [] } = useQuery({
+  const { data: templates = [], refetch: refetchTemplates } = useQuery({
     queryKey: CACHE_KEYS.templates,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/templates`);
@@ -47,29 +47,6 @@ export default function Templates() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [confirmEjecutar, setConfirmEjecutar] = useState(null);
-
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [templatesRes, clientesRes, productosRes] = await Promise.all([
-        authFetchJson(`${import.meta.env.VITE_API_URL}/templates`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/productos`)
-      ]);
-      if (templatesRes.res.ok) setTemplates(templatesRes.data);
-      if (clientesRes.res.ok) setClientes(Array.isArray(clientesRes.data) ? clientesRes.data : clientesRes.data.data || []);
-      if (productosRes.res.ok) setProductos(productosRes.data);
-      toastSuccess('📋 Plantillas y datos cargados correctamente');
-    } catch (e) {
-      toast('Error cargando datos', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const productosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return productos.slice(0, 50);
@@ -152,7 +129,7 @@ export default function Templates() {
       if (res.ok) {
         toast(editando ? 'Template actualizado' : 'Template creado', 'success');
         resetForm();
-        cargarDatos();
+        refetchTemplates();
       } else {
         const err = await res.json();
         toast(err.detail || 'Error', 'error');
@@ -195,7 +172,7 @@ export default function Templates() {
       });
       if (res.ok) {
         toast('Template eliminado', 'success');
-        cargarDatos();
+        refetchTemplates();
       }
     } catch (e) {
       toast('Error', 'error');

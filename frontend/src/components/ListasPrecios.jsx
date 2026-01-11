@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function ListasPrecios() {
-  const { data: listas = [] } = useQuery({
+  const { data: listas = [], refetch: refetchListas } = useQuery({
     queryKey: CACHE_KEYS.listas,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/listas-precios`);
@@ -83,7 +83,7 @@ export default function ListasPrecios() {
       if (res.ok) {
         toast(editando ? 'Lista actualizada' : 'Lista creada', 'success');
         resetForm();
-        cargarDatos();
+        refetchListas();
       } else {
         const err = await res.json();
         toast(err.detail || 'Error', 'error');
@@ -114,7 +114,7 @@ export default function ListasPrecios() {
       });
       if (res.ok) {
         toast('Lista eliminada', 'success');
-        cargarDatos();
+        refetchListas();
         if (vistaDetalle?.id === itemToDelete.id) setVistaDetalle(null);
       }
     } catch (e) {

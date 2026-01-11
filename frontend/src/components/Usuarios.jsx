@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Usuarios() {
-  const { data: usuarios = [], isLoading } = useQuery({
+  const { data: usuarios = [], isLoading, refetch: refetchUsuarios } = useQuery({
     queryKey: CACHE_KEYS.usuarios,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/usuarios`);
@@ -23,7 +23,7 @@ export default function Usuarios() {
     },
     staleTime: 1000 * 60 * 5,
   });
-  const [loading, setLoading] = useState(false);
+  
   const [confirmDelete, setConfirmDelete] = useState({ open: false, user: null });
   const [resetPassword, setResetPassword] = useState({ open: false, user: null, newPassword: '' });
 
@@ -41,7 +41,7 @@ export default function Usuarios() {
       const { res } = await authFetchJson(endpoint, { method: 'PUT' });
       if (res.ok) {
         toast(user.activo ? 'Usuario desactivado' : 'Usuario activado', 'success');
-        cargarUsuarios();
+        refetchUsuarios();
       } else {
         toast('Error al cambiar estado', 'error');
       }
@@ -61,7 +61,7 @@ export default function Usuarios() {
       );
       if (res.ok) {
         toast(`Rol cambiado a ${nuevoRol}`, 'success');
-        cargarUsuarios();
+        refetchUsuarios();
       } else {
         toast('Error al cambiar rol', 'error');
       }
@@ -80,7 +80,7 @@ export default function Usuarios() {
       );
       if (res.ok) {
         toast('Usuario eliminado', 'success');
-        cargarUsuarios();
+        refetchUsuarios();
       } else {
         toast('Error al eliminar usuario', 'error');
       }
@@ -169,7 +169,7 @@ export default function Usuarios() {
     });
   }, [usuarios, busqueda, filtroRol, filtroEstado]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="text-4xl animate-pulse">👥</div>
