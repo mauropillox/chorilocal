@@ -1,14 +1,24 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import { getSelectStyles } from '../selectStyles';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [clientes, setClientes] = useState([]);
+  const { data: clientes = [], isLoading: clientesLoading, refetch: refetchClientes } = useQuery({
+    queryKey: CACHE_KEYS.clientes,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+      if (!res.ok) return [];
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+    staleTime: 1000 * 60 * 5,
+  });
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -16,7 +26,6 @@ export default function Clientes() {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [editingClienteId, setEditingClienteId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set()); // Multi-select
-  const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -70,19 +79,7 @@ export default function Clientes() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nombre, telefono, direccion, creating]);
 
-  const cargarClientes = async () => {
-    setLoading(true);
-    try {
-      let url = `${import.meta.env.VITE_API_URL}/clientes?page=${page}&limit=${LIMIT}`;
-      if (busqueda.trim()) url += `&search=${encodeURIComponent(busqueda.trim())}`;
 
-      const { res, data } = await authFetchJson(url);
-      if (!res.ok) { setClientes([]); setLoading(false); return; }
-
-      // Formato paginado: { data: [], total, page, pages }
-      if (data.data) {
-        setClientes(data.data);
-        setTotalPages(data.pages);
         setTotalClientes(data.total);
       } else {
         // Formato legacy: array directo
