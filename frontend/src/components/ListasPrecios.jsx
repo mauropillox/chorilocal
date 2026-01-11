@@ -1,13 +1,29 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function ListasPrecios() {
-  const [listas, setListas] = useState([]);
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: listas = [] } = useQuery({
+    queryKey: CACHE_KEYS.listas,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/listas-precios`);
+      return res.ok ? (data || []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: productos = [] } = useQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      return res.ok ? (Array.isArray(data) ? data : []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const [loading, setLoading] = useState(false);
   const [editando, setEditando] = useState(null);
   const [vistaDetalle, setVistaDetalle] = useState(null);
 
