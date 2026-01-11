@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [productosEnOferta, setProductosEnOferta] = useState(new Set());
 
   // React Query hooks for dashboard data
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading, refetch: refetchMetrics } = useQuery({
     queryKey: CACHE_KEYS.dashboard,
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`);
@@ -23,7 +23,7 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const { data: pedidosPorDia = [], isLoading: pedidosLoading } = useQuery({
+  const { data: pedidosPorDia = [], isLoading: pedidosLoading, refetch: refetchPedidos } = useQuery({
     queryKey: ['dashboard', 'pedidos_por_dia'],
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/pedidos_por_dia?dias=30`);
@@ -34,7 +34,7 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: alertas = [], isLoading: alertasLoading } = useQuery({
+  const { data: alertas = [], isLoading: alertasLoading, refetch: refetchAlertas } = useQuery({
     queryKey: ['dashboard', 'alertas'],
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/alertas`);
@@ -45,7 +45,7 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: estadisticasUsuarios, isLoading: statsLoading } = useQuery({
+  const { data: estadisticasUsuarios, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard', 'estadisticas_usuarios'],
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/estadisticas/usuarios`);
@@ -55,7 +55,7 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: pedidosAntiguos = [], isLoading: antiguosLoading } = useQuery({
+  const { data: pedidosAntiguos = [], isLoading: antiguosLoading, refetch: refetchAntiguos } = useQuery({
     queryKey: ['dashboard', 'pedidos_antiguos'],
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/antiguos?horas=24`);
@@ -66,31 +66,42 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: ofertas = [], refetch: refetchOfertas } = useQuery({
+    queryKey: ['dashboard', 'ofertas_activas'],
+    queryFn: async () => {
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
+      if (!res.ok) throw new Error('Failed to fetch ofertas');
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
   const loading = metricsLoading || pedidosLoading || alertasLoading || statsLoading || antiguosLoading;
 
-  // Load ofertas on mount
+  // Update productosEnOferta whenever ofertas change
   useEffect(() => {
-    cargarOfertas();
-  }, []);
-
-  const cargarOfertas = async () => {
-    try {
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
-      if (res.ok) {
-        const data = await res.json();
-        const ids = new Set();
-        if (Array.isArray(data)) {
-          data.forEach(o => {
-            if (o.productos_ids && Array.isArray(o.productos_ids)) {
-              o.productos_ids.forEach(id => ids.add(id));
-            }
-          });
+    const ids = new Set();
+    if (Array.isArray(ofertas)) {
+      ofertas.forEach(o => {
+        if (o.productos_ids && Array.isArray(o.productos_ids)) {
+          o.productos_ids.forEach(id => ids.add(id));
         }
-        setProductosEnOferta(ids);
-      }
-    } catch (e) {
-      logger.error('Error cargando ofertas:', e);
+      });
     }
+    setProductosEnOferta(ids);
+  }, [ofertas]);
+
+  // Refetch all data
+  const handleRefresh = async () => {
+    await Promise.all([
+      refetchMetrics(),
+      refetchPedidos(),
+      refetchAlertas(),
+      refetchStats(),
+      refetchAntiguos(),
+      refetchOfertas(),
+    ]);
+    toastSuccess('Dashboard actualizado');
   };
 
   if (loading) {
@@ -127,7 +138,7 @@ export default function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text)' }}>📊 Dashboard</h2>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={cargarDatos} className="btn-secondary" style={{ padding: '8px 14px', minHeight: 40 }}>
+          <button onClick={handleRefresh} className="btn-secondary" style={{ padding: '8px 14px', minHeight: 40 }}>
             🔄 Actualizar
           </button>
         </div>
