@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import authFetch, { authFetchJson } from '../authFetch';
 import ConfirmDialog from './ConfirmDialog';
 import { toast, toastSuccess } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
@@ -12,9 +14,23 @@ export default function Ofertas() {
   const { user } = useAuth();
   // Vendedor and oficina users can only view offers, not edit
   const isReadOnly = user?.rol === 'vendedor' || user?.rol === 'oficina';
-  const [ofertas, setOfertas] = useState([]);
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: ofertas = [] } = useQuery({
+    queryKey: CACHE_KEYS.ofertas,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`);
+      return res.ok ? (data || []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: productos = [] } = useQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      return res.ok ? (Array.isArray(data) ? data : []) : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const [loading, setLoading] = useState(false);
 
   // Form state
   const [titulo, setTitulo] = useState('');
