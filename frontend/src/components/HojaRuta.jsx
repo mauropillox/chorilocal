@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
+import { useUpdatePedidoEstado } from '../hooks/useMutations';
 import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
@@ -81,6 +82,10 @@ export default function HojaRuta() {
         },
         staleTime: 1000 * 60 * 5,
     });
+    
+    // Mutation hook for optimistic estado updates
+    const updateEstadoMutation = useUpdatePedidoEstado();
+    
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); // Error state for UX
     const [filtroRepartidor, setFiltroRepartidor] = useState('');
@@ -510,24 +515,9 @@ export default function HojaRuta() {
 
     const cambiarEstado = async (pedidoId, nuevoEstado) => {
         try {
-            const pedido = pedidos.find(p => p.id === pedidoId);
-            const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/estado`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    estado: nuevoEstado,
-                    repartidor: pedido?.repartidor
-                })
-            });
-
-            if (res.ok) {
-                toastSuccess(`${ESTADOS_PEDIDO[nuevoEstado].icon} ${ESTADOS_PEDIDO[nuevoEstado].label}`);
-                await cargarDatos();
-            } else {
-                toastError('Error al cambiar estado');
-            }
+            await updateEstadoMutation.mutateAsync({ id: pedidoId, estado: nuevoEstado });
         } catch (e) {
-            toastError('Error de conexión');
+            // Error already handled by mutation hook
         }
     };
 
