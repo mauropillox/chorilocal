@@ -90,11 +90,11 @@ export default function Reportes() {
       reporteInventario.productos,
       'inventario_productos',
       [
-        { key: 'nombre', label: 'Producto' },
-        { key: 'stock', label: 'Stock Actual' },
-        { key: 'stock_minimo', label: 'Stock Mínimo' },
-        { key: 'precio', label: 'Precio ($)', format: (v) => v.toFixed(2) },
-        { label: 'Valor Total ($)', getValue: (row) => ((row.stock || 0) * (row.precio || 0)).toFixed(2) }
+        { key: 'nombre', label: 'nombre' },
+        { key: 'stock', label: 'stock' },
+        { key: 'stock_minimo', label: 'stock_minimo' },
+        { key: 'precio', label: 'precio', format: (v) => v.toFixed(2) },
+        { label: 'valor_total', getValue: (row) => ((row.stock || 0) * (row.precio || 0)).toFixed(2) }
       ]
     );
   };
@@ -136,9 +136,9 @@ export default function Reportes() {
       reporteRendimiento.usuarios_activos,
       'rendimiento_usuarios',
       [
-        { key: 'usuario', label: 'Usuario' },
-        { key: 'pedidos_creados', label: 'Pedidos Creados' },
-        { key: 'total_vendido', label: 'Total Vendido ($)', format: (v) => (v || 0).toFixed(2) }
+        { key: 'usuario', label: 'usuario' },
+        { key: 'pedidos_creados', label: 'pedidos_creados' },
+        { key: 'total_vendido', label: 'total_vendido', format: (v) => (v || 0).toFixed(2) }
       ]
     );
   };
@@ -149,9 +149,9 @@ export default function Reportes() {
       reporteComparativo.ultimos_7_dias,
       'comparativo_7_dias',
       [
-        { key: 'dia', label: 'Día' },
-        { key: 'pedidos', label: 'Pedidos' },
-        { key: 'facturado', label: 'Facturado ($)', format: (v) => (v || 0).toFixed(2) }
+        { key: 'dia', label: 'dia' },
+        { key: 'pedidos', label: 'pedidos' },
+        { key: 'facturado', label: 'facturado', format: (v) => (v || 0).toFixed(2) }
       ]
     );
   };
