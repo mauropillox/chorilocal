@@ -157,11 +157,12 @@ export default function HojaRuta() {
                 authFetchJson(`${import.meta.env.VITE_API_URL}/repartidores`)
             ]);
 
+            // Check pedidos
             if (pedRes.res.ok) {
                 const pedidosData = Array.isArray(pedRes.data) ? pedRes.data : [];
                 setPedidos(pedidosData);
             } else {
-                setError('Error al cargar pedidos');
+                logger.error('Error cargando pedidos:', pedRes.res.status);
             }
 
             if (cliRes.res.ok) {
@@ -179,10 +180,12 @@ export default function HojaRuta() {
                 const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
                 setRepartidores(reps.map(r => ({ nombre: r, id: null })));
             }
+            // Clear any previous errors on success
+            setError(null);
             toastSuccess('🗺️ Hoja de ruta cargada correctamente');
         } catch (e) {
-            logger.error('Error cargando datos:', e);
-            setError('Error de conexión. Por favor, intentá de nuevo.');
+            logger.error('HojaRuta cargarDatos error:', e?.message || e);
+            setError(`Error de conexión: ${e?.message || 'desconocido'}. Por favor, intentá de nuevo.`);
         } finally {
             setLoading(false);
         }
