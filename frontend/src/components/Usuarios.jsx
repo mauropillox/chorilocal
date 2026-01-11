@@ -1,12 +1,29 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetchJson } from '../authFetch';
 import { toast, toastSuccess } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Usuarios() {
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: usuarios = [], isLoading } = useQuery({
+    queryKey: CACHE_KEYS.usuarios,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/usuarios`);
+      if (res.ok) {
+        toastSuccess('👥 Usuarios cargados correctamente');
+        return data || [];
+      } else if (res.status === 403) {
+        toast('Solo administradores pueden acceder a esta sección', 'error');
+      } else {
+        toast('Error cargando usuarios', 'error');
+      }
+      return [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, user: null });
   const [resetPassword, setResetPassword] = useState({ open: false, user: null, newPassword: '' });
 
@@ -14,20 +31,6 @@ export default function Usuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
-
-  const cargarUsuarios = async () => {
-    setLoading(true);
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/usuarios`);
-      if (res.ok) {
-        setUsuarios(data);
-        toastSuccess('👥 Usuarios cargados correctamente');
-      } else if (res.status === 403) {
-        toast('Solo administradores pueden acceder a esta sección', 'error');
-      } else {
-        toast('Error cargando usuarios', 'error');
-      }
-    } catch (e) {
       toast('Error de conexión', 'error');
     } finally {
       setLoading(false);
