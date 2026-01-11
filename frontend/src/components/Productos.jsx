@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -9,7 +11,15 @@ import { logger } from '../utils/logger';
 
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [productos, setProductos] = useState([]);
+  const { data: productos = [], isLoading: productsLoading, refetch: refetchProductos } = useQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      if (!res.ok) return [];
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
   const [stock, setStock] = useState('0');
@@ -19,7 +29,6 @@ export default function Productos() {
   const [imagenUrl, setImagenUrl] = useState('');
   const [fileUploading, setFileUploading] = useState(false);
   const [filePreview, setFilePreview] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [urlError, setUrlError] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -115,7 +124,7 @@ export default function Productos() {
     }));
   }, [filtroStockBajo, filtroTipo, showAll, vistaStock]);
 
-  useEffect(() => { cargarProductos(); cargarOfertas(); cargarCategorias(); cargarTags(); }, []);
+  useEffect(() => { cargarOfertas(); cargarCategorias(); cargarTags(); }, []);
 
   // Handle URL search params (for deep linking from dashboard)
   useEffect(() => {
@@ -183,15 +192,7 @@ export default function Productos() {
     } catch (e) { /* ignore */ }
   };
 
-  const cargarProductos = async () => {
-    setLoading(true);
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
-      if (!res.ok) { setProductos([]); setLoading(false); return; }
-      setProductos(Array.isArray(data) ? data : []);
-    } catch (e) { setProductos([]); }
-    finally { setLoading(false); }
-  };
+
 
   const agregarProducto = useCallback(async () => {
     if (!nombre || !precio) return toastWarn("Debe ingresar el nombre y el precio del producto");
