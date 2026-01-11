@@ -40,26 +40,7 @@ export default function ListasPrecios() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [listasRes, productosRes] = await Promise.all([
-        authFetchJson(`${import.meta.env.VITE_API_URL}/listas-precios`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/productos`)
-      ]);
-      if (listasRes.res.ok) setListas(listasRes.data);
-      if (productosRes.res.ok) setProductos(productosRes.data);
-      toastSuccess('💰 Listas de precios cargadas correctamente');
-    } catch (e) {
-      toast('Error cargando datos', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Data loaded automatically by useQuery
 
   const cargarDetalle = async (listaId) => {
     try {

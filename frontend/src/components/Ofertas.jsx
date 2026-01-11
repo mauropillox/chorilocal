@@ -50,28 +50,8 @@ export default function Ofertas() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [ofertaToDelete, setOfertaToDelete] = useState(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [ofertasRes, productosRes] = await Promise.all([
-        authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/productos`)
-      ]);
-
-      if (ofertasRes.res.ok) setOfertas(ofertasRes.data);
-      if (productosRes.res.ok) setProductos(productosRes.data);
-      toastSuccess('🎁 Ofertas y productos cargados correctamente');
-    } catch (e) {
-      logger.error('Error cargando datos:', e);
-      toast('Error al cargar datos', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Data will be loaded automatically by useQuery on mount
+  // No need for useEffect + cargarDatos
 
   const resetForm = () => {
     setTitulo('');

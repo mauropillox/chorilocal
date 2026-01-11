@@ -36,24 +36,7 @@ export default function Categorias() {
     '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'
   ];
 
-  useEffect(() => {
-    cargarCategorias();
-  }, [incluirInactivas]);
-
-  const cargarCategorias = async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch(`${import.meta.env.VITE_API_URL}/categorias?incluir_inactivas=${incluirInactivas}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCategorias(data);
-        toastSuccess('📂 Categorías cargadas correctamente');
-      }
-    } catch (e) {
-      toastError('Error al cargar categorías');
-    }
-    setLoading(false);
-  };
+  // Data loaded automatically by useQuery
 
   const resetForm = () => {
     setNombre('');
