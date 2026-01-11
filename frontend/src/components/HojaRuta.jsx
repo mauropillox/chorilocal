@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetchJson, authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
 
@@ -50,11 +52,32 @@ const calcZoneProgress = (pedidosZona) => {
 };
 
 export default function HojaRuta() {
-    const [pedidos, setPedidos] = useState([]);
-    const [clientes, setClientes] = useState([]);
+    const { data: pedidos = [] } = useQuery({
+        queryKey: CACHE_KEYS.pedidos,
+        queryFn: async () => {
+            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`);
+            return res.ok ? (data || []) : [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+    const { data: clientes = [] } = useQuery({
+        queryKey: CACHE_KEYS.clientes,
+        queryFn: async () => {
+            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+            return res.ok ? (Array.isArray(data) ? data : (data.data || [])) : [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+    const { data: repartidores = [] } = useQuery({
+        queryKey: [...CACHE_KEYS.usuarios, 'repartidores'],
+        queryFn: async () => {
+            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/repartidores`);
+            return res.ok ? (data || []) : [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); // Error state for UX
-    const [repartidores, setRepartidores] = useState([]);
     const [filtroRepartidor, setFiltroRepartidor] = useState('');
     const [filtroZona, setFiltroZona] = useState('');
     const [filtroEstado, setFiltroEstado] = useState('');
