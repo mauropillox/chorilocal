@@ -73,4 +73,16 @@ class ErrorBoundary extends Component {
   }
 }
 
+/**
+ * TabErrorBoundary - Wrapper for specific tabs/sections
+ * Use this to wrap individual components that might fail
+ */
+export function TabErrorBoundary({ children, tabName }) {
+  return (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 export default ErrorBoundary;

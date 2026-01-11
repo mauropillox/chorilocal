@@ -18,6 +18,7 @@ const HojaRuta = lazy(() => import('./components/HojaRuta'));
 
 import ConnectionStatus from './components/ConnectionStatus';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import { TabErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 import { borrarToken } from './auth';
 import { useAuth } from './components/AuthContext';
@@ -481,23 +482,23 @@ export default function LayoutApp({ onLogout }) {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Rutas visibles para todos (admin, oficina, vendedor) */}
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/productos" element={<Productos />} />
-              <Route path="/pedidos" element={<Pedidos />} />
-              <Route path="/historial" element={<HistorialPedidos />} />
-              <Route path="/cambiar-password" element={<CambiarPassword />} />
+              <Route path="/clientes" element={<TabErrorBoundary tabName="Clientes"><Clientes /></TabErrorBoundary>} />
+              <Route path="/productos" element={<TabErrorBoundary tabName="Productos"><Productos /></TabErrorBoundary>} />
+              <Route path="/pedidos" element={<TabErrorBoundary tabName="Pedidos"><Pedidos /></TabErrorBoundary>} />
+              <Route path="/historial" element={<TabErrorBoundary tabName="Historial"><HistorialPedidos /></TabErrorBoundary>} />
+              <Route path="/cambiar-password" element={<TabErrorBoundary tabName="Cambiar Password"><CambiarPassword /></TabErrorBoundary>} />
 
               {/* Ofertas - Todos pueden ver, el componente maneja permisos internamente */}
-              <Route path="/ofertas" element={<Ofertas />} />
+              <Route path="/ofertas" element={<TabErrorBoundary tabName="Ofertas"><Ofertas /></TabErrorBoundary>} />
 
               {/* Rutas solo para Admin */}
-              <Route path="/dashboard" element={isAdmin ? <Dashboard /> : <Navigate to="/pedidos" />} />
-              <Route path="/reportes" element={isAdmin ? <Reportes /> : <Navigate to="/pedidos" />} />
-              <Route path="/listas-precios" element={isAdmin ? <ListasPrecios /> : <Navigate to="/pedidos" />} />
-              <Route path="/templates" element={isAdmin ? <Templates /> : <Navigate to="/pedidos" />} />
-              <Route path="/usuarios" element={isAdmin ? <Usuarios /> : <Navigate to="/pedidos" />} />
-              <Route path="/categorias" element={isAdmin ? <Categorias /> : <Navigate to="/pedidos" />} />
-              <Route path="/hoja-ruta" element={isAdmin ? <HojaRuta /> : <Navigate to="/pedidos" />} />
+              <Route path="/dashboard" element={isAdmin ? <TabErrorBoundary tabName="Dashboard"><Dashboard /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/reportes" element={isAdmin ? <TabErrorBoundary tabName="Reportes"><Reportes /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/listas-precios" element={isAdmin ? <TabErrorBoundary tabName="Listas de Precios"><ListasPrecios /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/templates" element={isAdmin ? <TabErrorBoundary tabName="Templates"><Templates /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/usuarios" element={isAdmin ? <TabErrorBoundary tabName="Usuarios"><Usuarios /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/categorias" element={isAdmin ? <TabErrorBoundary tabName="Categorías"><Categorias /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
+              <Route path="/hoja-ruta" element={isAdmin ? <TabErrorBoundary tabName="Hoja de Ruta"><HojaRuta /></TabErrorBoundary> : <Navigate to="/pedidos" />} />
 
               {/* Redirect from root - admin goes to dashboard, others to pedidos */}
               <Route path="/" element={<Navigate to={isAdmin ? "/dashboard" : "/pedidos"} />} />
