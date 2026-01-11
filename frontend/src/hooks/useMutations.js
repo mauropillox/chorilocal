@@ -8,15 +8,65 @@
  * 1. onMutate: Update cache optimistically, save snapshot
  * 2. onError: Rollback to snapshot if mutation fails
  * 3. onSettled: Refetch to ensure consistency
+ * 
+ * Error Handling:
+ * - Network errors: Show detailed toast with retry suggestion
+ * - 4xx errors: Show validation/conflict message from server
+ * - 5xx errors: Show generic error with retry
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authFetch, authFetchJson } from '../authFetch';
 import { CACHE_KEYS } from '../utils/queryClient';
-import { toastSuccess, toastError } from '../toast';
+import { toastSuccess, toastError, toastWarn } from '../toast';
 import { useAppStore } from '../store';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// ==================== ERROR HELPERS ====================
+
+/**
+ * Parse error message from various sources
+ */
+function parseErrorMessage(err, defaultMsg = 'Error desconocido') {
+    if (!err) return defaultMsg;
+    
+    // Server error with detail
+    if (err.detail) return err.detail;
+    if (err.message) return err.message;
+    
+    // Network errors
+    if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+        return 'Error de conexión. Verificá tu internet.';
+    }
+    if (err.name === 'AbortError') {
+        return 'La operación tardó demasiado. Intentá de nuevo.';
+    }
+    
+    return defaultMsg;
+}
+
+/**
+ * Format error for toast display with emoji
+ */
+function formatErrorToast(operation, err) {
+    const msg = parseErrorMessage(err, `Error al ${operation}`);
+    return `❌ ${msg}`;
+}
+
+/**
+ * React Query retry configuration
+ * Retry only network errors, not 4xx client errors
+ */
+const MUTATION_RETRY_CONFIG = {
+    retry: (failureCount, error) => {
+        // Don't retry client errors (4xx)
+        if (error?.status >= 400 && error?.status < 500) return false;
+        // Retry up to 2 times for network/server errors
+        return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+};
 
 // ==================== PRODUCTOS ====================
 
@@ -64,7 +114,7 @@ export const useCreateProducto = () => {
         onError: (err, newProducto, context) => {
             // Rollback on error
             queryClient.setQueryData(CACHE_KEYS.productos, context?.previousProductos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: (data) => {
             toastSuccess('✅ Producto creado');
@@ -109,7 +159,7 @@ export const useUpdateProducto = () => {
         },
         onError: (err, variables, context) => {
             queryClient.setQueryData(CACHE_KEYS.productos, context?.previousProductos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('✅ Producto actualizado');
@@ -133,10 +183,13 @@ export const useDeleteProducto = () => {
             });
             if (!res.ok) {
                 const error = await res.json().catch(() => ({}));
-                throw new Error(error.detail || 'Error al eliminar producto');
+                const err = new Error(error.detail || 'Error al eliminar producto');
+                err.status = res.status;
+                throw err;
             }
             return { id };
         },
+        ...MUTATION_RETRY_CONFIG,
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: CACHE_KEYS.productos });
 
@@ -151,7 +204,7 @@ export const useDeleteProducto = () => {
         },
         onError: (err, id, context) => {
             queryClient.setQueryData(CACHE_KEYS.productos, context?.previousProductos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('eliminar producto', err));
         },
         onSuccess: () => {
             toastSuccess('🗑️ Producto eliminado');
@@ -196,7 +249,7 @@ export const useUpdateProductoStock = () => {
         },
         onError: (err, variables, context) => {
             queryClient.setQueryData(CACHE_KEYS.productos, context?.previousProductos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('📦 Stock actualizado');
@@ -248,7 +301,7 @@ export const useCreateCliente = () => {
         },
         onError: (err, newCliente, context) => {
             queryClient.setQueryData(CACHE_KEYS.clientes, context?.previousClientes);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('✅ Cliente creado');
@@ -291,7 +344,7 @@ export const useUpdateCliente = () => {
         },
         onError: (err, variables, context) => {
             queryClient.setQueryData(CACHE_KEYS.clientes, context?.previousClientes);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('✅ Cliente actualizado');
@@ -332,7 +385,7 @@ export const useDeleteCliente = () => {
         },
         onError: (err, id, context) => {
             queryClient.setQueryData(CACHE_KEYS.clientes, context?.previousClientes);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('🗑️ Cliente eliminado');
@@ -386,7 +439,7 @@ export const useCreatePedido = () => {
         },
         onError: (err, newPedido, context) => {
             queryClient.setQueryData(CACHE_KEYS.pedidos, context?.previousPedidos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('📦 Pedido creado');
@@ -429,7 +482,7 @@ export const useUpdatePedidoEstado = () => {
         },
         onError: (err, variables, context) => {
             queryClient.setQueryData(CACHE_KEYS.pedidos, context?.previousPedidos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: (data, { estado }) => {
             const icons = { pendiente: '⏳', preparando: '🔄', entregado: '✅', cancelado: '❌' };
@@ -471,7 +524,7 @@ export const useDeletePedido = () => {
         },
         onError: (err, id, context) => {
             queryClient.setQueryData(CACHE_KEYS.pedidos, context?.previousPedidos);
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: () => {
             toastSuccess('🗑️ Pedido eliminado');
@@ -544,7 +597,7 @@ export const useBulkUpdatePedidosEstado = () => {
             if (context?.previousPedidos) {
                 setPedidos(context.previousPedidos);
             }
-            toastError(`❌ ${err.message}`);
+            toastError(formatErrorToast('operación', err));
         },
         onSuccess: ({ successCount, failedCount, nuevoEstado }) => {
             // Show success message based on ESTADOS_PEDIDO icons (defined in HojaRuta)

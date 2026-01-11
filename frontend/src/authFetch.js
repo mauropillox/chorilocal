@@ -2,6 +2,7 @@ import { obtenerToken, borrarToken, guardarToken, decodeToken } from './auth';
 import { queueRequest } from './offline/sync';
 import { toastSuccess, toastWarn, toastError } from './toast';
 import { logger } from './utils/logger';
+import { validateResponse } from './utils/schemas';
 
 // Token refresh: intenta refrescar el token antes de que expire
 let refreshPromise = null;
@@ -178,11 +179,21 @@ async function authFetch(input, init = {}, retryCount = 0) {
   }
 }
 
-async function authFetchJson(input, init = {}) {
+async function authFetchJson(input, init = {}, options = {}) {
   const res = await authFetch(input, init);
   const contentType = res.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
     const data = await res.json();
+    
+    // Validate response with Zod if enabled (default: true for GET requests)
+    const shouldValidate = options.validate !== false && (init.method || 'GET').toUpperCase() === 'GET';
+    if (shouldValidate && res.ok && data) {
+      const validation = validateResponse(input, data, { strict: false, silent: options.silent });
+      if (!validation.success && !options.silent) {
+        logger.warn(`[Zod] API response validation warning for ${input}`);
+      }
+    }
+    
     return { res, data };
   }
   return { res, data: null };

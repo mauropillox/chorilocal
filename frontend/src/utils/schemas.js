@@ -190,19 +190,10 @@ export const ApiErrorSchema = z.object({
     status: z.number().optional(),
 });
 
-// Type inference helpers
-export type Producto = z.infer<typeof ProductoSchema>;
-export type Cliente = z.infer<typeof ClienteSchema>;
-export type Pedido = z.infer<typeof PedidoSchema>;
-export type Usuario = z.infer<typeof UsuarioSchema>;
-export type Reporte = z.infer<typeof ReporteSchema>;
-export type Template = z.infer<typeof TemplateSchema>;
-export type Oferta = z.infer<typeof OfertaSchema>;
-export type ListaPrecios = z.infer<typeof ListaPreciosSchema>;
-export type Categoria = z.infer<typeof CategoriaSchema>;
-export type HojaRuta = z.infer<typeof HojaRutaSchema>;
-export type OfflineQueueItem = z.infer<typeof OfflineQueueItemSchema>;
-export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+// Type inference helpers (for TypeScript - commented out for JS)
+// export type Producto = z.infer<typeof ProductoSchema>;
+// export type Cliente = z.infer<typeof ClienteSchema>;
+// etc...
 
 // Safe parsing helper
 export const parseResponse = (schema, data) => {
@@ -223,3 +214,91 @@ export const parseResponseSafe = (schema, data, fallback = null) => {
         return fallback;
     }
 };
+
+// ==================== SCHEMA MAP ====================
+
+/**
+ * Map endpoint patterns to their validation schemas
+ * Used by validateResponse() to auto-select the right schema
+ */
+export const SCHEMA_MAP = {
+    // Array endpoints
+    'productos': ProductosListSchema,
+    'clientes': ClientesListSchema,
+    'pedidos': PedidosListSchema,
+    'categorias': CategoriasListSchema,
+    'ofertas': OfertasListSchema,
+    'ofertas/activas': OfertasListSchema,
+    'usuarios': UsuariosListSchema,
+    'repartidores': UsuariosListSchema,
+    'templates': TemplatesListSchema,
+    'listas-precios': ListasPreciosListSchema,
+    
+    // Single item endpoints (patterns)
+    'producto': ProductoSchema,
+    'cliente': ClienteSchema,
+    'pedido': PedidoSchema,
+    'categoria': CategoriaSchema,
+    'oferta': OfertaSchema,
+    'usuario': UsuarioSchema,
+    'template': TemplateSchema,
+};
+
+/**
+ * Validate API response data against schema
+ * @param {string} endpoint - API endpoint URL
+ * @param {any} data - Response data to validate
+ * @param {object} options - { strict: boolean, silent: boolean }
+ * @returns {{ success: boolean, data?: any, error?: string }}
+ */
+export function validateResponse(endpoint, data, options = { strict: false, silent: false }) {
+    const endpointKey = extractEndpointKey(endpoint);
+    const schema = SCHEMA_MAP[endpointKey];
+    
+    if (!schema) {
+        // No schema defined - skip validation
+        return { success: true, data };
+    }
+    
+    const result = schema.safeParse(data);
+    
+    if (!result.success) {
+        const errorMessage = result.error.issues
+            .slice(0, 3) // Limit to first 3 errors
+            .map(issue => `${issue.path.join('.')}: ${issue.message}`)
+            .join(', ');
+        
+        if (!options.silent) {
+            console.warn(`[Zod] Validation warning for ${endpointKey}:`, errorMessage);
+        }
+        
+        // In non-strict mode, return original data with warning
+        return { 
+            success: false, 
+            error: errorMessage,
+            data: options.strict ? null : data
+        };
+    }
+    
+    return { success: true, data: result.data };
+}
+
+/**
+ * Extract endpoint key from full URL path
+ */
+function extractEndpointKey(url) {
+    let path = url.replace(/^https?:\/\/[^\/]+/, '').split('?')[0];
+    path = path.replace(/^\/?(api)?\//, '');
+    
+    if (path.match(/ofertas\/activas/i)) return 'ofertas/activas';
+    if (path.match(/repartidores/i)) return 'repartidores';
+    if (path.match(/listas-precios/i)) return 'listas-precios';
+    
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length >= 2 && /^\d+$/.test(segments[segments.length - 1])) {
+        const resource = segments[segments.length - 2];
+        return resource.replace(/s$/, '');
+    }
+    
+    return segments[0] || '';
+}
