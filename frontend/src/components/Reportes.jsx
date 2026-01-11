@@ -159,7 +159,7 @@ export default function Reportes() {
   // Helper function to handle API errors with proper messages
   const handleApiError = (error, res = null) => {
     console.error('API Error:', error, res);
-    
+
     // Handle network errors
     if (!navigator.onLine) {
       toast('❌ Sin conexión a internet. Por favor, verifica tu conexión.', 'error');
@@ -324,7 +324,7 @@ export default function Reportes() {
     else if (tab === 'productos') cargarReporteProductos();
     else if (tab === 'rendimiento') cargarReporteRendimiento();
     else if (tab === 'comparativo') cargarReporteComparativo();
-  }, [tab]);
+  }, [tab, desde, hasta]);
 
   const formatCurrency = (num) => `$${(num || 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}`;
 
