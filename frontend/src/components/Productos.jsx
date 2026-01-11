@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
-import { CACHE_KEYS } from '../utils/queryClient';
+import { useProductosQuery } from '../hooks/useHybridQuery';
 import { ProductListSkeleton, TableSkeleton } from './Skeleton';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
@@ -11,16 +10,7 @@ import { logger } from '../utils/logger';
 
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: productos = [], isLoading: productsLoading, refetch: refetchProductos } = useQuery({
-    queryKey: CACHE_KEYS.productos,
-    queryFn: async () => {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
-      if (!res.ok) return [];
-      toastSuccess('📦 Productos cargados correctamente');
-      return Array.isArray(data) ? data : [];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
+  const { productos, isLoading: productsLoading, refetch: refetchProductos } = useProductosQuery();
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
   const [stock, setStock] = useState('0');

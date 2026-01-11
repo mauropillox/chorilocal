@@ -1,30 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
-import { CACHE_KEYS } from '../utils/queryClient';
+import { useClientesQuery, useProductosQuery } from '../hooks/useHybridQuery';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
 
 export default function Pedidos() {
-  const { data: clientes = [], isLoading: clientesLoading, refetch: refetchClientes } = useQuery({
-    queryKey: CACHE_KEYS.clientes,
-    queryFn: async () => {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
-      if (!res.ok) return [];
-      return Array.isArray(data) ? data : (data.data || []);
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-  const { data: productos = [], isLoading: productosLoading, refetch: refetchProductos } = useQuery({
-    queryKey: CACHE_KEYS.productos,
-    queryFn: async () => {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
-      if (!res.ok) return [];
-      return Array.isArray(data) ? data : [];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
+  const { clientes, isLoading: clientesLoading, refetch: refetchClientes } = useClientesQuery({ showToast: false });
+  const { productos, isLoading: productosLoading, refetch: refetchProductos } = useProductosQuery({ showToast: false });
   const [clienteId, setClienteId] = useState('');
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');

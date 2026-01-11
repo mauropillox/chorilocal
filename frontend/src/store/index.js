@@ -358,6 +358,42 @@ export const useAppStore = create(
                     });
                 },
 
+                // Direct setters for React Query integration
+                setProductos: (productos) => {
+                    set(state => {
+                        state.entities.productos = productos;
+                        state.entities.lastFetched.productos = Date.now();
+                    });
+                },
+
+                setClientes: (clientes) => {
+                    set(state => {
+                        state.entities.clientes = clientes;
+                        state.entities.lastFetched.clientes = Date.now();
+                    });
+                },
+
+                setPedidos: (pedidos) => {
+                    set(state => {
+                        state.entities.pedidos = pedidos;
+                        state.entities.lastFetched.pedidos = Date.now();
+                    });
+                },
+
+                setCategorias: (categorias) => {
+                    set(state => {
+                        state.entities.categorias = categorias;
+                        state.entities.lastFetched.categorias = Date.now();
+                    });
+                },
+
+                setOfertas: (ofertas) => {
+                    set(state => {
+                        state.entities.ofertas = ofertas;
+                        state.entities.lastFetched.ofertas = Date.now();
+                    });
+                },
+
                 // ==================== UI STATE ====================
                 ui: {
                     sidebarOpen: true,

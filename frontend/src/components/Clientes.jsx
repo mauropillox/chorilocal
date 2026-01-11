@@ -1,25 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
-import { CACHE_KEYS } from '../utils/queryClient';
+import { useClientesQuery } from '../hooks/useHybridQuery';
 import { getSelectStyles } from '../selectStyles';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: clientes = [], isLoading: clientesLoading, refetch: refetchClientes } = useQuery({
-    queryKey: CACHE_KEYS.clientes,
-    queryFn: async () => {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
-      if (!res.ok) return [];
-      toastSuccess('👥 Clientes cargados correctamente');
-      return Array.isArray(data) ? data : (data.data || []);
-    },
-    staleTime: 1000 * 60 * 5,
-  });
+  const { clientes, isLoading: clientesLoading, refetch: refetchClientes } = useClientesQuery();
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
