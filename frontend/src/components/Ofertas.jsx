@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authFetch, { authFetchJson } from '../authFetch';
 import ConfirmDialog from './ConfirmDialog';
-import { toast } from '../toast';
+import { toast, toastSuccess } from '../toast';
 import HelpBanner from './HelpBanner';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
@@ -48,6 +48,7 @@ export default function Ofertas() {
 
       if (ofertasRes.res.ok) setOfertas(ofertasRes.data);
       if (productosRes.res.ok) setProductos(productosRes.data);
+      toastSuccess('🎁 Ofertas y productos cargados correctamente');
     } catch (e) {
       logger.error('Error cargando datos:', e);
       toast('Error al cargar datos', 'error');

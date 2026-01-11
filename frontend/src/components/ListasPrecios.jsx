@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { authFetchJson, authFetch } from '../authFetch';
-import { toast } from '../toast';
+import { toast, toastSuccess } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
@@ -37,6 +37,7 @@ export default function ListasPrecios() {
       ]);
       if (listasRes.res.ok) setListas(listasRes.data);
       if (productosRes.res.ok) setProductos(productosRes.data);
+      toastSuccess('💰 Listas de precios cargadas correctamente');
     } catch (e) {
       toast('Error cargando datos', 'error');
     } finally {

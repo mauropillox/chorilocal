@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authFetchJson, authFetch } from '../authFetch';
-import { toast } from '../toast';
+import { toast, toastSuccess } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
@@ -40,6 +40,7 @@ export default function Templates() {
       if (templatesRes.res.ok) setTemplates(templatesRes.data);
       if (clientesRes.res.ok) setClientes(Array.isArray(clientesRes.data) ? clientesRes.data : clientesRes.data.data || []);
       if (productosRes.res.ok) setProductos(productosRes.data);
+      toastSuccess('📋 Plantillas y datos cargados correctamente');
     } catch (e) {
       toast('Error cargando datos', 'error');
     } finally {

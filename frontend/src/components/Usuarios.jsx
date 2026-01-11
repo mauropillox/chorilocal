@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { authFetchJson } from '../authFetch';
-import { toast } from '../toast';
+import { toast, toastSuccess } from '../toast';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
@@ -21,6 +21,7 @@ export default function Usuarios() {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/usuarios`);
       if (res.ok) {
         setUsuarios(data);
+        toastSuccess('👥 Usuarios cargados correctamente');
       } else if (res.status === 403) {
         toast('Solo administradores pueden acceder a esta sección', 'error');
       } else {
