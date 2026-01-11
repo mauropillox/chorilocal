@@ -28,7 +28,7 @@ import authFetch from './authFetch';
 import OfflineNotifier from './components/OfflineNotifier';
 import OfflineQueue from './components/OfflineQueue';
 import { logger } from './utils/logger';
-import { useWebSocket } from './hooks/useWebSocket';
+// import { useWebSocket } from './hooks/useWebSocket'; // Disabled - Render free tier doesn't support WebSocket
 
 // Loading fallback para Suspense
 const PageLoader = () => (
