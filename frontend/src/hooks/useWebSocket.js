@@ -43,7 +43,7 @@ function getWebSocketUrl() {
 
     // Convert http(s) to ws(s)
     const wsUrl = apiUrl.replace(/^http/, 'ws');
-    return `${wsUrl}/ws/${token}`;
+    return `${wsUrl}/api/ws/${token}`;
 }
 
 /**
