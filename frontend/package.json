@@ -13,6 +13,7 @@
     "lint:fix": "eslint src/ --ext .js,.jsx --fix"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.16",
     "buffer": "^6.0.3",
     "immer": "^10.0.3",
     "jspdf": "^3.0.1",
@@ -22,6 +23,7 @@
     "react-select": "^5.10.1",
     "vite": "^4.5.10",
     "vite-plugin-pwa": "^0.21.2",
+    "zod": "^4.3.5",
     "zustand": "^4.4.7"
   },
   "optionalDependencies": {
