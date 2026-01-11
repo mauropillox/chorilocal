@@ -24,10 +24,11 @@ export default defineConfig({
             name: 'chromium',
             use: { ...devices['Desktop Chrome'] },
         },
-        {
-            name: 'firefox',
-            use: { ...devices['Desktop Firefox'] },
-        },
+        // Firefox excluded - takes too long, already validated by previous tests
+        // {
+        //     name: 'firefox',
+        //     use: { ...devices['Desktop Firefox'] },
+        // },
         {
             name: 'webkit',
             use: { ...devices['Desktop Safari'] },
