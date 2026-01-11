@@ -156,16 +156,75 @@ export default function Reportes() {
     );
   };
 
+  // Helper function to handle API errors with proper messages
+  const handleApiError = (error, res = null) => {
+    console.error('API Error:', error, res);
+    
+    // Handle network errors
+    if (!navigator.onLine) {
+      toast('❌ Sin conexión a internet. Por favor, verifica tu conexión.', 'error');
+      return;
+    }
+
+    // Handle timeout errors
+    if (error?.name === 'AbortError') {
+      toast('⏱️ La solicitud tardó demasiado. Por favor, intenta de nuevo.', 'error');
+      return;
+    }
+
+    // Handle HTTP status codes
+    if (res) {
+      switch (res.status) {
+        case 401:
+          toast('🔐 Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+          break;
+        case 403:
+          toast('🚫 No tienes permiso para acceder a este recurso.', 'error');
+          break;
+        case 404:
+          toast('📍 El recurso solicitado no fue encontrado.', 'error');
+          break;
+        case 500:
+          toast('⚠️ Error del servidor. Por favor, intenta más tarde.', 'error');
+          break;
+        case 503:
+          toast('🔧 El servidor está en mantenimiento. Intenta más tarde.', 'error');
+          break;
+        default:
+          if (res.status >= 400 && res.status < 500) {
+            toast(`❌ Error de cliente (${res.status}). Verifica los parámetros.`, 'error');
+          } else if (res.status >= 500) {
+            toast(`⚠️ Error del servidor (${res.status}). Intenta más tarde.`, 'error');
+          } else {
+            toast(`⚠️ Error inesperado (${res.status}).`, 'error');
+          }
+      }
+      return;
+    }
+
+    // Handle other errors
+    if (error?.message === 'Failed to fetch') {
+      toast('🌐 Error de conexión. Verifica tu conexión a internet.', 'error');
+      return;
+    }
+
+    toast('❌ Error desconocido. Por favor, intenta de nuevo.', 'error');
+  };
+
   const cargarReporteVentas = async () => {
     setLoading(true);
     try {
       const { res, data } = await authFetchJson(
         `${import.meta.env.VITE_API_URL}/reportes/ventas?desde=${desde}&hasta=${hasta}`
       );
-      if (res.ok) setReporteVentas(data);
-      else toast('Error cargando reporte', 'error');
+      if (res.ok) {
+        setReporteVentas(data);
+        toastSuccess('📊 Reporte de ventas cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
@@ -175,9 +234,14 @@ export default function Reportes() {
     setLoading(true);
     try {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/reportes/inventario`);
-      if (res.ok) setReporteInventario(data);
+      if (res.ok) {
+        setReporteInventario(data);
+        toastSuccess('📦 Reporte de inventario cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
@@ -187,9 +251,14 @@ export default function Reportes() {
     setLoading(true);
     try {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/reportes/clientes`);
-      if (res.ok) setReporteClientes(data);
+      if (res.ok) {
+        setReporteClientes(data);
+        toastSuccess('👥 Reporte de clientes cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
@@ -201,9 +270,14 @@ export default function Reportes() {
       const { res, data } = await authFetchJson(
         `${import.meta.env.VITE_API_URL}/reportes/productos?desde=${desde}&hasta=${hasta}`
       );
-      if (res.ok) setReporteProductos(data);
+      if (res.ok) {
+        setReporteProductos(data);
+        toastSuccess('🏆 Reporte de productos cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
@@ -213,9 +287,14 @@ export default function Reportes() {
     setLoading(true);
     try {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/reportes/rendimiento`);
-      if (res.ok) setReporteRendimiento(data);
+      if (res.ok) {
+        setReporteRendimiento(data);
+        toastSuccess('⚡ Reporte de rendimiento cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
@@ -225,9 +304,14 @@ export default function Reportes() {
     setLoading(true);
     try {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/reportes/comparativo`);
-      if (res.ok) setReporteComparativo(data);
+      if (res.ok) {
+        setReporteComparativo(data);
+        toastSuccess('📈 Reporte comparativo cargado correctamente');
+      } else {
+        handleApiError(null, res);
+      }
     } catch (e) {
-      toast('Error de conexión', 'error');
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
