@@ -65,21 +65,8 @@ export default function Pedidos() {
   }, [clienteId, productosSeleccionados.length]);
 
   useEffect(() => {
+    // Load ofertas activas
     (async () => {
-      setLoadingClientes(true);
-      const rc = await authFetch(`${import.meta.env.VITE_API_URL}/clientes`);
-      if (rc.ok) { const data = await rc.json(); setClientes(data); }
-      else setClientes([]);
-      setLoadingClientes(false);
-
-      setLoadingProductos(true);
-      try {
-        const { res: rp, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
-        if (rp.ok && Array.isArray(data)) setProductos(data); else setProductos([]);
-      } catch (e) { setProductos([]); }
-      setLoadingProductos(false);
-
-      // Cargar ofertas activas
       try {
         const ro = await authFetch(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
         if (ro.ok) {
@@ -542,7 +529,7 @@ export default function Pedidos() {
             </select>
           </div>
 
-          {loadingProductos ? (
+          {productosLoading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="card-item flex items-center gap-3">

@@ -23,7 +23,7 @@ export default function Usuarios() {
     },
     staleTime: 1000 * 60 * 5,
   });
-  
+
   const [confirmDelete, setConfirmDelete] = useState({ open: false, user: null });
   const [resetPassword, setResetPassword] = useState({ open: false, user: null, newPassword: '' });
 
