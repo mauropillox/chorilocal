@@ -38,7 +38,6 @@ export default function Productos() {
   const [precioMin, setPrecioMin] = useState('');
   const [precioMax, setPrecioMax] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
-  const [categorias, setCategorias] = useState([]);
   const [categoriaProducto, setCategoriaProducto] = useState('');
   const [editingImage, setEditingImage] = useState(null);
   const [editingStock, setEditingStock] = useState(null);
@@ -124,9 +123,65 @@ export default function Productos() {
     }));
   }, [filtroStockBajo, filtroTipo, showAll, vistaStock]);
 
-  useEffect(() => { cargarOfertas(); cargarCategorias(); cargarTags(); }, []);
+  // Load ofertas activas
+  const { data: ofertasActivas = [] } = useQuery({
+    queryKey: ['ofertasActivas'],
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
+      return (res.ok && Array.isArray(data)) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
-  // Handle URL search params (for deep linking from dashboard)
+  // Load categorias
+  const { data: categorias = [] } = useQuery({
+    queryKey: CACHE_KEYS.categorias,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/categorias`);
+      return (res.ok && Array.isArray(data)) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Update productosEnOferta when ofertas load
+  useEffect(() => {
+    const idsEnOferta = new Set();
+    ofertasActivas.forEach(o => (o.productos_ids || []).forEach(id => idsEnOferta.add(id)));
+    setProductosEnOferta(idsEnOferta);
+  }, [ofertasActivas]);
+
+  // Load tags
+  const { data: tagsData = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/tags`);
+      return (res.ok && Array.isArray(data)) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Load productos-con-tags
+  const { data: productosConTags = [] } = useQuery({
+    queryKey: ['productos-con-tags'],
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos-con-tags`);
+      return (res.ok && Array.isArray(data)) ? data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Update tags state when data loads
+  useEffect(() => {
+    setAllTags(tagsData);
+    const tagMap = {};
+    productosConTags.forEach(p => {
+      if (p.tags && Array.isArray(p.tags)) {
+        tagMap[p.id] = p.tags;
+      }
+    });
+    setProductosTags(tagMap);
+  }, [tagsData, productosConTags]);
+
   useEffect(() => {
     const buscarParam = searchParams.get('buscar');
     const stockBajoParam = searchParams.get('stockBajo');
@@ -148,49 +203,6 @@ export default function Productos() {
       setSearchParams({});
     }
   }, [searchParams]);
-
-  const cargarOfertas = async () => {
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
-      if (res.ok && Array.isArray(data)) {
-        const idsEnOferta = new Set();
-        data.forEach(o => (o.productos_ids || []).forEach(id => idsEnOferta.add(id)));
-        setProductosEnOferta(idsEnOferta);
-      }
-    } catch (e) { /* ignore */ }
-  };
-
-  const cargarCategorias = async () => {
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/categorias`);
-      if (res.ok && Array.isArray(data)) {
-        setCategorias(data);
-      }
-    } catch (e) { /* ignore */ }
-  };
-
-  const cargarTags = async () => {
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/tags`);
-      if (res.ok && Array.isArray(data)) {
-        setAllTags(data);
-      }
-    } catch (e) { /* ignore */ }
-
-    // Cargar todos los productos con tags en una sola consulta (evita N+1)
-    try {
-      const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos-con-tags`);
-      if (res.ok && Array.isArray(data)) {
-        const tagMap = {};
-        data.forEach(p => {
-          if (p.tags && Array.isArray(p.tags)) {
-            tagMap[p.id] = p.tags;
-          }
-        });
-        setProductosTags(tagMap);
-      }
-    } catch (e) { /* ignore */ }
-  };
 
 
 
@@ -216,7 +228,7 @@ export default function Productos() {
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      await cargarProductos();
+      await refetchProductos();
       setNombre(''); setPrecio(''); setStock('0'); setStockTipo('unidad'); setStockMinimo('10'); setStockMinimoTipo('unidad');
       // Clean up blob URL to prevent memory leak
       if (filePreview && filePreview.startsWith('blob:')) URL.revokeObjectURL(filePreview);
@@ -248,7 +260,7 @@ export default function Productos() {
     });
 
     if (res.ok) {
-      await cargarProductos();
+      await refetchProductos();
       setEditingStock(null);
       setNewStock('');
       toastSuccess('Stock actualizado');
@@ -272,7 +284,7 @@ export default function Productos() {
     });
 
     if (res.ok) {
-      await cargarProductos();
+      await refetchProductos();
       setEditingCategoria(null);
       toastSuccess('Categoría actualizada');
     } else {
@@ -317,7 +329,7 @@ export default function Productos() {
       });
 
       if (res.ok) {
-        await cargarProductos();
+        await refetchProductos();
         setEditingProducto(null);
         toastSuccess('Producto actualizado correctamente');
       } else {
@@ -340,7 +352,7 @@ export default function Productos() {
         method: 'DELETE'
       });
       if (res.ok) {
-        await cargarProductos();
+        await refetchProductos();
         setConfirmDelete(null);
         toastSuccess('Producto eliminado correctamente');
       } else {
@@ -393,7 +405,7 @@ export default function Productos() {
           toastWarn(`${data.errors.length} producto(s) no se pudieron eliminar (tienen pedidos asociados)`);
         }
         setSelectedIds(new Set());
-        await cargarProductos();
+        await refetchProductos();
       } else {
         const err = await res.json().catch(() => ({}));
         toastError(err.detail || 'Error al eliminar productos');
@@ -417,7 +429,7 @@ export default function Productos() {
     });
 
     if (res.ok) {
-      await cargarProductos();
+      await refetchProductos();
       setEditingImage(null);
       // Clean up blob URL to prevent memory leak
       if (filePreview && filePreview.startsWith('blob:')) URL.revokeObjectURL(filePreview);
@@ -441,7 +453,7 @@ export default function Productos() {
     });
 
     if (res.ok) {
-      await cargarProductos();
+      await refetchProductos();
       setEditingImage(null);
       toastSuccess('✅ Imagen eliminada correctamente');
     } else {

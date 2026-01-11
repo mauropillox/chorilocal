@@ -14,7 +14,7 @@ export default function Ofertas() {
   const { user } = useAuth();
   // Vendedor and oficina users can only view offers, not edit
   const isReadOnly = user?.rol === 'vendedor' || user?.rol === 'oficina';
-  const { data: ofertas = [] } = useQuery({
+  const { data: ofertas = [], refetch: refetchOfertas } = useQuery({
     queryKey: CACHE_KEYS.ofertas,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`);
@@ -91,7 +91,7 @@ export default function Ofertas() {
       if (res.ok) {
         toast(editando ? 'Oferta actualizada' : 'Oferta creada', 'success');
         resetForm();
-        cargarDatos();
+        refetchOfertas();
       } else {
         const errorData = await res.json().catch(() => ({}));
         logger.error('Error response:', errorData);
@@ -130,7 +130,7 @@ export default function Ofertas() {
 
       if (res.ok) {
         toast('Oferta eliminada', 'success');
-        cargarDatos();
+        refetchOfertas();
       } else {
         toast('Error al eliminar oferta', 'error');
       }
@@ -156,7 +156,7 @@ export default function Ofertas() {
         } else {
           toast(oferta.activa ? 'Oferta desactivada' : 'Oferta activada', 'success');
         }
-        cargarDatos();
+        refetchOfertas();
       } else {
         toast('Error al cambiar estado', 'error');
       }
