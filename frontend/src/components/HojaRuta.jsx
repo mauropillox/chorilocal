@@ -57,7 +57,7 @@ export default function HojaRuta() {
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`);
             if (res.ok) {
-                toastSuccess('🗺️ Hoja de ruta cargada correctamente');
+                toastSuccess('🗺️ Hoja de ruta cargada');
                 return data || [];
             }
             return [];
@@ -68,6 +68,7 @@ export default function HojaRuta() {
         queryKey: CACHE_KEYS.clientes,
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+            // No toast - clientes are secondary data for HojaRuta
             return res.ok ? (Array.isArray(data) ? data : (data.data || [])) : [];
         },
         staleTime: 1000 * 60 * 5,

@@ -13,7 +13,7 @@ export default function Templates() {
     queryKey: CACHE_KEYS.templates,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/templates`);
-      if (res.ok) toastSuccess('📋 Plantillas cargadas correctamente');
+      if (res.ok) toastSuccess('📋 Plantillas cargadas');
       return res.ok ? (data || []) : [];
     },
     staleTime: 1000 * 60 * 5,
@@ -22,6 +22,7 @@ export default function Templates() {
     queryKey: CACHE_KEYS.clientes,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
+      // No toast - clientes are secondary data for Templates
       return res.ok ? (Array.isArray(data) ? data : (data.data || [])) : [];
     },
     staleTime: 1000 * 60 * 5,

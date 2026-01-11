@@ -18,7 +18,7 @@ export default function Ofertas() {
     queryKey: CACHE_KEYS.ofertas,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/ofertas`);
-      if (res.ok) toastSuccess('⭐ Ofertas cargadas correctamente');
+      if (res.ok) toastSuccess('💰 Ofertas cargadas');
       return res.ok ? (data || []) : [];
     },
     staleTime: 1000 * 60 * 5,
@@ -27,6 +27,7 @@ export default function Ofertas() {
     queryKey: CACHE_KEYS.productos,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+      // No toast here - productos are secondary data for this tab
       return res.ok ? (Array.isArray(data) ? data : []) : [];
     },
     staleTime: 1000 * 60 * 5,

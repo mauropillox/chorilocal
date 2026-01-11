@@ -13,7 +13,7 @@ export default function Categorias() {
       try {
         const res = await authFetch(`${import.meta.env.VITE_API_URL}/categorias`);
         const data = await res.json();
-        if (res.ok) toastSuccess('🏷️ Categorías cargadas correctamente');
+        if (res.ok) toastSuccess('🏷️ Categorías cargadas');
         return res.ok ? (data || []) : [];
       } catch (e) {
         return [];
