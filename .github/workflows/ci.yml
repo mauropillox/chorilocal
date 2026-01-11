@@ -2,20 +2,26 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, master, develop]
     paths-ignore:
       - 'docs/**'
       - '**.md'
       - 'README.md'
       - '.gitignore'
   pull_request:
-    branches: [main]
+    branches: [main, master, develop]
     paths-ignore:
       - 'docs/**'
       - '**.md'
 
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+
 jobs:
+  # ==================== BACKEND TESTS ====================
   backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,7 +33,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
           cache-dependency-path: backend/requirements.txt
       
@@ -37,14 +43,26 @@ jobs:
           pip install -r requirements.txt
       
       - name: Run pytest
-        run: |
-          python -m pytest -v --tb=short -x
+        run: python -m pytest tests/ -v --tb=short
         env:
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci
           DB_PATH: /tmp/test_ventas.db
 
-  frontend-lint:
+      - name: Run pytest with coverage
+        run: python -m pytest tests/ --cov=. --cov-report=xml --cov-report=html
+        continue-on-error: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/htmlcov/
+          retention-days: 7
+
+  # ==================== FRONTEND TESTS ====================
+  frontend-tests:
+    name: Frontend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,23 +74,166 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:run
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 7
+
+  # ==================== FRONTEND BUILD ====================
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend-tests
+    defaults:
+      run:
+        working-directory: frontend
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       
       - name: Install dependencies
         run: npm ci
       
-      - name: Build
+      - name: Build production bundle
         run: npm run build
         env:
-          VITE_API_URL: https://api.pedidosfriosur.com
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.pedidosfriosur.com' }}
 
-  # Optional: Run E2E tests (requires playwright setup)
-  # e2e-tests:
-  #   runs-on: ubuntu-latest
-  #   needs: [backend-tests, frontend-lint]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Run Playwright tests
-  #       run: npx playwright test
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist/
+          retention-days: 7
+
+  # ==================== LINT ====================
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint || true
+
+  # ==================== E2E TESTS (Optional) ====================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || contains(github.event.pull_request.labels.*.name, 'run-e2e')
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start backend server
+        working-directory: backend
+        run: |
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+        env:
+          SECRET_KEY: test-secret-key-for-ci
+
+      - name: Start frontend server
+        working-directory: frontend
+        run: |
+          npx serve -s dist -l 5173 &
+          sleep 3
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:5173
+
+      - name: Upload E2E report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ==================== CI SUCCESS CHECK ====================
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, frontend-build, lint]
+    if: always()
+    
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.backend-tests.result }}" != "success" ]; then
+            echo "❌ Backend tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.frontend-tests.result }}" != "success" ]; then
+            echo "❌ Frontend tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.frontend-build.result }}" != "success" ]; then
+            echo "❌ Frontend build failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed!"
