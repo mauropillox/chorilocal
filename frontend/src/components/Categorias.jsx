@@ -1,12 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authFetch } from '../authFetch';
 import { toastSuccess, toastError } from '../toast';
+import { CACHE_KEYS } from '../utils/queryClient';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
 export default function Categorias() {
-  const [categorias, setCategorias] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: categorias = [] } = useQuery({
+    queryKey: CACHE_KEYS.categorias,
+    queryFn: async () => {
+      try {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/categorias`);
+        const data = await res.json();
+        return res.ok ? (data || []) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [nombre, setNombre] = useState('');
