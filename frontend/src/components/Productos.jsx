@@ -791,7 +791,7 @@ export default function Productos() {
         <div className="panel">
           {vistaStock ? (
             /* VISTA GESTOR DE STOCK */
-            loading ? (
+            productsLoading ? (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>📦 Gestor de Stock</h3>
@@ -1041,7 +1041,7 @@ export default function Productos() {
                 <input type="number" placeholder="Precio max" value={precioMax} onChange={e => setPrecioMax(e.target.value)} className="text-sm p-2 border rounded" />
               </div>
 
-              {loading ? (
+              {productsLoading ? (
                 <ProductListSkeleton count={5} />
               ) : productosFiltrados.length === 0 && !busqueda && !showAll ? (
                 <div className="empty-state">

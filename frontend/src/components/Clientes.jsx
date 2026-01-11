@@ -372,7 +372,7 @@ export default function Clientes() {
             </div>
           )}
 
-          {loading ? (
+          {clientesLoading ? (
             <div className="space-y-3">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="card-item">
@@ -466,7 +466,7 @@ export default function Clientes() {
             </div>
           )}
 
-          {!clienteDetalle && !loading && (
+          {!clienteDetalle && !clientesLoading && (
             <div className="empty-state mt-4">
               <div className="empty-state-icon">👤</div>
               <div className="empty-state-text">Selecciona un cliente para ver detalles</div>
