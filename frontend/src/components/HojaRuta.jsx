@@ -56,7 +56,11 @@ export default function HojaRuta() {
         queryKey: CACHE_KEYS.pedidos,
         queryFn: async () => {
             const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`);
-            return res.ok ? (data || []) : [];
+            if (res.ok) {
+                toastSuccess('🗺️ Hoja de ruta cargada correctamente');
+                return data || [];
+            }
+            return [];
         },
         staleTime: 1000 * 60 * 5,
     });

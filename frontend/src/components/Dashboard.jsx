@@ -18,7 +18,9 @@ export default function Dashboard() {
     queryFn: async () => {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/dashboard/metrics`);
       if (!res.ok) throw new Error('Failed to fetch metrics');
-      return res.json();
+      const data = await res.json();
+      toastSuccess('📊 Dashboard cargado');
+      return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
