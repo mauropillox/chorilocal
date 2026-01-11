@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchConToken } from "../auth";
+import { toastSuccess, toastError } from '../toast';
 import HelpBanner from './HelpBanner';
 import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../utils/logger';
@@ -30,6 +31,7 @@ export default function AdminPanel() {
           rolesIniciales[u.username] = u.rol;
         });
         setRolesEdit(rolesIniciales);
+        toastSuccess('👤 Usuarios y roles cargados correctamente');
       } else {
         logger.error("Error al obtener usuarios");
       }

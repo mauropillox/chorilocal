@@ -73,6 +73,8 @@ export default function Pedidos() {
       } catch (e) {
         logger.error('Error cargando ofertas:', e);
       }
+
+      toastSuccess('📦 Clientes, productos y ofertas cargados correctamente');
     })();
 
     // Restore draft from localStorage

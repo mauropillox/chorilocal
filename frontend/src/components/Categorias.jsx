@@ -33,6 +33,7 @@ export default function Categorias() {
       if (res.ok) {
         const data = await res.json();
         setCategorias(data);
+        toastSuccess('📂 Categorías cargadas correctamente');
       }
     } catch (e) {
       toastError('Error al cargar categorías');

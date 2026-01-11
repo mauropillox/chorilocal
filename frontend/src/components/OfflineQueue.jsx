@@ -11,6 +11,7 @@ export default function OfflineQueue() {
         try {
             const all = await sync.getAll();
             setItems(all);
+            toastSuccess('📡 Cola offline cargada correctamente');
         } catch (e) { logger.error('OfflineQueue load error:', e); }
     };
 

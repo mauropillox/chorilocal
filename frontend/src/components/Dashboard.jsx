@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authFetch from '../authFetch';
+import { toastSuccess } from '../toast';
 import { DashboardSkeleton } from './Skeleton';
 import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
@@ -100,6 +101,7 @@ export default function Dashboard() {
       setEstadisticasUsuarios(statsData);
       setPedidosAntiguos(antiguosData);
       setLoading(false);
+      toastSuccess('📊 Dashboard actualizado correctamente');
     } catch (error) {
       logger.error('Error cargando dashboard:', error);
       setLoading(false);

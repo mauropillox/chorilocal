@@ -156,6 +156,7 @@ export default function HojaRuta() {
                 const reps = [...new Set(pedidosData.map(p => p.repartidor).filter(Boolean))];
                 setRepartidores(reps.map(r => ({ nombre: r, id: null })));
             }
+            toastSuccess('🗺️ Hoja de ruta cargada correctamente');
         } catch (e) {
             logger.error('Error cargando datos:', e);
             setError('Error de conexión. Por favor, intentá de nuevo.');
