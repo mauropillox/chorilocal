@@ -185,14 +185,15 @@ async function authFetchJson(input, init = {}, options = {}) {
   if (contentType.includes('application/json')) {
     const data = await res.json();
 
-    // Validate response with Zod if enabled (default: true for GET requests)
-    const shouldValidate = options.validate !== false && (init.method || 'GET').toUpperCase() === 'GET';
-    if (shouldValidate && res.ok && data) {
-      const validation = validateResponse(input, data, { strict: false, silent: options.silent });
-      if (!validation.success && !options.silent) {
-        logger.warn(`[Zod] API response validation warning for ${input}`);
-      }
-    }
+    // Zod validation disabled - causing too many false positives with production data
+    // TODO: Re-enable when backend returns consistent data structures
+    // const shouldValidate = options.validate !== false && (init.method || 'GET').toUpperCase() === 'GET';
+    // if (shouldValidate && res.ok && data) {
+    //   const validation = validateResponse(input, data, { strict: false, silent: options.silent });
+    //   if (!validation.success && !options.silent) {
+    //     logger.warn(`[Zod] API response validation warning for ${input}`);
+    //   }
+    // }
 
     return { res, data };
   }
