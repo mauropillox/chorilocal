@@ -28,8 +28,8 @@ export default function Reportes() {
       return;
     }
 
-    // Build header row with Spanish column names
-    const headerRow = columnConfig.map(col => col.label).join(',');
+    // Build header row with Spanish column names (usando ; como separador para Excel)
+    const headerRow = columnConfig.map(col => col.label).join(';');
 
     // Build data rows
     const dataRows = data.map(row => {
@@ -51,13 +51,13 @@ export default function Reportes() {
         // Convert to string and handle empty values
         const strVal = val != null ? String(val) : '';
 
-        // Escape values with commas, quotes, or newlines
-        if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
+        // Escape values with semicolons, quotes, or newlines
+        if (strVal.includes(';') || strVal.includes('"') || strVal.includes('\n')) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
 
         return strVal;
-      }).join(',');
+      }).join(';');
     }).join('\n');
 
     const csvContent = `${headerRow}\n${dataRows}`;
@@ -75,11 +75,11 @@ export default function Reportes() {
     if (!reporteVentas?.top_productos) return;
     exportToCSV(
       reporteVentas.top_productos,
-      'ventas_top_productos',
+      'reporte_ventas',
       [
-        { key: 'nombre', label: 'Producto' },
-        { key: 'cantidad_vendida', label: 'Cantidad Vendida' },
-        { key: 'total_vendido', label: 'Total Vendido ($)', format: (v) => v.toFixed(2) }
+        { key: 'nombre', label: 'nombre' },
+        { key: 'cantidad_vendida', label: 'cantidad_vendida' },
+        { key: 'total_vendido', label: 'total_vendido', format: (v) => v.toFixed(2) }
       ]
     );
   };
@@ -94,7 +94,7 @@ export default function Reportes() {
         { key: 'stock', label: 'Stock Actual' },
         { key: 'stock_minimo', label: 'Stock Mínimo' },
         { key: 'precio', label: 'Precio ($)', format: (v) => v.toFixed(2) },
-        { label: 'Valor Total ($)', getValue: (row) => (row.stock * row.precio).toFixed(2) }
+        { label: 'Valor Total ($)', getValue: (row) => ((row.stock || 0) * (row.precio || 0)).toFixed(2) }
       ]
     );
   };
@@ -103,14 +103,13 @@ export default function Reportes() {
     if (!reporteClientes?.clientes) return;
     exportToCSV(
       reporteClientes.clientes,
-      'clientes_completo',
+      'reporte_clientes',
       [
-        { key: 'nombre', label: 'Cliente' },
-        { key: 'telefono', label: 'Teléfono', format: (v) => v || 'Sin teléfono' },
-        { key: 'direccion', label: 'Dirección', format: (v) => v || 'Sin dirección' },
-        { key: 'total_pedidos', label: 'Total Pedidos' },
-        { key: 'total_gastado', label: 'Total Gastado ($)', format: (v) => (v || 0).toFixed(2) },
-        { key: 'ultimo_pedido', label: 'Último Pedido', format: (v) => v || 'Nunca' }
+        { key: 'nombre', label: 'nombre' },
+        { key: 'telefono', label: 'telefono' },
+        { key: 'direccion', label: 'direccion' },
+        { key: 'total_pedidos', label: 'total_pedidos' },
+        { key: 'total_gastado', label: 'total_gastado', format: (v) => (v || 0).toFixed(2) }
       ]
     );
   };
@@ -372,7 +371,10 @@ export default function Reportes() {
           <div className="panel">
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">📦 Reporte de Inventario</h3>
-              <button onClick={exportInventario} className="btn-export">📥 Exportar CSV</button>
+              <div className="flex gap-2">
+                <button onClick={cargarReporteInventario} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={exportInventario} className="btn-export">📥 Exportar CSV</button>
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -472,7 +474,10 @@ export default function Reportes() {
           <div className="panel">
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">👥 Reporte de Clientes</h3>
-              <button onClick={exportClientes} className="btn-export">📥 Exportar CSV</button>
+              <div className="flex gap-2">
+                <button onClick={cargarReporteClientes} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={exportClientes} className="btn-export">📥 Exportar CSV</button>
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -670,7 +675,10 @@ export default function Reportes() {
           <div className="panel">
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">⚡ Reporte de Rendimiento</h3>
-              <button onClick={exportRendimiento} className="btn-export">📥 Exportar CSV</button>
+              <div className="flex gap-2">
+                <button onClick={cargarReporteRendimiento} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={exportRendimiento} className="btn-export">📥 Exportar CSV</button>
+              </div>
             </div>
           </div>
           {/* Métricas */}
@@ -748,7 +756,10 @@ export default function Reportes() {
           <div className="panel">
             <div className="flex gap-4 items-center justify-between flex-wrap">
               <h3 className="font-semibold">📈 Reporte Comparativo</h3>
-              <button onClick={exportComparativo} className="btn-export">📥 Exportar CSV</button>
+              <div className="flex gap-2">
+                <button onClick={cargarReporteComparativo} className="btn-primary">🔄 Actualizar</button>
+                <button onClick={exportComparativo} className="btn-export">📥 Exportar CSV</button>
+              </div>
             </div>
           </div>
           {/* Este mes vs anterior */}
