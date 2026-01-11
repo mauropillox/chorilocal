@@ -7,7 +7,7 @@ import HelpBanner from './HelpBanner';
 import { logger } from '../utils/logger';
 
 export default function Pedidos() {
-  const { data: clientes = [], isLoading: clientesLoading } = useQuery({
+  const { data: clientes = [], isLoading: clientesLoading, refetch: refetchClientes } = useQuery({
     queryKey: CACHE_KEYS.clientes,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`);
@@ -16,7 +16,7 @@ export default function Pedidos() {
     },
     staleTime: 1000 * 60 * 5,
   });
-  const { data: productos = [], isLoading: productosLoading } = useQuery({
+  const { data: productos = [], isLoading: productosLoading, refetch: refetchProductos } = useQuery({
     queryKey: CACHE_KEYS.productos,
     queryFn: async () => {
       const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
