@@ -150,72 +150,78 @@ def vendedor_token(client):
 @pytest.fixture
 def test_pedido(client, auth_headers):
     """Create a test pedido for use in tests"""
-    # Create cliente first
-    cliente_response = client.post("/clientes", headers=auth_headers, json={
-        "nombre": "Cliente Test Pedido"
-    })
-    cliente_id = cliente_response.json()["id"]
+    import db
     
-    # Create producto
-    producto_response = client.post("/productos", headers=auth_headers, json={
-        "nombre": "Producto Test",
-        "precio": 100.0,
-        "stock": 100
-    })
-    producto_id = producto_response.json()["id"]
+    # Create cliente and producto directly in DB
+    con = db.conectar()
+    cur = con.cursor()
     
-    # Create pedido
-    response = client.post("/pedidos", headers=auth_headers, json={
-        "cliente": {
-            "id": cliente_id,
-            "nombre": "Cliente Test Pedido"
-        },
-        "productos": [
-            {
-                "id": producto_id,
-                "nombre": "Producto Test",
-                "precio": 100.0,
-                "cantidad": 1,
-                "tipo": "unidad"
-            }
-        ]
-    })
-    return response.json()
+    # Create test cliente
+    cur.execute("INSERT INTO clientes (nombre) VALUES (?)", ("Cliente Test Pedido",))
+    cliente_id = cur.lastrowid
+    
+    # Create test producto
+    cur.execute("""
+        INSERT INTO productos (nombre, precio, stock) 
+        VALUES (?, ?, ?)
+    """, ("Producto Test", 100.0, 100))
+    producto_id = cur.lastrowid
+    
+    # Create test pedido
+    cur.execute("""
+        INSERT INTO pedidos (cliente_id, estado, creado_por)
+        VALUES (?, ?, ?)
+    """, (cliente_id, "pendiente", "testadmin"))
+    pedido_id = cur.lastrowid
+    
+    # Add item to pedido
+    cur.execute("""
+        INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario)
+        VALUES (?, ?, ?, ?)
+    """, (pedido_id, producto_id, 1, 100.0))
+    
+    con.commit()
+    con.close()
+    
+    return {"id": pedido_id, "cliente_id": cliente_id, "producto_id": producto_id}
 
 @pytest.fixture
 def test_pedidos_batch(client, auth_headers):
     """Create multiple test pedidos for use in tests"""
+    import db
+    
+    con = db.conectar()
+    cur = con.cursor()
     pedidos = []
+    
     for i in range(3):
-        # Create cliente
-        cliente_response = client.post("/clientes", headers=auth_headers, json={
-            "nombre": f"Cliente Batch {i}"
-        })
-        cliente_id = cliente_response.json()["id"]
+        # Create test cliente
+        cur.execute("INSERT INTO clientes (nombre) VALUES (?)", (f"Cliente Batch {i}",))
+        cliente_id = cur.lastrowid
         
-        # Create producto
-        producto_response = client.post("/productos", headers=auth_headers, json={
-            "nombre": f"Producto Batch {i}",
-            "precio": 100.0 + i,
-            "stock": 100
-        })
-        producto_id = producto_response.json()["id"]
+        # Create test producto
+        cur.execute("""
+            INSERT INTO productos (nombre, precio, stock)
+            VALUES (?, ?, ?)
+        """, (f"Producto Batch {i}", 100.0 + i, 100))
+        producto_id = cur.lastrowid
         
-        # Create pedido
-        response = client.post("/pedidos", headers=auth_headers, json={
-            "cliente": {
-                "id": cliente_id,
-                "nombre": f"Cliente Batch {i}"
-            },
-            "productos": [
-                {
-                    "id": producto_id,
-                    "nombre": f"Producto Batch {i}",
-                    "precio": 100.0 + i,
-                    "cantidad": 1,
-                    "tipo": "unidad"
-                }
-            ]
-        })
-        pedidos.append(response.json())
+        # Create test pedido
+        cur.execute("""
+            INSERT INTO pedidos (cliente_id, estado, creado_por)
+            VALUES (?, ?, ?)
+        """, (cliente_id, "pendiente", "testadmin"))
+        pedido_id = cur.lastrowid
+        
+        # Add item to pedido
+        cur.execute("""
+            INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario)
+            VALUES (?, ?, ?, ?)
+        """, (pedido_id, producto_id, 1, 100.0 + i))
+        
+        pedidos.append({"id": pedido_id, "cliente_id": cliente_id, "producto_id": producto_id})
+    
+    con.commit()
+    con.close()
+    
     return pedidos
