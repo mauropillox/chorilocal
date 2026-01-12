@@ -286,7 +286,8 @@ export default function Productos() {
 
   // Abrir modal de edición completa
   const abrirEdicionProducto = (producto) => {
-    setEditForm({
+    console.log('abrirEdicionProducto llamado con:', producto);
+    const newEditForm = {
       nombre: producto.nombre || '',
       precio: String(producto.precio || ''),
       stock: String(producto.stock || '0'),
@@ -294,7 +295,10 @@ export default function Productos() {
       stock_tipo: producto.stock_tipo || 'unidad',
       categoria_id: producto.categoria_id || '',
       imagen_url: producto.imagen_url || ''
-    });
+    };
+    console.log('setEditForm:', newEditForm);
+    setEditForm(newEditForm);
+    console.log('setEditingProducto:', producto);
     setEditingProducto(producto);
   };
 
@@ -1188,11 +1192,11 @@ export default function Productos() {
                           <div className="flex gap-1" style={{ flexShrink: 0 }}>
                             <button
                               type="button"
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 e.preventDefault();
                                 console.log('Click editar producto:', p.id, p.nombre);
-                                abrirEdicionProducto(p); 
+                                abrirEdicionProducto(p);
                               }}
                               className="btn-ghost"
                               style={{ padding: '6px 10px', minHeight: 'auto' }}
@@ -1202,11 +1206,11 @@ export default function Productos() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 e.preventDefault();
                                 console.log('Click eliminar producto:', p.id, p.nombre);
-                                setConfirmDelete(p); 
+                                setConfirmDelete(p);
                               }}
                               className="btn-ghost"
                               style={{ padding: '6px 10px', minHeight: 'auto', color: 'var(--color-danger, #ef4444)' }}
@@ -1355,8 +1359,8 @@ export default function Productos() {
       {/* Modal de edición completa de producto */}
       {
         editingProducto && (
-          <div className="modal-overlay" onClick={() => !savingEdit && setEditingProducto(null)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <div className="modal-backdrop" onClick={() => !savingEdit && setEditingProducto(null)}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
               <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
                 ✏️ Editar Producto
               </h3>
