@@ -146,3 +146,76 @@ def vendedor_token(client):
     })
     assert response.status_code == 200
     return response.json()["access_token"]
+
+@pytest.fixture
+def test_pedido(client, auth_headers):
+    """Create a test pedido for use in tests"""
+    # Create cliente first
+    cliente_response = client.post("/clientes", headers=auth_headers, json={
+        "nombre": "Cliente Test Pedido"
+    })
+    cliente_id = cliente_response.json()["id"]
+    
+    # Create producto
+    producto_response = client.post("/productos", headers=auth_headers, json={
+        "nombre": "Producto Test",
+        "precio": 100.0,
+        "stock": 100
+    })
+    producto_id = producto_response.json()["id"]
+    
+    # Create pedido
+    response = client.post("/pedidos", headers=auth_headers, json={
+        "cliente": {
+            "id": cliente_id,
+            "nombre": "Cliente Test Pedido"
+        },
+        "productos": [
+            {
+                "id": producto_id,
+                "nombre": "Producto Test",
+                "precio": 100.0,
+                "cantidad": 1,
+                "tipo": "unidad"
+            }
+        ]
+    })
+    return response.json()
+
+@pytest.fixture
+def test_pedidos_batch(client, auth_headers):
+    """Create multiple test pedidos for use in tests"""
+    pedidos = []
+    for i in range(3):
+        # Create cliente
+        cliente_response = client.post("/clientes", headers=auth_headers, json={
+            "nombre": f"Cliente Batch {i}"
+        })
+        cliente_id = cliente_response.json()["id"]
+        
+        # Create producto
+        producto_response = client.post("/productos", headers=auth_headers, json={
+            "nombre": f"Producto Batch {i}",
+            "precio": 100.0 + i,
+            "stock": 100
+        })
+        producto_id = producto_response.json()["id"]
+        
+        # Create pedido
+        response = client.post("/pedidos", headers=auth_headers, json={
+            "cliente": {
+                "id": cliente_id,
+                "nombre": f"Cliente Batch {i}"
+            },
+            "productos": [
+                {
+                    "id": producto_id,
+                    "nombre": f"Producto Batch {i}",
+                    "precio": 100.0 + i,
+                    "cantidad": 1,
+                    "tipo": "unidad"
+                }
+            ]
+        })
+        pedidos.append(response.json())
+    return pedidos
