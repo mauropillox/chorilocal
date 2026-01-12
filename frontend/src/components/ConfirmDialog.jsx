@@ -1,7 +1,19 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-export default function ConfirmDialog({ open, title, message, onConfirm, onCancel, onClose }) {
-  // Support both onCancel and onClose for backwards compatibility
+export default function ConfirmDialog({ 
+  open, 
+  isOpen, // Support both open and isOpen
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  onClose,
+  confirmText = 'Confirmar',
+  cancelText = 'Cancelar',
+  variant = 'default' // 'default' or 'danger'
+}) {
+  // Support both open and isOpen, and both onCancel and onClose
+  const isVisible = open ?? isOpen;
   const handleCancel = onCancel || onClose;
   const cancelRef = useRef(null);
   const confirmRef = useRef(null);
@@ -9,7 +21,7 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
 
   // Focus trap implementation
   const handleKeyDown = useCallback((e) => {
-    if (!open) return;
+    if (!isVisible) return;
 
     if (e.key === 'Escape') {
       handleCancel?.();
@@ -34,18 +46,18 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
         firstElement.focus();
       }
     }
-  }, [open, handleCancel]);
+  }, [isVisible, handleCancel]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
 
     // Focus first button when opening
-    if (open && cancelRef.current) {
+    if (isVisible && cancelRef.current) {
       cancelRef.current.focus();
     }
 
     // Prevent body scroll when modal is open
-    if (open) {
+    if (isVisible) {
       document.body.style.overflow = 'hidden';
     }
 
@@ -53,9 +65,9 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [open, handleKeyDown]);
+  }, [isVisible, handleKeyDown]);
 
-  if (!open) return null;
+  if (!isVisible) return null;
 
   return (
     <div
@@ -80,15 +92,15 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
             className="btn-secondary"
             aria-label="Cancelar acción"
           >
-            Cancelar
+            {cancelText}
           </button>
           <button
             ref={confirmRef}
             onClick={onConfirm}
-            className="btn-danger"
+            className={variant === 'danger' ? 'btn-danger' : 'btn-primary'}
             aria-label="Confirmar acción"
           >
-            Confirmar
+            {confirmText}
           </button>
         </div>
       </div>

@@ -286,7 +286,6 @@ export default function Productos() {
 
   // Abrir modal de edición completa
   const abrirEdicionProducto = (producto) => {
-    console.log('abrirEdicionProducto llamado con:', producto);
     const newEditForm = {
       nombre: producto.nombre || '',
       precio: String(producto.precio || ''),
@@ -296,9 +295,7 @@ export default function Productos() {
       categoria_id: producto.categoria_id || '',
       imagen_url: producto.imagen_url || ''
     };
-    console.log('setEditForm:', newEditForm);
     setEditForm(newEditForm);
-    console.log('setEditingProducto:', producto);
     setEditingProducto(producto);
   };
 
@@ -1195,7 +1192,6 @@ export default function Productos() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                console.log('Click editar producto:', p.id, p.nombre);
                                 abrirEdicionProducto(p);
                               }}
                               className="btn-ghost"
@@ -1209,7 +1205,6 @@ export default function Productos() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                console.log('Click eliminar producto:', p.id, p.nombre);
                                 setConfirmDelete(p);
                               }}
                               className="btn-ghost"
