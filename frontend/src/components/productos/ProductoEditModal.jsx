@@ -81,8 +81,8 @@ export function ProductoEditModal({
     if (!producto) return null;
 
     return (
-        <div className="modal-overlay" onClick={() => !saving && onClose?.()}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-backdrop" onClick={() => !saving && onClose?.()}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
                 <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
                     ✏️ Editar Producto
                 </h3>

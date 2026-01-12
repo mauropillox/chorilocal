@@ -358,13 +358,13 @@ export default function Usuarios() {
       {/* Modal Reset Password */}
       {resetPassword.open && (
         <div
-          className="modal-overlay"
+          className="modal-backdrop"
           onClick={() => setResetPassword({ open: false, user: null, newPassword: '' })}
           role="dialog"
           aria-modal="true"
           aria-labelledby="reset-password-title"
         >
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <h2 id="reset-password-title" style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}>
               🔑 Resetear Contraseña
             </h2>

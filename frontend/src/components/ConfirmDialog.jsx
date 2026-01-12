@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-export default function ConfirmDialog({ 
-  open, 
+export default function ConfirmDialog({
+  open,
   isOpen, // Support both open and isOpen
-  title, 
-  message, 
-  onConfirm, 
-  onCancel, 
+  title,
+  message,
+  onConfirm,
+  onCancel,
   onClose,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
