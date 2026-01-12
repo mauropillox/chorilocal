@@ -72,7 +72,7 @@ def admin_token(client):
     con.close()
     
     # Login to get token
-    response = client.post("/login", data={
+    response = client.post("/api/login", data={
         "username": "testadmin",
         "password": "testpass123"
     })
@@ -98,7 +98,7 @@ def user_token(client):
     con.close()
     
     # Login to get token
-    response = client.post("/login", data={
+    response = client.post("/api/login", data={
         "username": "testuser",
         "password": "testpass123"
     })
@@ -140,7 +140,7 @@ def vendedor_token(client):
     con.close()
     
     # Login to get token
-    response = client.post("/login", data={
+    response = client.post("/api/login", data={
         "username": "testvendedor",
         "password": "testpass123"
     })

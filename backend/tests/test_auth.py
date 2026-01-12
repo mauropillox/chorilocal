@@ -36,7 +36,7 @@ class TestAuthentication:
         con.commit()
         con.close()
         
-        response = client.post("/login", data={
+        response = client.post("/api/login", data={
             "username": "logintest",
             "password": "password123"
         })
@@ -61,7 +61,7 @@ class TestAuthentication:
         con.commit()
         con.close()
         
-        response = client.post("/login", data={
+        response = client.post("/api/login", data={
             "username": "wrongpass",
             "password": "wrongpass"
         })
@@ -125,7 +125,7 @@ class TestRateLimiting:
         # Make many rapid requests to trigger rate limit
         responses = []
         for _ in range(15):  # Login is limited to 10/minute
-            response = client.post("/login", data={
+            response = client.post("/api/login", data={
                 "username": "fake",
                 "password": "fake"
             })
