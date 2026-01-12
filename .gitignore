@@ -239,3 +239,8 @@ scripts/test/
 
 # Secrets scan artifacts
 .secrets*.txt
+.auth/
+
+# Test output files
+junit.xml
+test-results.json
