@@ -180,6 +180,7 @@ export const useDeleteProducto = () => {
         mutationFn: async (id) => {
             const res = await authFetch(`${API_URL}/productos/${id}`, {
                 method: 'DELETE',
+                headers: { 'X-Confirm-Delete': 'true' },
             });
             if (!res.ok) {
                 const error = await res.json().catch(() => ({}));
@@ -365,6 +366,7 @@ export const useDeleteCliente = () => {
         mutationFn: async (id) => {
             const res = await authFetch(`${API_URL}/clientes/${id}`, {
                 method: 'DELETE',
+                headers: { 'X-Confirm-Delete': 'true' },
             });
             if (!res.ok) {
                 const error = await res.json().catch(() => ({}));

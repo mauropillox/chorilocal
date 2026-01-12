@@ -80,7 +80,8 @@ export default function Categorias() {
   const handleDelete = useCallback(async (id) => {
     try {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/categorias/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'X-Confirm-Delete': 'true' }
       });
       if (res.ok) {
         const data = await res.json();
