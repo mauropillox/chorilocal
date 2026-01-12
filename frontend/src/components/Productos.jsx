@@ -1187,7 +1187,7 @@ export default function Productos() {
                           {/* Botones editar y eliminar */}
                           <div className="flex gap-1" style={{ flexShrink: 0 }}>
                             <button
-                              onClick={() => abrirEdicionProducto(p)}
+                              onClick={(e) => { e.stopPropagation(); abrirEdicionProducto(p); }}
                               className="btn-ghost"
                               style={{ padding: '6px 10px', minHeight: 'auto' }}
                               title="Editar producto"
@@ -1195,7 +1195,7 @@ export default function Productos() {
                               ✏️
                             </button>
                             <button
-                              onClick={() => setConfirmDelete(p)}
+                              onClick={(e) => { e.stopPropagation(); setConfirmDelete(p); }}
                               className="btn-ghost"
                               style={{ padding: '6px 10px', minHeight: 'auto', color: 'var(--color-danger, #ef4444)' }}
                               title="Eliminar producto"
