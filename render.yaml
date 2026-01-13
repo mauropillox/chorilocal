@@ -11,9 +11,9 @@ services:
       name: database
       mountPath: /data
       sizeGB: 1
-    # CRITICAL: Disable Render's auto-deploy to save $30/month
-    # Deploy manually only when needed (or via GitHub Actions webhook)
-    autoDeploy: false
+    # Auto-deploy only on main/master branch (not every commit)
+    autoDeploy: true
+    branch: main
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -35,9 +35,9 @@ services:
     plan: hobby
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
-    # CRITICAL: Disable Render's auto-deploy to save money
-    # Deploy manually only when needed
-    autoDeploy: false
+    # Auto-deploy only on main/master branch
+    autoDeploy: true
+    branch: main
     envVars:
       - key: VITE_API_URL
         value: https://api.pedidosfriosur.com/api
