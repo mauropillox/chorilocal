@@ -1,0 +1,80 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Corre cada 12 horas (00:00 y 12:00 UTC)
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  backup:
+    name: Backup Database
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create backup timestamp
+        id: timestamp
+        run: echo "date=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+      
+      - name: Download database from Render
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          # Crear directorio para backup
+          mkdir -p backups
+          
+          echo "🔐 Iniciando backup automático..."
+          
+          # Paso 1: Crear backup en el servidor
+          echo "📦 Creando backup en servidor..."
+          BACKUP_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $BACKUP_TOKEN" \
+            "$BACKEND_URL/api/admin/backup-now")
+          
+          echo "Response: $BACKUP_RESPONSE"
+          
+          # Extraer filename del response JSON
+          BACKUP_FILENAME=$(echo $BACKUP_RESPONSE | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+          
+          if [ -z "$BACKUP_FILENAME" ]; then
+            echo "❌ Error: No se pudo crear backup"
+            echo "Failed to create backup at $(date)" > backups/backup_failed.log
+            exit 0
+          fi
+          
+          echo "✅ Backup creado: $BACKUP_FILENAME"
+          
+          # Paso 2: Descargar el backup
+          echo "⬇️ Descargando backup..."
+          curl -L -H "Authorization: Bearer $BACKUP_TOKEN" \
+               -o "backups/$BACKUP_FILENAME" \
+               "$BACKEND_URL/api/admin/backups/$BACKUP_FILENAME"
+          
+          # Verificar que el archivo existe y tiene contenido
+          if [ -f "backups/$BACKUP_FILENAME" ] && [ -s "backups/$BACKUP_FILENAME" ]; then
+            echo "✅ Backup descargado exitosamente"
+            ls -lh backups/
+          else
+            echo "⚠️ Backup falló o está vacío"
+            echo "Backup failed at $(date)" > backups/backup_failed.log
+          fi
+      
+      - name: Upload backup to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ steps.timestamp.outputs.date }}
+          path: backups/
+          retention-days: 90
+          compression-level: 9
+      
+      - name: Backup summary
+        run: |
+          echo "## 📦 Database Backup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** ${{ steps.timestamp.outputs.date }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Completed" >> $GITHUB_STEP_SUMMARY
+          echo "**Retention:** 90 days in GitHub Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files backed up:" >> $GITHUB_STEP_SUMMARY
+          ls -lh backups/ >> $GITHUB_STEP_SUMMARY || echo "No files found"
