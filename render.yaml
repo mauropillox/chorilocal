@@ -6,17 +6,14 @@ services:
     plan: hobby
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    # CRITICAL: Disable Render's CI to save money
-    # We use GitHub Actions instead (2000 free minutes vs Render's 500)
-    autoDeploy: true
-    buildFilter:
-      paths:
-        - backend/**
-      ignoredPaths:
-        - docs/**
-        - frontend/**
-        - README.md
-        - "*.md"
+    # Persistent disk for database storage
+    disk:
+      name: database
+      mountPath: /data
+      sizeGB: 1
+    # CRITICAL: Disable Render's auto-deploy to save $30/month
+    # Deploy manually only when needed (or via GitHub Actions webhook)
+    autoDeploy: false
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -38,16 +35,9 @@ services:
     plan: hobby
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
-    # CRITICAL: Disable Render's CI to save money
-    autoDeploy: true
-    buildFilter:
-      paths:
-        - frontend/**
-      ignoredPaths:
-        - docs/**
-        - backend/**
-        - README.md
-        - "*.md"
+    # CRITICAL: Disable Render's auto-deploy to save money
+    # Deploy manually only when needed
+    autoDeploy: false
     envVars:
       - key: VITE_API_URL
         value: https://api.pedidosfriosur.com/api
