@@ -3,7 +3,7 @@ services:
     name: chorilocal-backend
     env: docker
     region: oregon
-    plan: starter
+    plan: hobby
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     # CRITICAL: Disable Render's CI to save money
@@ -35,7 +35,7 @@ services:
     name: chorilocal-frontend
     env: docker
     region: oregon
-    plan: starter
+    plan: hobby
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     # CRITICAL: Disable Render's CI to save money

@@ -321,45 +321,46 @@ async def startup_event():
         else:
             logger.info("No pending migrations")
         
-        # Step 3: Verify database indexes (SQLite only)
+        # Step 3: Verify database indexes (SQLite only, lightweight check)
         if not db.USE_POSTGRES:
             with db.get_db_connection() as conn:
                 cursor = conn.cursor()
-                # Critical indexes for query performance
-                expected_indexes = {
-                    'idx_pedidos_cliente': 'CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id)',
-                    'idx_pedidos_estado': 'CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado)',
-                    'idx_pedidos_fecha': 'CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha)',
-                    'idx_productos_categoria': 'CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id)',
-                    'idx_pedido_productos_pedido': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_pedido ON pedido_productos(pedido_id)',
-                    'idx_pedido_productos_producto': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_producto ON pedido_productos(producto_id)',
-                }
+                # Only check if indexes exist, don't recreate on every startup
+                cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+                index_count = cursor.fetchone()[0]
                 
-                # Check existing indexes
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
-                existing = {row[0] for row in cursor.fetchall()}
-                
-                # Create missing indexes
-                created = []
-                for idx_name, create_sql in expected_indexes.items():
-                    if idx_name not in existing:
+                # Only create indexes if missing (first-time setup)
+                if index_count < 6:
+                    expected_indexes = {
+                        'idx_pedidos_cliente': 'CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id)',
+                        'idx_pedidos_estado': 'CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado)',
+                        'idx_pedidos_fecha': 'CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha)',
+                        'idx_productos_categoria': 'CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id)',
+                        'idx_pedido_productos_pedido': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_pedido ON pedido_productos(pedido_id)',
+                        'idx_pedido_productos_producto': 'CREATE INDEX IF NOT EXISTS idx_pedido_productos_producto ON pedido_productos(producto_id)',
+                    }
+                    
+                    created = []
+                    for idx_name, create_sql in expected_indexes.items():
                         try:
                             cursor.execute(create_sql)
                             created.append(idx_name)
                         except Exception as e:
                             logger.warning(f"Index creation failed for {idx_name}: {str(e)}")
-                
-                if created:
-                    conn.commit()
-                    logger.info(f"Indexes created: {created}")
+                    
+                    if created:
+                        conn.commit()
+                        logger.info(f"Indexes created: {created}")
                 else:
-                    logger.info(f"Indexes verified: {len(existing)} existing")
+                    logger.info(f"Indexes verified: {index_count} existing")
         
-        # Step 4: Start backup scheduler (production only, non-blocking)
-        if ENVIRONMENT == "production":
-            from backup_scheduler import start_backup_scheduler
-            start_backup_scheduler()
-            logger.info("Backup scheduler started")
+        # Step 4: Start backup scheduler (DISABLED to save resources)
+        # Backups can be done manually or via external cron job
+        # if ENVIRONMENT == "production":
+        #     from backup_scheduler import start_backup_scheduler
+        #     start_backup_scheduler()
+        #     logger.info("Backup scheduler started")
+        logger.info("Backup scheduler: DISABLED (use manual backups or external cron)")
         
         logger.info("Application initialization completed successfully")
         
