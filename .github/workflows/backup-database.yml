@@ -1,10 +1,10 @@
 name: Database Backup
 
 on:
-  schedule:
-    # Corre cada 12 horas (00:00 y 12:00 UTC)
-    - cron: '0 0,12 * * *'
-  workflow_dispatch: # Permite ejecutar manualmente
+  # schedule:
+  #   # Corre cada 12 horas (00:00 y 12:00 UTC)
+  #   - cron: '0 0,12 * * *'
+  workflow_dispatch: # Solo manual - evita errores sin secrets configurados
 
 jobs:
   backup:
@@ -18,18 +18,33 @@ jobs:
       
       - name: Download database from Render
         env:
-          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           # Crear directorio para backup
           mkdir -p backups
           
+          echo "🔐 Logging in to get admin token..."
+          
+          # Login to get token
+          TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=$ADMIN_USERNAME&password=$ADMIN_PASSWORD" \
+            "$BACKEND_URL/api/login" | jq -r '.access_token')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Error: Failed to login"
+            exit 1
+          fi
+          
+          echo "✅ Login successful"
           echo "🔐 Iniciando backup automático..."
           
           # Paso 1: Crear backup en el servidor
           echo "📦 Creando backup en servidor..."
           BACKUP_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer $BACKUP_TOKEN" \
+            -H "Authorization: Bearer $TOKEN" \
             "$BACKEND_URL/api/admin/backup-now")
           
           echo "Response: $BACKUP_RESPONSE"
@@ -47,7 +62,7 @@ jobs:
           
           # Paso 2: Descargar el backup
           echo "⬇️ Descargando backup..."
-          curl -L -H "Authorization: Bearer $BACKUP_TOKEN" \
+          curl -L -H "Authorization: Bearer $TOKEN" \
                -o "backups/$BACKUP_FILENAME" \
                "$BACKEND_URL/api/admin/backups/$BACKUP_FILENAME"
           
