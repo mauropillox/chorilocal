@@ -13,6 +13,10 @@ import os
 import time
 import traceback
 
+# --- Sentry Error Tracking ---
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+
 import db
 import models
 from deps import limiter
@@ -49,6 +53,18 @@ app = FastAPI(
     redoc_url="/redoc" if ENVIRONMENT != "production" else None,
     openapi_url="/openapi.json" if ENVIRONMENT != "production" else None
 )
+
+# --- Sentry Initialization ---
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN and ENVIRONMENT == "production":
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=0.1,
+        environment=ENVIRONMENT,
+        release=API_VERSION
+    )
+    logger.info("Sentry error tracking initialized")
 
 # --- Rate Limiting ---
 app.state.limiter = limiter
