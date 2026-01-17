@@ -20,6 +20,12 @@ async def crear_producto(request: Request, producto: models.ProductoCreate, curr
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="El producto ya existe")
         
+        # Validate categoria_id if provided
+        if producto.categoria_id is not None:
+            cursor.execute("SELECT id FROM categorias WHERE id = ?", (producto.categoria_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Categoría con ID {producto.categoria_id} no existe")
+        
         cursor.execute(
             """INSERT INTO productos (nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo) 
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -74,6 +80,12 @@ async def actualizar_producto(producto_id: int, producto: models.ProductoCreate,
         cursor.execute("SELECT id FROM productos WHERE id = ?", (producto_id,))
         if cursor.fetchone() is None:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+        # Validate categoria_id if provided
+        if producto.categoria_id is not None:
+            cursor.execute("SELECT id FROM categorias WHERE id = ?", (producto.categoria_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Categoría con ID {producto.categoria_id} no existe")
 
         cursor.execute(
             """UPDATE productos SET nombre = ?, precio = ?, categoria_id = ?, imagen_url = ?, 
