@@ -34,6 +34,24 @@ def temp_db():
     db.DB_PATH = temp_path
     db.ensure_schema()
     
+    # Apply ofertas migration (add new columns for flexible offer types)
+    import sqlite3
+    con = sqlite3.connect(temp_path)
+    cur = con.cursor()
+    try:
+        cur.execute("ALTER TABLE ofertas ADD COLUMN tipo TEXT DEFAULT 'porcentaje'")
+        cur.execute("ALTER TABLE ofertas ADD COLUMN reglas_json TEXT")
+        cur.execute("ALTER TABLE ofertas ADD COLUMN compra_cantidad INTEGER")
+        cur.execute("ALTER TABLE ofertas ADD COLUMN paga_cantidad INTEGER")
+        cur.execute("ALTER TABLE ofertas ADD COLUMN regalo_producto_id INTEGER")
+        cur.execute("ALTER TABLE ofertas ADD COLUMN regalo_cantidad INTEGER DEFAULT 1")
+        con.commit()
+    except sqlite3.OperationalError:
+        # Columns might already exist
+        pass
+    finally:
+        con.close()
+    
     yield temp_path
     
     # Cleanup

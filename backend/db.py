@@ -2892,7 +2892,19 @@ def get_ofertas(solo_activas: bool = True) -> List[Dict[str, Any]]:
             params.extend([now_str, now_str])
         query += " ORDER BY hasta DESC"
         _execute(cur, query, tuple(params))
-        return _fetchall_as_dict(cur)
+        ofertas = _fetchall_as_dict(cur)
+        
+        # Parse reglas_json for each offer
+        for oferta in ofertas:
+            if oferta.get('reglas_json'):
+                try:
+                    oferta['reglas'] = json.loads(oferta['reglas_json'])
+                except:
+                    oferta['reglas'] = None
+            if 'reglas_json' in oferta:
+                del oferta['reglas_json']
+        
+        return ofertas
 
 
 def get_oferta_by_id(oferta_id: int) -> Optional[Dict[str, Any]]:
@@ -2903,6 +2915,15 @@ def get_oferta_by_id(oferta_id: int) -> Optional[Dict[str, Any]]:
         oferta = _fetchone_as_dict(cur)
         if not oferta:
             return None
+        
+        # Parse reglas_json
+        if oferta.get('reglas_json'):
+            try:
+                oferta['reglas'] = json.loads(oferta['reglas_json'])
+            except:
+                oferta['reglas'] = None
+        if 'reglas_json' in oferta:
+            del oferta['reglas_json']
         
         _execute(
             cur,
@@ -2919,16 +2940,30 @@ def get_oferta_by_id(oferta_id: int) -> Optional[Dict[str, Any]]:
 def add_oferta(oferta: Dict[str, Any]) -> Dict[str, Any]:
     """Crea una nueva oferta."""
     with get_db_transaction() as (con, cur):
+        # Serialize reglas to JSON if present
+        reglas_json = None
+        if oferta.get('reglas'):
+            reglas_json = json.dumps(oferta['reglas'])
+        
         _execute(
             cur,
-            "INSERT INTO ofertas (titulo, descripcion, desde, hasta, activa, descuento_porcentaje) VALUES (?, ?, ?, ?, ?, ?)",
+            """INSERT INTO ofertas 
+               (titulo, descripcion, desde, hasta, activa, tipo, descuento_porcentaje, 
+                reglas_json, compra_cantidad, paga_cantidad, regalo_producto_id, regalo_cantidad) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 oferta['titulo'],
                 oferta.get('descripcion'),
                 oferta['desde'],
                 oferta['hasta'],
                 1 if oferta.get('activa', True) else 0,
-                float(oferta.get('descuento_porcentaje', 10.0))
+                oferta.get('tipo', 'porcentaje'),
+                float(oferta.get('descuento_porcentaje')) if oferta.get('descuento_porcentaje') else None,
+                reglas_json,
+                oferta.get('compra_cantidad'),
+                oferta.get('paga_cantidad'),
+                oferta.get('regalo_producto_id'),
+                oferta.get('regalo_cantidad')
             )
         )
         oferta_id = cur.lastrowid
@@ -2947,16 +2982,31 @@ def add_oferta(oferta: Dict[str, Any]) -> Dict[str, Any]:
 def update_oferta(oferta_id: int, oferta: Dict[str, Any]) -> Dict[str, Any]:
     """Actualiza una oferta."""
     with get_db_transaction() as (con, cur):
+        # Serialize reglas to JSON if present
+        reglas_json = None
+        if oferta.get('reglas'):
+            reglas_json = json.dumps(oferta['reglas'])
+        
         _execute(
             cur,
-            "UPDATE ofertas SET titulo = ?, descripcion = ?, desde = ?, hasta = ?, activa = ?, descuento_porcentaje = ? WHERE id = ?",
+            """UPDATE ofertas 
+               SET titulo = ?, descripcion = ?, desde = ?, hasta = ?, activa = ?, 
+                   tipo = ?, descuento_porcentaje = ?, reglas_json = ?, 
+                   compra_cantidad = ?, paga_cantidad = ?, regalo_producto_id = ?, regalo_cantidad = ? 
+               WHERE id = ?""",
             (
                 oferta['titulo'],
                 oferta.get('descripcion'),
                 oferta['desde'],
                 oferta['hasta'],
                 1 if oferta.get('activa', True) else 0,
-                float(oferta.get('descuento_porcentaje', 10.0)),
+                oferta.get('tipo', 'porcentaje'),
+                float(oferta.get('descuento_porcentaje')) if oferta.get('descuento_porcentaje') else None,
+                reglas_json,
+                oferta.get('compra_cantidad'),
+                oferta.get('paga_cantidad'),
+                oferta.get('regalo_producto_id'),
+                oferta.get('regalo_cantidad'),
                 oferta_id
             )
         )
