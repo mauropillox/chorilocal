@@ -2,10 +2,10 @@
 
 ## Testing Summary
 **Date**: 2026-01-21  
-**Total Tests**: 32  
-**Passed**: 32 ✅  
+**Total Tests**: 36  
+**Passed**: 36 ✅  
 **Failed**: 0  
-**Coverage**: Backend + Validation + User Roles + Error Cases
+**Coverage**: Backend + Validation + All 3 User Roles + Error Cases
 
 ---
 
@@ -29,15 +29,19 @@
 - ✅ Create gift with purchase offer
 - ✅ Validation: Missing regalo_producto_id fails with 400
 
-### 5. TestOfertasCRUD (8 tests)
+### 5. TestOfertasCRUD (12 tests) ⭐ **Enhanced with all 3 roles**
 - ✅ List ofertas (admin sees all, users see active only)
 - ✅ List ofertas activas (public endpoint)
 - ✅ Update oferta
 - ✅ Delete oferta
-- ✅ **Non-admin CANNOT create** → 403 ✅
-- ✅ **Non-admin CANNOT update** → 403 ✅
-- ✅ **Non-admin CANNOT delete** → 403 ✅
-- ✅ **Non-admin CAN view** → 200 ✅
+- ✅ **Vendedor CANNOT create** → 403 ✅
+- ✅ **Oficina CANNOT create** → 403 ✅
+- ✅ **Vendedor CANNOT update** → 403 ✅
+- ✅ **Oficina CANNOT update** → 403 ✅
+- ✅ **Vendedor CANNOT delete** → 403 ✅
+- ✅ **Oficina CANNOT delete** → 403 ✅
+- ✅ **Vendedor CAN view** → 200 ✅
+- ✅ **Oficina CAN view** → 200 ✅
 
 ### 6. TestOfertasValidation (10 tests)
 - ✅ Missing required fields → 422
@@ -62,19 +66,22 @@
 
 ## User Role Testing Summary
 
-| Action | Admin | User | Unauthenticated | Result |
-|--------|-------|------|----------------|--------|
-| **Create Offer** | ✅ 200 | ❌ 403 | ❌ 401 | **PASS** |
-| **Update Offer** | ✅ 200 | ❌ 403 | ❌ 401 | **PASS** |
-| **Delete Offer** | ✅ 204 | ❌ 403 | ❌ 401 | **PASS** |
-| **View Offer** | ✅ 200 | ✅ 200 | ❌ 401 | **PASS** |
-| **List Ofertas** | ✅ 200 (all) | ✅ 200 (active) | ❌ 401 | **PASS** |
-| **List Activas** | ✅ 200 | ✅ 200 | ✅ 200 | **PASS** |
+| Action | Admin | Vendedor | Oficina | Unauthenticated | Result |
+|--------|-------|----------|---------|----------------|--------|
+| **Create Offer** | ✅ 200 | ❌ 403 | ❌ 403 | ❌ 401 | **PASS** |
+| **Update Offer** | ✅ 200 | ❌ 403 | ❌ 403 | ❌ 401 | **PASS** |
+| **Delete Offer** | ✅ 204 | ❌ 403 | ❌ 403 | ❌ 401 | **PASS** |
+| **View Offer** | ✅ 200 | ✅ 200 | ✅ 200 | ❌ 401 | **PASS** |
+| **List Ofertas** | ✅ 200 (all) | ✅ 200 (active) | ✅ 200 (active) | ❌ 401 | **PASS** |
+| **List Activas** | ✅ 200 | ✅ 200 | ✅ 200 | ✅ 200 | **PASS** |
 
 ### ✅ Authorization Enforcement VERIFIED:
-- Only ADMIN users can create/update/delete offers
-- Regular users can VIEW offers (read-only)
+- **Only ADMIN users** can create/update/delete offers
+- **Vendedor users** can VIEW offers (read-only) but CANNOT modify
+- **Oficina users** can VIEW offers (read-only) but CANNOT modify
 - Public endpoint /ofertas/activas works without auth
+
+**All 3 system roles tested: admin, vendedor, oficina** ⭐
 
 ---
 
@@ -183,7 +190,7 @@ cd /home/mauro/dev/chorizaurio/backend
 pytest tests/test_ofertas_comprehensive.py -v
 
 # Result:
-# 32 passed in 26.95s ✅
+# 36 passed in 31.11s ✅
 ```
 
 ---
@@ -195,9 +202,9 @@ pytest tests/test_ofertas_comprehensive.py -v
 - [x] Models & validation
 - [x] API endpoints
 - [x] Admin-only enforcement
-- [x] Comprehensive tests (32 tests)
+- [x] Comprehensive tests (36 tests)
 - [x] Error handling
-- [x] User role validation
+- [x] **All 3 role validation (admin, vendedor, oficina)** ⭐
 
 ### Frontend 🔜 PENDING
 - [ ] UI for creating offers
@@ -218,8 +225,9 @@ pytest tests/test_ofertas_comprehensive.py -v
 ## Conclusion
 
 ✅ **Backend implementation COMPLETE and FULLY TESTED**  
-✅ **32/32 tests passing**  
+✅ **36/36 tests passing**  
 ✅ **Admin-only enforcement VERIFIED**  
+✅ **All 3 system roles tested (admin, vendedor, oficina)** ⭐  
 ✅ **Comprehensive error cases COVERED**  
 ✅ **All 4 offer types working correctly**  
 
