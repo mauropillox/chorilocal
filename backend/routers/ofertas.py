@@ -141,7 +141,7 @@ async def crear_oferta(
     """Create new offer - Admin only"""
     # Validate offer type requirements
     if oferta.tipo == TipoOferta.PORCENTAJE:
-        if not oferta.descuento_porcentaje:
+        if oferta.descuento_porcentaje is None:
             raise HTTPException(status_code=400, detail="descuento_porcentaje requerido para tipo porcentaje")
     
     elif oferta.tipo == TipoOferta.PRECIO_CANTIDAD:
@@ -178,7 +178,7 @@ async def actualizar_oferta(
     """Update offer - Admin only"""
     # Same validations as create
     if oferta.tipo == TipoOferta.PORCENTAJE:
-        if not oferta.descuento_porcentaje:
+        if oferta.descuento_porcentaje is None:
             raise HTTPException(status_code=400, detail="descuento_porcentaje requerido para tipo porcentaje")
     
     elif oferta.tipo == TipoOferta.PRECIO_CANTIDAD:

@@ -4,6 +4,7 @@ import sqlite3
 import logging
 import base64
 import gzip
+import json
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 from contextlib import contextmanager
