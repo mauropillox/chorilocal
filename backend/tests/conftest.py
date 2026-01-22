@@ -99,25 +99,25 @@ def admin_token(client):
 
 @pytest.fixture
 def user_token(client):
-    """Get a regular user token for authenticated requests"""
+    """Get a vendedor user token for authenticated requests"""
     import db
     from passlib.context import CryptContext
     
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
-    # Create regular user directly in DB
+    # Create vendedor user directly in DB
     con = db.conectar()
     cur = con.cursor()
     cur.execute("""
         INSERT OR IGNORE INTO usuarios (username, password_hash, rol, activo)
         VALUES (?, ?, ?, ?)
-    """, ("testuser", pwd_context.hash("testpass123"), "user", 1))
+    """, ("testvendedor", pwd_context.hash("testpass123"), "vendedor", 1))
     con.commit()
     con.close()
     
     # Login to get token
     response = client.post("/api/login", data={
-        "username": "testuser",
+        "username": "testvendedor",
         "password": "testpass123"
     })
     assert response.status_code == 200
@@ -133,34 +133,50 @@ def auth_headers(admin_token):
 
 @pytest.fixture
 def user_headers(user_token):
-    """Return authorization headers for regular user with X-Confirm-Delete"""
+    """Return authorization headers for vendedor user with X-Confirm-Delete"""
     return {
         "Authorization": f"Bearer {user_token}",
         "X-Confirm-Delete": "true"
     }
 
 @pytest.fixture
-def vendedor_token(client):
-    """Get a vendedor (non-admin) user token for authenticated requests"""
+def vendedor_headers(user_token):
+    """Alias for user_headers - vendedor role headers"""
+    return {
+        "Authorization": f"Bearer {user_token}",
+        "X-Confirm-Delete": "true"
+    }
+
+@pytest.fixture
+def oficina_token(client):
+    """Get an oficina user token for authenticated requests"""
     import db
     from passlib.context import CryptContext
     
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
-    # Create vendedor user directly in DB
+    # Create oficina user directly in DB
     con = db.conectar()
     cur = con.cursor()
     cur.execute("""
         INSERT OR IGNORE INTO usuarios (username, password_hash, rol, activo)
         VALUES (?, ?, ?, ?)
-    """, ("testvendedor", pwd_context.hash("testpass123"), "user", 1))
+    """, ("testoficina", pwd_context.hash("testpass123"), "oficina", 1))
     con.commit()
     con.close()
     
     # Login to get token
     response = client.post("/api/login", data={
-        "username": "testvendedor",
+        "username": "testoficina",
         "password": "testpass123"
     })
     assert response.status_code == 200
     return response.json()["access_token"]
+
+@pytest.fixture
+def oficina_headers(oficina_token):
+    """Return authorization headers for oficina user with X-Confirm-Delete"""
+    return {
+        "Authorization": f"Bearer {oficina_token}",
+        "X-Confirm-Delete": "true"
+    }
