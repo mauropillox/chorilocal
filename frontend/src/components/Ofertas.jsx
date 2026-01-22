@@ -80,7 +80,7 @@ export default function Ofertas() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validaciones por tipo de oferta
     if (!titulo || !desde || !hasta) {
       toastError('Complete título y fechas');
@@ -153,8 +153,8 @@ export default function Ofertas() {
 
       const method = editando ? 'PUT' : 'POST';
 
-      const res = await authFetch(url, { 
-        method, 
+      const res = await authFetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -385,7 +385,7 @@ export default function Ofertas() {
           </div>
 
           {/* Campos condicionales según tipo */}
-          
+
           {/* TIPO: PORCENTAJE */}
           {tipoOferta === 'porcentaje' && (
             <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
@@ -418,7 +418,7 @@ export default function Ofertas() {
               <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
                 Define cuánto cuesta cada unidad según la cantidad comprada. Ejemplo: 1 unidad = $100, 5 unidades = $90 c/u, 10 unidades = $80 c/u
               </small>
-              
+
               {reglas.map((regla, idx) => (
                 <div key={idx} className="flex gap-2 mb-2 items-center">
                   <div className="flex-1">
@@ -464,7 +464,7 @@ export default function Ofertas() {
                   </button>
                 </div>
               ))}
-              
+
               <button
                 type="button"
                 onClick={() => setReglas([...reglas, { cantidad: (reglas[reglas.length - 1]?.cantidad || 0) + 5, precio_unitario: 100 }])}
@@ -484,7 +484,7 @@ export default function Ofertas() {
               <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
                 Ejemplos: 3x2 (llevá 3, pagá 2), 2x1 (llevá 2, pagá 1), 5x4 (llevá 5, pagá 4)
               </small>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a llevar</label>
@@ -530,7 +530,7 @@ export default function Ofertas() {
               <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
                 Al comprar el producto principal, se regala automáticamente el producto seleccionado
               </small>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Producto a regalar</label>
@@ -834,7 +834,7 @@ export default function Ofertas() {
                           } : {}}>
                           {vencida ? '⏰ Vencida' : vigente && oferta.activa ? '✨ ACTIVA' : oferta.activa ? '⏳ Programada' : '⏸ Inactiva'}
                         </span>
-                        
+
                         {/* Mostrar tipo y valor de oferta */}
                         {oferta.tipo === 'porcentaje' && (
                           <span className="font-bold" style={{
@@ -845,7 +845,7 @@ export default function Ofertas() {
                             {oferta.descuento_porcentaje || 0}% OFF
                           </span>
                         )}
-                        
+
                         {oferta.tipo === 'precio_cantidad' && (
                           <span className="font-bold" style={{
                             fontSize: oferta.activa && vigente ? '1.2rem' : '1rem',
@@ -854,7 +854,7 @@ export default function Ofertas() {
                             💰 Precio×Cant
                           </span>
                         )}
-                        
+
                         {oferta.tipo === 'nxm' && (
                           <span className="font-bold" style={{
                             fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
@@ -863,7 +863,7 @@ export default function Ofertas() {
                             {oferta.compra_cantidad}x{oferta.paga_cantidad}
                           </span>
                         )}
-                        
+
                         {oferta.tipo === 'regalo' && (
                           <span className="font-bold" style={{
                             fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
@@ -892,13 +892,13 @@ export default function Ofertas() {
                         {oferta.tipo === 'nxm' && '🎯 Oferta NxM'}
                         {oferta.tipo === 'regalo' && '🎁 Regalo con Compra'}
                       </div>
-                      
+
                       {oferta.tipo === 'porcentaje' && (
                         <div className="text-sm" style={{ color: 'var(--color-text)' }}>
                           <strong>{oferta.descuento_porcentaje}%</strong> de descuento sobre el precio original
                         </div>
                       )}
-                      
+
                       {oferta.tipo === 'precio_cantidad' && oferta.reglas && (
                         <div className="text-sm space-y-1" style={{ color: 'var(--color-text)' }}>
                           {oferta.reglas.map((regla, idx) => (
@@ -908,13 +908,13 @@ export default function Ofertas() {
                           ))}
                         </div>
                       )}
-                      
+
                       {oferta.tipo === 'nxm' && (
                         <div className="text-sm" style={{ color: 'var(--color-text)' }}>
                           Llevá <strong>{oferta.compra_cantidad}</strong> unidades, pagá solo <strong>{oferta.paga_cantidad}</strong>
                         </div>
                       )}
-                      
+
                       {oferta.tipo === 'regalo' && (
                         <div className="text-sm" style={{ color: 'var(--color-text)' }}>
                           Regalo: <strong>{oferta.regalo_cantidad}×</strong> {productos.find(p => p.id === oferta.regalo_producto_id)?.nombre || 'Producto'}
