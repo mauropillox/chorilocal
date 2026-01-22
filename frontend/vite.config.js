@@ -35,9 +35,12 @@ export default defineConfig({
     // Code-splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-select'],
-          'utils': ['./src/utils.js', './src/auth.js']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-select')) {
+              return 'vendor';
+            }
+          }
         }
       },
       // Handle optional dependencies
@@ -81,4 +84,4 @@ export default defineConfig({
     // }
   }
 });
-// Cache bust: 1768146159
+// Cache bust: 1737509998
