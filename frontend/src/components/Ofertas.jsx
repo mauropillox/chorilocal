@@ -39,7 +39,13 @@ export default function Ofertas() {
   const [descripcion, setDescripcion] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [tipoOferta, setTipoOferta] = useState('porcentaje'); // porcentaje, precio_cantidad, nxm, regalo
   const [descuento, setDescuento] = useState(10);
+  const [reglas, setReglas] = useState([{ cantidad: 1, precio_unitario: 100 }]); // Para precio_cantidad
+  const [compraCantidad, setCompraCantidad] = useState(3); // Para nxm
+  const [pagaCantidad, setPagaCantidad] = useState(2); // Para nxm
+  const [regaloProductoId, setRegaloProductoId] = useState(''); // Para regalo
+  const [regaloCantidad, setRegaloCantidad] = useState(1); // Para regalo
   const [productosSeleccionados, setProductosSeleccionados] = useState([]); // [{producto_id, cantidad}]
 
   // Buscador de productos
@@ -60,7 +66,13 @@ export default function Ofertas() {
     setDescripcion('');
     setDesde('');
     setHasta('');
+    setTipoOferta('porcentaje');
     setDescuento(10);
+    setReglas([{ cantidad: 1, precio_unitario: 100 }]);
+    setCompraCantidad(3);
+    setPagaCantidad(2);
+    setRegaloProductoId('');
+    setRegaloCantidad(1);
     setProductosSeleccionados([]);
     setBusqueda('');
     setEditando(null);
@@ -68,19 +80,72 @@ export default function Ofertas() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!titulo || !desde || !hasta || productosSeleccionados.length === 0) {
-      toastError('Complete todos los campos y seleccione al menos un producto');
+    
+    // Validaciones por tipo de oferta
+    if (!titulo || !desde || !hasta) {
+      toastError('Complete título y fechas');
       return;
     }
 
+    // Validar según tipo
+    if (tipoOferta === 'porcentaje') {
+      if (!descuento || descuento <= 0 || descuento > 100) {
+        toastError('El descuento debe estar entre 1 y 100%');
+        return;
+      }
+    } else if (tipoOferta === 'precio_cantidad') {
+      if (!reglas || reglas.length === 0) {
+        toastError('Debe agregar al menos una regla de precio por cantidad');
+        return;
+      }
+      // Validar que todas las reglas tengan valores válidos
+      const reglasInvalidas = reglas.some(r => !r.cantidad || r.cantidad <= 0 || !r.precio_unitario || r.precio_unitario <= 0);
+      if (reglasInvalidas) {
+        toastError('Todas las reglas deben tener cantidad y precio válidos');
+        return;
+      }
+    } else if (tipoOferta === 'nxm') {
+      if (!compraCantidad || compraCantidad < 2 || !pagaCantidad || pagaCantidad < 1) {
+        toastError('Cantidades inválidas para oferta NxM (ej: 3x2)');
+        return;
+      }
+      if (pagaCantidad >= compraCantidad) {
+        toastError('La cantidad a pagar debe ser menor que la cantidad a comprar');
+        return;
+      }
+    } else if (tipoOferta === 'regalo') {
+      if (!regaloProductoId) {
+        toastError('Debe seleccionar un producto de regalo');
+        return;
+      }
+      if (!regaloCantidad || regaloCantidad <= 0) {
+        toastError('La cantidad de regalo debe ser mayor a 0');
+        return;
+      }
+    }
+
     try {
-      const formData = new FormData();
-      formData.append('titulo', titulo);
-      formData.append('descripcion', descripcion || '');
-      formData.append('desde', desde);
-      formData.append('hasta', hasta);
-      formData.append('descuento_porcentaje', descuento);
-      formData.append('productos', JSON.stringify(productosSeleccionados));
+      const payload = {
+        titulo,
+        descripcion: descripcion || '',
+        desde,
+        hasta,
+        tipo: tipoOferta,
+        productos: productosSeleccionados
+      };
+
+      // Agregar campos específicos por tipo
+      if (tipoOferta === 'porcentaje') {
+        payload.descuento_porcentaje = descuento;
+      } else if (tipoOferta === 'precio_cantidad') {
+        payload.reglas = reglas;
+      } else if (tipoOferta === 'nxm') {
+        payload.compra_cantidad = compraCantidad;
+        payload.paga_cantidad = pagaCantidad;
+      } else if (tipoOferta === 'regalo') {
+        payload.regalo_producto_id = parseInt(regaloProductoId);
+        payload.regalo_cantidad = regaloCantidad;
+      }
 
       const url = editando
         ? `${import.meta.env.VITE_API_URL}/ofertas/${editando}`
@@ -88,7 +153,11 @@ export default function Ofertas() {
 
       const method = editando ? 'PUT' : 'POST';
 
-      const res = await authFetch(url, { method, body: formData });
+      const res = await authFetch(url, { 
+        method, 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
       if (res.ok) {
         toastSuccess(editando ? '✅ Oferta actualizada' : '✅ Oferta creada');
@@ -110,8 +179,14 @@ export default function Ofertas() {
     setTitulo(oferta.titulo);
     setDescripcion(oferta.descripcion || '');
     setDesde(oferta.desde);
-    setDescuento(oferta.descuento_porcentaje || 10);
     setHasta(oferta.hasta);
+    setTipoOferta(oferta.tipo || 'porcentaje');
+    setDescuento(oferta.descuento_porcentaje || 10);
+    setReglas(oferta.reglas || [{ cantidad: 1, precio_unitario: 100 }]);
+    setCompraCantidad(oferta.compra_cantidad || 3);
+    setPagaCantidad(oferta.paga_cantidad || 2);
+    setRegaloProductoId(oferta.regalo_producto_id || '');
+    setRegaloCantidad(oferta.regalo_cantidad || 1);
     setProductosSeleccionados(oferta.productos || []);
     setBusqueda('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -226,7 +301,11 @@ export default function Ofertas() {
             { label: 'Asignar productos', text: 'Buscá y seleccioná los productos que quieras incluir en la oferta. Podés agregar o quitar productos en cualquier momento.' },
             { label: 'Vigencia', text: 'Las ofertas se activan/desactivan automáticamente según las fechas configuradas. Las activas se muestran con un contador en el menú.' },
             { label: 'Editar o eliminar', text: 'Clickeá cualquier oferta de la lista para editarla. Podés eliminar ofertas que ya no necesites.' },
-            { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' }
+            { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' },
+            { label: '📊 Tipo: Porcentaje', text: 'Descuento estándar (ej: 15% de descuento). Se aplica sobre el precio original.' },
+            { label: '💰 Tipo: Precio × Cantidad', text: 'Define tus propios precios por cantidad (ej: 1-4 unidades a $100, 5-9 a $90, 10+ a $80). Flexibilidad total!' },
+            { label: '🎯 Tipo: NxM (3x2, 2x1)', text: 'Ofertas tipo "Llevá 3 pagá 2" o "2x1". Define cuántas unidades se llevan y cuántas se pagan.' },
+            { label: '🎁 Tipo: Regalo', text: 'Al comprar X cantidad del producto principal, se regala otro producto. Ideal para promociones especiales.' }
           ]}
         />
       )}
@@ -287,25 +366,202 @@ export default function Ofertas() {
             </div>
           </div>
 
+          {/* Selector de tipo de oferta */}
           <div className="form-group mb-4">
             <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>
-              💰 Descuento (%) *
+              🎯 Tipo de Oferta *
             </label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              step="1"
-              value={descuento}
-              onChange={(e) => setDescuento(Number(e.target.value))}
+            <select
+              value={tipoOferta}
+              onChange={(e) => setTipoOferta(e.target.value)}
               required
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
-              placeholder="Ej: 15"
-            />
-            <small style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
-              Este descuento se aplicará automáticamente a los productos en pedidos
-            </small>
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+            >
+              <option value="porcentaje">📊 Descuento por Porcentaje (ej: 15% off)</option>
+              <option value="precio_cantidad">💰 Precio por Cantidad (tú defines cantidad → precio)</option>
+              <option value="nxm">🎯 Oferta NxM (ej: 3x2, 2x1)</option>
+              <option value="regalo">🎁 Regalo con Compra</option>
+            </select>
           </div>
+
+          {/* Campos condicionales según tipo */}
+          
+          {/* TIPO: PORCENTAJE */}
+          {tipoOferta === 'porcentaje' && (
+            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>
+                💰 Descuento (%) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={descuento}
+                onChange={(e) => setDescuento(Number(e.target.value))}
+                required
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                placeholder="Ej: 15"
+              />
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                Este descuento se aplicará sobre el precio original del producto
+              </small>
+            </div>
+          )}
+
+          {/* TIPO: PRECIO × CANTIDAD */}
+          {tipoOferta === 'precio_cantidad' && (
+            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
+                💰 Reglas de Precio por Cantidad *
+              </label>
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
+                Define cuánto cuesta cada unidad según la cantidad comprada. Ejemplo: 1 unidad = $100, 5 unidades = $90 c/u, 10 unidades = $80 c/u
+              </small>
+              
+              {reglas.map((regla, idx) => (
+                <div key={idx} className="flex gap-2 mb-2 items-center">
+                  <div className="flex-1">
+                    <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad mínima</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={regla.cantidad}
+                      onChange={(e) => {
+                        const newReglas = [...reglas];
+                        newReglas[idx].cantidad = parseInt(e.target.value) || 1;
+                        setReglas(newReglas);
+                      }}
+                      placeholder="Ej: 5"
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Precio unitario $</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={regla.precio_unitario}
+                      onChange={(e) => {
+                        const newReglas = [...reglas];
+                        newReglas[idx].precio_unitario = parseFloat(e.target.value) || 0;
+                        setReglas(newReglas);
+                      }}
+                      placeholder="Ej: 90.00"
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReglas(reglas.filter((_, i) => i !== idx))}
+                    className="btn-danger"
+                    disabled={reglas.length === 1}
+                    style={{ marginTop: '20px', minHeight: '36px' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              
+              <button
+                type="button"
+                onClick={() => setReglas([...reglas, { cantidad: (reglas[reglas.length - 1]?.cantidad || 0) + 5, precio_unitario: 100 }])}
+                className="btn-secondary text-sm mt-2"
+              >
+                ➕ Agregar Regla
+              </button>
+            </div>
+          )}
+
+          {/* TIPO: NxM (3x2, 2x1, etc) */}
+          {tipoOferta === 'nxm' && (
+            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
+                🎯 Configuración NxM (Llevá X, Pagá Y) *
+              </label>
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
+                Ejemplos: 3x2 (llevá 3, pagá 2), 2x1 (llevá 2, pagá 1), 5x4 (llevá 5, pagá 4)
+              </small>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a llevar</label>
+                  <input
+                    type="number"
+                    min="2"
+                    step="1"
+                    value={compraCantidad}
+                    onChange={(e) => setCompraCantidad(parseInt(e.target.value) || 2)}
+                    placeholder="Ej: 3"
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a pagar</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={pagaCantidad}
+                    onChange={(e) => setPagaCantidad(parseInt(e.target.value) || 1)}
+                    placeholder="Ej: 2"
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                  />
+                </div>
+              </div>
+              <div className="mt-2 text-center" style={{ padding: '10px', background: 'var(--color-bg-accent)', borderRadius: '6px' }}>
+                <strong style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
+                  {compraCantidad}x{pagaCantidad} - Llevá {compraCantidad}, Pagá {pagaCantidad}
+                </strong>
+              </div>
+            </div>
+          )}
+
+          {/* TIPO: REGALO */}
+          {tipoOferta === 'regalo' && (
+            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
+                🎁 Producto de Regalo *
+              </label>
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
+                Al comprar el producto principal, se regala automáticamente el producto seleccionado
+              </small>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Producto a regalar</label>
+                  <select
+                    value={regaloProductoId}
+                    onChange={(e) => setRegaloProductoId(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  >
+                    <option value="">Seleccionar producto...</option>
+                    {productos.map(p => (
+                      <option key={p.id} value={p.id}>{p.nombre} - ${p.precio}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a regalar</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={regaloCantidad}
+                    onChange={(e) => setRegaloCantidad(parseInt(e.target.value) || 1)}
+                    placeholder="Ej: 1"
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Productos seleccionados - mostrar primero */}
           {productosSeleccionadosData.length > 0 && (
@@ -578,13 +834,44 @@ export default function Ofertas() {
                           } : {}}>
                           {vencida ? '⏰ Vencida' : vigente && oferta.activa ? '✨ ACTIVA' : oferta.activa ? '⏳ Programada' : '⏸ Inactiva'}
                         </span>
-                        <span className="font-bold" style={{
-                          fontSize: oferta.activa && vigente ? '1.5rem' : '1.125rem',
-                          color: oferta.activa && vigente ? '#059669' : '#14b8a6',
-                          textShadow: oferta.activa && vigente ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
-                        }}>
-                          {oferta.descuento_porcentaje || 0}% OFF
-                        </span>
+                        
+                        {/* Mostrar tipo y valor de oferta */}
+                        {oferta.tipo === 'porcentaje' && (
+                          <span className="font-bold" style={{
+                            fontSize: oferta.activa && vigente ? '1.5rem' : '1.125rem',
+                            color: oferta.activa && vigente ? '#059669' : '#14b8a6',
+                            textShadow: oferta.activa && vigente ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                          }}>
+                            {oferta.descuento_porcentaje || 0}% OFF
+                          </span>
+                        )}
+                        
+                        {oferta.tipo === 'precio_cantidad' && (
+                          <span className="font-bold" style={{
+                            fontSize: oferta.activa && vigente ? '1.2rem' : '1rem',
+                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          }}>
+                            💰 Precio×Cant
+                          </span>
+                        )}
+                        
+                        {oferta.tipo === 'nxm' && (
+                          <span className="font-bold" style={{
+                            fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
+                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          }}>
+                            {oferta.compra_cantidad}x{oferta.paga_cantidad}
+                          </span>
+                        )}
+                        
+                        {oferta.tipo === 'regalo' && (
+                          <span className="font-bold" style={{
+                            fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
+                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          }}>
+                            🎁 Regalo
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -596,6 +883,44 @@ export default function Ofertas() {
                         {oferta.descripcion}
                       </p>
                     )}
+
+                    {/* Detalles según tipo de oferta */}
+                    <div className="mb-3 p-3 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
+                      <div className="text-sm font-semibold mb-1" style={{ color: 'var(--color-primary)' }}>
+                        {oferta.tipo === 'porcentaje' && '📊 Descuento por Porcentaje'}
+                        {oferta.tipo === 'precio_cantidad' && '💰 Precio por Cantidad'}
+                        {oferta.tipo === 'nxm' && '🎯 Oferta NxM'}
+                        {oferta.tipo === 'regalo' && '🎁 Regalo con Compra'}
+                      </div>
+                      
+                      {oferta.tipo === 'porcentaje' && (
+                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
+                          <strong>{oferta.descuento_porcentaje}%</strong> de descuento sobre el precio original
+                        </div>
+                      )}
+                      
+                      {oferta.tipo === 'precio_cantidad' && oferta.reglas && (
+                        <div className="text-sm space-y-1" style={{ color: 'var(--color-text)' }}>
+                          {oferta.reglas.map((regla, idx) => (
+                            <div key={idx}>
+                              • Desde <strong>{regla.cantidad}</strong> unidades → <strong>${regla.precio_unitario}</strong> c/u
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {oferta.tipo === 'nxm' && (
+                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
+                          Llevá <strong>{oferta.compra_cantidad}</strong> unidades, pagá solo <strong>{oferta.paga_cantidad}</strong>
+                        </div>
+                      )}
+                      
+                      {oferta.tipo === 'regalo' && (
+                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
+                          Regalo: <strong>{oferta.regalo_cantidad}×</strong> {productos.find(p => p.id === oferta.regalo_producto_id)?.nombre || 'Producto'}
+                        </div>
+                      )}
+                    </div>
 
                     <div className="flex gap-4 flex-wrap mb-4 text-sm" style={{ color: '#64748b' }}>
                       <span>📅 {oferta.desde} → {oferta.hasta}</span>
