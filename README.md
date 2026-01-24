@@ -184,9 +184,67 @@ GET  /users        → Listar usuarios (admin)
 6. **Comparativo** - Tendencias mes/año
 
 ### 💰 Listas de Precios & Ofertas
+
+#### Listas de Precios
 - Múltiples listas de precios por cliente
-- Ofertas con vigencia temporal
-- Aplicación automática de descuentos
+- Precios personalizados por producto/cliente
+- Gestión vía API `/api/listas-precios`
+
+#### Sistema de Ofertas (4 Tipos)
+
+**1. Porcentaje** - Descuento porcentual
+```json
+{
+  "tipo": "porcentaje",
+  "descuento_porcentaje": 15.0,
+  "titulo": "15% OFF en todo"
+}
+```
+
+**2. Precio por Cantidad** - Precios escalonados
+```json
+{
+  "tipo": "precio_cantidad",
+  "reglas": [
+    {"cantidad": 1, "precio": 100},
+    {"cantidad": 5, "precio": 90},
+    {"cantidad": 10, "precio": 80}
+  ]
+}
+```
+
+**3. NxM** - Compra N, paga M
+```json
+{
+  "tipo": "nxm",
+  "compra_cantidad": 3,
+  "paga_cantidad": 2
+}
+```
+
+**4. Regalo** - Producto gratis con compra
+```json
+{
+  "tipo": "regalo",
+  "regalo_producto_id": 123,
+  "regalo_cantidad": 1
+}
+```
+
+**Endpoints:**
+- `GET /api/ofertas` - Listar (admin: todas, users: activas)
+- `GET /api/ofertas/activas` - Públicas (sin auth)
+- `POST /api/ofertas` - Crear (admin only)
+- `PUT /api/ofertas/{id}` - Actualizar (admin only)
+- `DELETE /api/ofertas/{id}` - Eliminar (admin only)
+
+**Validación:**
+- Porcentaje: 0-100%
+- NxM: compra ≥ 2, paga < compra
+- Fechas: desde < hasta
+- Regalo: producto_id debe existir
+
+Ver: [docs/OFERTAS_TESTING_REPORT.md](docs/OFERTAS_TESTING_REPORT.md)
 
 ### 🔧 Admin
 - Backups automáticos diarios (SQLite → backup folder)
