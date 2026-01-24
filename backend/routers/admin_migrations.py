@@ -18,7 +18,7 @@ async def migrate_ofertas_advanced_types(current_user: dict = Depends(get_admin_
     """
     try:
         import db
-        con = db.get_db()
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Check current structure
@@ -70,7 +70,7 @@ async def check_ofertas_schema(current_user: dict = Depends(get_admin_user)):
     """Check current ofertas table schema"""
     try:
         import db
-        con = db.get_db()
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         cursor.execute("PRAGMA table_info(ofertas)")
