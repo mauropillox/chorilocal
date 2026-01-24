@@ -2977,7 +2977,8 @@ def add_oferta(oferta: Dict[str, Any]) -> Dict[str, Any]:
         )
         oferta_id = cur.lastrowid
         
-        for prod in oferta.get('productos', []):
+        productos = oferta.get('productos') or []
+        for prod in productos:
             _execute(
                 cur,
                 "INSERT INTO oferta_productos (oferta_id, producto_id, cantidad) VALUES (?, ?, ?)",
