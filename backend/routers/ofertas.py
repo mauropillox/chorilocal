@@ -138,73 +138,33 @@ async def get_oferta(oferta_id: int, current_user: dict = Depends(get_current_us
 
 @router.post("/ofertas", response_model=Oferta)
 async def crear_oferta(
-    current_user: dict = Depends(get_admin_user),
-    titulo: str = Form(...),
-    desde: str = Form(...),
-    hasta: str = Form(...),
-    tipo: str = Form("porcentaje"),
-    descripcion: Optional[str] = Form(None),
-    productos: Optional[str] = Form(None),  # JSON string
-    descuento_porcentaje: Optional[float] = Form(None),
-    reglas: Optional[str] = Form(None),  # JSON string
-    compra_cantidad: Optional[int] = Form(None),
-    paga_cantidad: Optional[int] = Form(None),
-    regalo_producto_id: Optional[int] = Form(None),
-    regalo_cantidad: Optional[int] = Form(1),
+    oferta: OfertaCreate,
+    current_user: dict = Depends(get_admin_user)
 ):
-    """Create new offer - Admin only - Form-based for frontend compatibility"""
-    # Parse JSON fields
-    productos_list = []
-    if productos:
-        try:
-            productos_list = json.loads(productos)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON in productos field")
-    
-    reglas_list = None
-    if reglas:
-        try:
-            reglas_list = json.loads(reglas)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON in reglas field")
-    
+    """Create new offer - Admin only - JSON-based"""
     # Validate offer type requirements
-    if tipo == "porcentaje":
-        if descuento_porcentaje is None:
+    if oferta.tipo == "porcentaje":
+        if oferta.descuento_porcentaje is None:
             raise HTTPException(status_code=400, detail="descuento_porcentaje requerido para tipo porcentaje")
     
-    elif tipo == "precio_cantidad":
-        if not reglas_list or len(reglas_list) == 0:
+    elif oferta.tipo == "precio_cantidad":
+        if not oferta.reglas or len(oferta.reglas) == 0:
             raise HTTPException(status_code=400, detail="reglas requeridas para tipo precio_cantidad")
+        # Auto-sort reglas by cantidad
+        oferta.reglas = sorted(oferta.reglas, key=lambda x: x.cantidad)
     
-    elif tipo == "nxm":
-        if not compra_cantidad or not paga_cantidad:
+    elif oferta.tipo == "nxm":
+        if not oferta.compra_cantidad or not oferta.paga_cantidad:
             raise HTTPException(status_code=400, detail="compra_cantidad y paga_cantidad requeridos para tipo nxm")
-        if paga_cantidad >= compra_cantidad:
+        if oferta.paga_cantidad >= oferta.compra_cantidad:
             raise HTTPException(status_code=400, detail="paga_cantidad debe ser menor que compra_cantidad")
     
-    elif tipo == "regalo":
-        if not regalo_producto_id:
+    elif oferta.tipo == "regalo":
+        if not oferta.regalo_producto_id:
             raise HTTPException(status_code=400, detail="regalo_producto_id requerido para tipo regalo")
     
-    oferta_data = {
-        "titulo": titulo,
-        "descripcion": descripcion,
-        "desde": desde,
-        "hasta": hasta,
-        "activa": True,
-        "tipo": tipo,
-        "descuento_porcentaje": descuento_porcentaje,
-        "reglas": reglas_list,
-        "compra_cantidad": compra_cantidad,
-        "paga_cantidad": paga_cantidad,
-        "regalo_producto_id": regalo_producto_id,
-        "regalo_cantidad": regalo_cantidad,
-        "productos": productos_list
-    }
-    
     try:
-        result = db.add_oferta(oferta_data)
+        result = db.add_oferta(oferta.model_dump())
         return result
     except Exception as e:
         logger.error(f"Error creating oferta: {type(e).__name__}: {str(e)}")
