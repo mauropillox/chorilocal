@@ -838,38 +838,46 @@ export default function Ofertas() {
                         </span>
 
                         {/* Mostrar tipo y valor de oferta */}
+                        {/* Badge del tipo con colores distintivos */}
                         {oferta.tipo === 'porcentaje' && (
-                          <span className="font-bold" style={{
-                            fontSize: oferta.activa && vigente ? '1.5rem' : '1.125rem',
-                            color: oferta.activa && vigente ? '#059669' : '#14b8a6',
-                            textShadow: oferta.activa && vigente ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                          <span className="font-bold px-3 py-1 rounded-full" style={{
+                            fontSize: oferta.activa && vigente ? '1.1rem' : '0.95rem',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: 'white',
+                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
                           }}>
-                            {oferta.descuento_porcentaje || 0}% OFF
+                            📊 {oferta.descuento_porcentaje || 0}% OFF
                           </span>
                         )}
 
                         {oferta.tipo === 'precio_cantidad' && (
-                          <span className="font-bold" style={{
-                            fontSize: oferta.activa && vigente ? '1.2rem' : '1rem',
-                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          <span className="font-bold px-3 py-1 rounded-full" style={{
+                            fontSize: oferta.activa && vigente ? '1rem' : '0.9rem',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            color: 'white',
+                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
                           }}>
                             💰 Precio×Cant
                           </span>
                         )}
 
                         {oferta.tipo === 'nxm' && (
-                          <span className="font-bold" style={{
-                            fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
-                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          <span className="font-bold px-3 py-1 rounded-full" style={{
+                            fontSize: oferta.activa && vigente ? '1.1rem' : '0.95rem',
+                            background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                            color: 'white',
+                            boxShadow: '0 2px 8px rgba(139, 92, 246, 0.35)'
                           }}>
-                            {oferta.compra_cantidad}x{oferta.paga_cantidad}
+                            🎯 {oferta.compra_cantidad}x{oferta.paga_cantidad}
                           </span>
                         )}
 
                         {oferta.tipo === 'regalo' && (
-                          <span className="font-bold" style={{
-                            fontSize: oferta.activa && vigente ? '1.3rem' : '1rem',
-                            color: oferta.activa && vigente ? '#059669' : '#14b8a6'
+                          <span className="font-bold px-3 py-1 rounded-full" style={{
+                            fontSize: oferta.activa && vigente ? '1rem' : '0.9rem',
+                            background: 'linear-gradient(135deg, #ec4899, #db2777)',
+                            color: 'white',
+                            boxShadow: '0 2px 8px rgba(236, 72, 153, 0.35)'
                           }}>
                             🎁 Regalo
                           </span>
@@ -886,9 +894,23 @@ export default function Ofertas() {
                       </p>
                     )}
 
-                    {/* Detalles según tipo de oferta */}
-                    <div className="mb-3 p-3 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
-                      <div className="text-sm font-semibold mb-1" style={{ color: 'var(--color-primary)' }}>
+                    {/* Detalles según tipo de oferta - mejorado */}
+                    <div className="mb-3 p-3 rounded-lg" style={{ 
+                      background: oferta.tipo === 'porcentaje' ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)' :
+                                  oferta.tipo === 'precio_cantidad' ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' :
+                                  oferta.tipo === 'nxm' ? 'linear-gradient(135deg, #f5f3ff, #ede9fe)' :
+                                  'linear-gradient(135deg, #fdf2f8, #fce7f3)',
+                      border: oferta.tipo === 'porcentaje' ? '1px solid #a7f3d0' :
+                              oferta.tipo === 'precio_cantidad' ? '1px solid #fcd34d' :
+                              oferta.tipo === 'nxm' ? '1px solid #c4b5fd' :
+                              '1px solid #f9a8d4'
+                    }}>
+                      <div className="text-sm font-semibold mb-1 flex items-center gap-2" style={{ 
+                        color: oferta.tipo === 'porcentaje' ? '#047857' :
+                               oferta.tipo === 'precio_cantidad' ? '#b45309' :
+                               oferta.tipo === 'nxm' ? '#6d28d9' :
+                               '#be185d'
+                      }}>
                         {oferta.tipo === 'porcentaje' && '📊 Descuento por Porcentaje'}
                         {oferta.tipo === 'precio_cantidad' && '💰 Precio por Cantidad'}
                         {oferta.tipo === 'nxm' && '🎯 Oferta NxM'}
@@ -896,77 +918,122 @@ export default function Ofertas() {
                       </div>
 
                       {oferta.tipo === 'porcentaje' && (
-                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
-                          <strong>{oferta.descuento_porcentaje}%</strong> de descuento sobre el precio original
+                        <div className="text-sm" style={{ color: '#065f46' }}>
+                          <strong style={{ fontSize: '1.1rem' }}>{oferta.descuento_porcentaje}%</strong> de descuento sobre el precio original
                         </div>
                       )}
 
                       {oferta.tipo === 'precio_cantidad' && oferta.reglas && (
-                        <div className="text-sm space-y-1" style={{ color: 'var(--color-text)' }}>
+                        <div className="text-sm space-y-1" style={{ color: '#92400e' }}>
                           {oferta.reglas.map((regla, idx) => (
-                            <div key={idx}>
-                              • Desde <strong>{regla.cantidad}</strong> unidades → <strong>${regla.precio_unitario}</strong> c/u
+                            <div key={idx} className="flex items-center gap-1">
+                              <span style={{ color: '#d97706' }}>▸</span> 
+                              Desde <strong>{regla.cantidad}</strong> unidades → <strong style={{ color: '#b45309' }}>${regla.precio_unitario}</strong> c/u
                             </div>
                           ))}
                         </div>
                       )}
 
                       {oferta.tipo === 'nxm' && (
-                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
-                          Llevá <strong>{oferta.compra_cantidad}</strong> unidades, pagá solo <strong>{oferta.paga_cantidad}</strong>
+                        <div className="text-sm" style={{ color: '#5b21b6' }}>
+                          Llevá <strong style={{ fontSize: '1.1rem' }}>{oferta.compra_cantidad}</strong> unidades, pagá solo <strong style={{ fontSize: '1.1rem', color: '#7c3aed' }}>{oferta.paga_cantidad}</strong>
                         </div>
                       )}
 
                       {oferta.tipo === 'regalo' && (
-                        <div className="text-sm" style={{ color: 'var(--color-text)' }}>
-                          Regalo: <strong>{oferta.regalo_cantidad}×</strong> {productos.find(p => p.id === oferta.regalo_producto_id)?.nombre || 'Producto'}
+                        <div className="text-sm" style={{ color: '#9d174d' }}>
+                          Regalo: <strong style={{ fontSize: '1rem' }}>{oferta.regalo_cantidad}×</strong> <span style={{ color: '#db2777', fontWeight: '600' }}>{productos.find(p => p.id === oferta.regalo_producto_id)?.nombre || 'Producto'}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex gap-4 flex-wrap mb-4 text-sm" style={{ color: '#64748b' }}>
-                      <span>📅 {oferta.desde} → {oferta.hasta}</span>
+                    {/* Fechas formateadas bonitas */}
+                    <div className="flex gap-4 flex-wrap mb-4 text-sm items-center" style={{ color: '#64748b' }}>
+                      <span className="flex items-center gap-1">
+                        📅 <span style={{ fontWeight: '500' }}>
+                          {new Date(oferta.desde).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                        <span style={{ margin: '0 4px', color: '#94a3b8' }}>→</span>
+                        <span style={{ fontWeight: '500' }}>
+                          {new Date(oferta.hasta).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </span>
                     </div>
 
-                    {/* Productos como chips */}
+                    {/* Productos como chips - mejorado */}
                     <div className="mb-4">
-                      <p className="text-xs font-medium mb-2" style={{ color: '#64748b' }}>
-                        {productosConInfo.length} producto(s):
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {productosConInfo.map((p, i) => (
-                          <span key={i}
-                            onClick={() => navigate('/productos')}
-                            className="text-xs px-2 py-1 rounded-md cursor-pointer hover:opacity-80"
-                            style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
-                            title="Click para ver producto">
-                            {p.cantidad}× {p.nombre}
-                          </span>
-                        ))}
-                      </div>
+                      {productosConInfo.length > 0 ? (
+                        <>
+                          <p className="text-xs font-medium mb-2 flex items-center gap-1" style={{ color: '#64748b' }}>
+                            📦 <span>{productosConInfo.length} producto{productosConInfo.length !== 1 ? 's' : ''} incluido{productosConInfo.length !== 1 ? 's' : ''}</span>
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {productosConInfo.map((p, i) => (
+                              <span key={i}
+                                onClick={() => navigate('/productos')}
+                                className="text-xs px-2.5 py-1.5 rounded-lg cursor-pointer hover:scale-105 transition-transform"
+                                style={{ 
+                                  background: 'linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg))', 
+                                  color: 'var(--color-text)', 
+                                  border: '1px solid var(--color-border)',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                }}
+                                title="Click para ver producto">
+                                <span style={{ fontWeight: '600' }}>{p.cantidad}×</span> {p.nombre}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-xs px-3 py-2 rounded-lg flex items-center gap-2" 
+                          style={{ 
+                            background: 'linear-gradient(135deg, #fef3c7, #fde68a)', 
+                            color: '#92400e',
+                            border: '1px dashed #f59e0b'
+                          }}>
+                          <span>⚠️</span>
+                          <span>Oferta general - aplica a todos los productos</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Botones - solo para admin/oficina */}
+                    {/* Botones - solo para admin/oficina - mejorados */}
                     {!isReadOnly && (
                       <div className="flex gap-2 flex-wrap pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
                         <button
                           onClick={() => editarOferta(oferta)}
-                          className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+                          style={{ 
+                            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                            color: 'white',
+                            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+                          }}
                           aria-label={`Editar oferta ${oferta.titulo}`}>
-                          Editar
+                          ✏️ Editar
                         </button>
                         <button
                           onClick={() => toggleOferta(oferta)}
-                          className={oferta.activa ? "btn-warning" : "btn-success"}
-                          style={{ padding: '6px 12px', fontSize: '12px' }}>
-                          {oferta.activa ? 'Desactivar' : 'Activar'}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+                          style={{ 
+                            background: oferta.activa 
+                              ? 'linear-gradient(135deg, #f59e0b, #d97706)' 
+                              : 'linear-gradient(135deg, #10b981, #059669)',
+                            color: 'white',
+                            boxShadow: oferta.activa 
+                              ? '0 2px 4px rgba(245, 158, 11, 0.3)'
+                              : '0 2px 4px rgba(16, 185, 129, 0.3)'
+                          }}>
+                          {oferta.activa ? '⏸️ Desactivar' : '▶️ Activar'}
                         </button>
                         <button
                           onClick={() => confirmarEliminar(oferta)}
-                          className="btn-danger"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}>
-                          Eliminar
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+                          style={{ 
+                            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                            color: 'white',
+                            boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
+                          }}>
+                          🗑️ Eliminar
                         </button>
                       </div>
                     )}
