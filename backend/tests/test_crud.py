@@ -213,14 +213,14 @@ class TestOfertas:
         })
         producto_id = producto_response.json()["id"]
         
-        # Create oferta using Form data (as the endpoint expects)
-        import json
-        response = client.post("/ofertas", headers=auth_headers, data={
+        # Create oferta using JSON (new API format)
+        response = client.post("/ofertas", headers=auth_headers, json={
             "titulo": "Super Oferta",
             "descripcion": "Una oferta increíble",
             "desde": "2025-01-01",
             "hasta": "2025-12-31",
-            "productos": json.dumps([{"producto_id": producto_id, "cantidad": 1}]),
+            "tipo": "porcentaje",
+            "productos": [{"producto_id": producto_id, "cantidad": 1}],
             "descuento_porcentaje": 20
         })
         assert response.status_code == 200

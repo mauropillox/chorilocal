@@ -297,15 +297,17 @@ export default function Ofertas() {
           title="¿Cómo gestionar ofertas?"
           icon="🎁"
           items={[
-            { label: 'Crear oferta', text: 'Completá título, descripción, fechas de vigencia y porcentaje de descuento. Podés aplicarla a productos específicos o de forma general.' },
+            { label: 'Crear oferta', text: 'Completá título, descripción, fechas de vigencia y elegí el tipo de oferta. Cada tipo tiene requisitos específicos.' },
             { label: 'Asignar productos', text: 'Buscá y seleccioná los productos que quieras incluir en la oferta. Podés agregar o quitar productos en cualquier momento.' },
             { label: 'Vigencia', text: 'Las ofertas se activan/desactivan automáticamente según las fechas configuradas. Las activas se muestran con un contador en el menú.' },
             { label: 'Editar o eliminar', text: 'Clickeá cualquier oferta de la lista para editarla. Podés eliminar ofertas que ya no necesites.' },
             { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' },
-            { label: '📊 Tipo: Porcentaje', text: 'Descuento estándar (ej: 15% de descuento). Se aplica sobre el precio original.' },
-            { label: '💰 Tipo: Precio × Cantidad', text: 'Define tus propios precios por cantidad (ej: 1-4 unidades a $100, 5-9 a $90, 10+ a $80). Flexibilidad total!' },
-            { label: '🎯 Tipo: NxM (3x2, 2x1)', text: 'Ofertas tipo "Llevá 3 pagá 2" o "2x1". Define cuántas unidades se llevan y cuántas se pagan.' },
-            { label: '🎁 Tipo: Regalo', text: 'Al comprar X cantidad del producto principal, se regala otro producto. Ideal para promociones especiales.' }
+            { label: '📊 Tipo: Porcentaje', text: 'Descuento estándar (ej: 15%). Requerido: descuento_porcentaje (0-100). Ejemplo: {"tipo": "porcentaje", "descuento_porcentaje": 20}' },
+            { label: '💰 Tipo: Precio × Cantidad', text: 'Define precios por cantidad. Requerido: reglas (array). Ejemplo: {"tipo": "precio_cantidad", "reglas": [{"cantidad": 1, "precio_unitario": 100}, {"cantidad": 5, "precio_unitario": 90}]}' },
+            { label: '🎯 Tipo: NxM (3x2, 2x1)', text: 'Llevá N pagá M. Requerido: compra_cantidad, paga_cantidad. Ejemplo: {"tipo": "nxm", "compra_cantidad": 3, "paga_cantidad": 2} = 3x2. Nota: paga_cantidad < compra_cantidad' },
+            { label: '🎁 Tipo: Regalo', text: 'Regalo al comprar cantidad. Requerido: regalo_producto_id. Ejemplo: {"tipo": "regalo", "compra_cantidad": 2, "regalo_producto_id": 45, "regalo_cantidad": 1}' },
+            { label: '⚙️ Campos comunes', text: 'Todos los tipos requieren: titulo, desde, hasta, productos (array opcional). Campos: activa (boolean), descripcion (string opcional)' },
+            { label: '📝 Ejemplo completo', text: '{"titulo": "3x2 Chorizos", "desde": "2026-01-01", "hasta": "2026-12-31", "tipo": "nxm", "compra_cantidad": 3, "paga_cantidad": 2, "productos": [{"producto_id": 10, "cantidad": 1}], "activa": true}' }
           ]}
         />
       )}
