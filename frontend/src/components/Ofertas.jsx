@@ -818,10 +818,10 @@ export default function Ofertas() {
 
         {/* Leyenda de colores */}
         {ofertas.length > 0 && (
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '12px', 
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
             justifyContent: 'center',
             marginBottom: '24px',
             padding: '12px',
@@ -830,9 +830,9 @@ export default function Ofertas() {
             border: '1px dashed var(--color-border)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-              <div style={{ 
-                width: '32px', 
-                height: '20px', 
+              <div style={{
+                width: '32px',
+                height: '20px',
                 background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
                 borderRadius: '4px',
                 border: '2px solid #10b981'
@@ -842,9 +842,9 @@ export default function Ofertas() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-              <div style={{ 
-                width: '32px', 
-                height: '20px', 
+              <div style={{
+                width: '32px',
+                height: '20px',
                 background: 'linear-gradient(135deg, #dcfce7, #a7f3d0)',
                 borderRadius: '4px',
                 border: '2px solid #6ee7b7'
@@ -854,9 +854,9 @@ export default function Ofertas() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-              <div style={{ 
-                width: '32px', 
-                height: '20px', 
+              <div style={{
+                width: '32px',
+                height: '20px',
                 background: 'linear-gradient(135deg, #fee2e2, #fca5a5)',
                 borderRadius: '4px',
                 border: '2px solid #ef4444'
@@ -867,9 +867,9 @@ export default function Ofertas() {
 
             {!isReadOnly && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                <div style={{ 
-                  width: '32px', 
-                  height: '20px', 
+                <div style={{
+                  width: '32px',
+                  height: '20px',
                   background: 'linear-gradient(135deg, #e5e7eb, #d1d5db)',
                   borderRadius: '4px',
                   border: '1px solid #9ca3af'
