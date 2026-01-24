@@ -260,3 +260,38 @@ def migrate_006_add_repartidor_column(cursor):
     except Exception as e:
         logger.error("migration_006: Failed to add repartidor column", error=str(e))
         raise
+
+
+@register_migration("007_add_ofertas_advanced_types")
+def migrate_007_ofertas_advanced_types(cursor):
+    """
+    Add columns to support advanced offer types:
+    - tipo: tipo de oferta (porcentaje, precio_cantidad, nxm, regalo)
+    - reglas_json: reglas específicas en JSON
+    - compra_cantidad: para ofertas nxm (compra N, paga M)
+    - paga_cantidad: para ofertas nxm
+    - regalo_producto_id: ID del producto de regalo
+    - regalo_cantidad: cantidad de regalo
+    """
+    cursor.execute("PRAGMA table_info(ofertas)")
+    existing = {row[1] for row in cursor.fetchall()}
+    
+    columns_to_add = {
+        'tipo': "ALTER TABLE ofertas ADD COLUMN tipo TEXT DEFAULT 'porcentaje'",
+        'reglas_json': "ALTER TABLE ofertas ADD COLUMN reglas_json TEXT",
+        'compra_cantidad': "ALTER TABLE ofertas ADD COLUMN compra_cantidad INTEGER",
+        'paga_cantidad': "ALTER TABLE ofertas ADD COLUMN paga_cantidad INTEGER",
+        'regalo_producto_id': "ALTER TABLE ofertas ADD COLUMN regalo_producto_id INTEGER",
+        'regalo_cantidad': "ALTER TABLE ofertas ADD COLUMN regalo_cantidad INTEGER"
+    }
+    
+    added = []
+    for col, sql in columns_to_add.items():
+        if col not in existing:
+            cursor.execute(sql)
+            added.append(col)
+    
+    if added:
+        logger.info(f"migration_007: Added ofertas columns: {added}")
+    else:
+        logger.info("migration_007: All ofertas columns already exist")
