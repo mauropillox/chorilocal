@@ -294,20 +294,19 @@ export default function Ofertas() {
       {/* Ayuda colapsable - Solo para admin */}
       {!isReadOnly && (
         <HelpBanner
-          title="¿Cómo gestionar ofertas?"
+          title="¿Cómo crear ofertas?"
           icon="🎁"
           items={[
-            { label: 'Crear oferta', text: 'Completá título, descripción, fechas de vigencia y elegí el tipo de oferta. Cada tipo tiene requisitos específicos.' },
-            { label: 'Asignar productos', text: 'Buscá y seleccioná los productos que quieras incluir en la oferta. Podés agregar o quitar productos en cualquier momento.' },
-            { label: 'Vigencia', text: 'Las ofertas se activan/desactivan automáticamente según las fechas configuradas. Las activas se muestran con un contador en el menú.' },
-            { label: 'Editar o eliminar', text: 'Clickeá cualquier oferta de la lista para editarla. Podés eliminar ofertas que ya no necesites.' },
-            { label: 'Visualización', text: 'Los productos en oferta se marcan con 🎁 en el catálogo y muestran el precio original tachado junto al precio con descuento.' },
-            { label: '📊 Tipo: Porcentaje', text: 'Descuento estándar (ej: 15%). Requerido: descuento_porcentaje (0-100). Ejemplo: {"tipo": "porcentaje", "descuento_porcentaje": 20}' },
-            { label: '💰 Tipo: Precio × Cantidad', text: 'Define precios por cantidad. Requerido: reglas (array). Ejemplo: {"tipo": "precio_cantidad", "reglas": [{"cantidad": 1, "precio_unitario": 100}, {"cantidad": 5, "precio_unitario": 90}]}' },
-            { label: '🎯 Tipo: NxM (3x2, 2x1)', text: 'Llevá N pagá M. Requerido: compra_cantidad, paga_cantidad. Ejemplo: {"tipo": "nxm", "compra_cantidad": 3, "paga_cantidad": 2} = 3x2. Nota: paga_cantidad < compra_cantidad' },
-            { label: '🎁 Tipo: Regalo', text: 'Regalo al comprar cantidad. Requerido: regalo_producto_id. Ejemplo: {"tipo": "regalo", "compra_cantidad": 2, "regalo_producto_id": 45, "regalo_cantidad": 1}' },
-            { label: '⚙️ Campos comunes', text: 'Todos los tipos requieren: titulo, desde, hasta, productos (array opcional). Campos: activa (boolean), descripcion (string opcional)' },
-            { label: '📝 Ejemplo completo', text: '{"titulo": "3x2 Chorizos", "desde": "2026-01-01", "hasta": "2026-12-31", "tipo": "nxm", "compra_cantidad": 3, "paga_cantidad": 2, "productos": [{"producto_id": 10, "cantidad": 1}], "activa": true}' }
+            { label: '✨ Paso 1: Título y fechas', text: 'Poné un nombre llamativo (ej: "🔥 Promo Fin de Semana") y elegí desde cuándo hasta cuándo dura la oferta.' },
+            { label: '📦 Paso 2: Elegí productos', text: 'Buscá los productos que quieras incluir. Si no elegís ninguno, la oferta aplica a TODO el catálogo.' },
+            { label: '🎯 Paso 3: Tipo de descuento', text: 'Elegí cómo querés hacer el descuento (explicado abajo). Cada tipo pide datos diferentes.' },
+            { label: '✅ Paso 4: Guardar', text: 'Clickeá "Crear Oferta" y listo! La oferta se activa automáticamente en la fecha de inicio.' },
+            { label: '📊 Porcentaje', text: 'El clásico "X% de descuento". Ejemplo: Ponés 20% y un producto de $1000 queda en $800. Solo tenés que poner el porcentaje.' },
+            { label: '💰 Precio por Cantidad', text: 'Mientras más compran, más barato sale. Ejemplo: 1 chorizo $500, pero si llevan 5 o más baja a $400 cada uno.' },
+            { label: '🎯 Llevá X Pagá Y (3x2, 2x1)', text: 'El famoso "Llevá 3 Pagá 2". Solo ponés cuántos se llevan y cuántos pagan. Siempre pagan MENOS de lo que llevan.' },
+            { label: '🎁 Regalo', text: 'Al comprar cierta cantidad, regalás otro producto. Ejemplo: Comprando 2 chorizos, regalás 1 morcilla.' },
+            { label: '⏸️ Activar/Desactivar', text: 'Podés pausar una oferta sin eliminarla. Útil para ofertas que repetís seguido.' },
+            { label: '🔄 Editar', text: 'Clickeá en cualquier oferta de abajo para modificarla. Los cambios se aplican al instante.' }
           ]}
         />
       )}
@@ -333,12 +332,12 @@ export default function Ofertas() {
             </div>
 
             <div className="form-group">
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>Descripción</label>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>Descripción (opcional)</label>
               <input
                 type="text"
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Descripción corta"
+                placeholder="Ej: Válido solo los viernes"
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />
             </div>
@@ -346,7 +345,7 @@ export default function Ofertas() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="form-group">
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>Desde *</label>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>📅 Fecha de inicio *</label>
               <input
                 type="date"
                 value={desde}
@@ -354,10 +353,11 @@ export default function Ofertas() {
                 required
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>La oferta empieza este día a las 00:00</small>
             </div>
 
             <div className="form-group">
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>Hasta *</label>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>📅 Fecha de fin *</label>
               <input
                 type="date"
                 value={hasta}
@@ -365,6 +365,7 @@ export default function Ofertas() {
                 required
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />
+              <small style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>La oferta termina este día a las 23:59</small>
             </div>
           </div>
 
@@ -377,191 +378,255 @@ export default function Ofertas() {
               value={tipoOferta}
               onChange={(e) => setTipoOferta(e.target.value)}
               required
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid var(--color-primary)', fontSize: '15px', fontWeight: '500', background: 'var(--color-bg)' }}
             >
-              <option value="porcentaje">📊 Descuento por Porcentaje (ej: 15% off)</option>
-              <option value="precio_cantidad">💰 Precio por Cantidad (tú defines cantidad → precio)</option>
-              <option value="nxm">🎯 Oferta NxM (ej: 3x2, 2x1)</option>
-              <option value="regalo">🎁 Regalo con Compra</option>
+              <option value="porcentaje">📊 Porcentaje — "20% de descuento"</option>
+              <option value="precio_cantidad">💰 Precio por cantidad — "5 o más a $400 c/u"</option>
+              <option value="nxm">🎯 Llevá X Pagá Y — "3x2", "2x1"</option>
+              <option value="regalo">🎁 Regalo — "Comprando 2, llevás 1 gratis"</option>
             </select>
+            <small style={{ color: 'var(--color-text-muted)', fontSize: '11px', marginTop: '4px', display: 'block' }}>Elegí el tipo de descuento que querés aplicar</small>
           </div>
 
           {/* Campos condicionales según tipo */}
 
           {/* TIPO: PORCENTAJE */}
           {tipoOferta === 'porcentaje' && (
-            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)' }}>
-                💰 Descuento (%) *
+            <div className="form-group mb-4" style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', border: '2px solid #6ee7b7' }}>
+              <label style={{ fontSize: '16px', fontWeight: '700', color: '#047857', marginBottom: '12px', display: 'block' }}>
+                📊 ¿Qué porcentaje de descuento?
               </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={descuento}
-                onChange={(e) => setDescuento(Number(e.target.value))}
-                required
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
-                placeholder="Ej: 15"
-              />
-              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
-                Este descuento se aplicará sobre el precio original del producto
-              </small>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  step="1"
+                  value={descuento}
+                  onChange={(e) => setDescuento(Number(e.target.value))}
+                  required
+                  style={{ width: '120px', padding: '12px', borderRadius: '8px', border: '2px solid #34d399', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}
+                  placeholder="20"
+                />
+                <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>% OFF</span>
+              </div>
+              <p style={{ color: '#065f46', fontSize: '13px', marginTop: '12px' }}>
+                💡 <strong>Ejemplo:</strong> Con {descuento || 20}% de descuento, un producto de $1.000 queda en <strong>${(1000 * (1 - (descuento || 20) / 100)).toLocaleString('es-AR')}</strong>
+              </p>
             </div>
           )}
 
           {/* TIPO: PRECIO × CANTIDAD */}
           {tipoOferta === 'precio_cantidad' && (
-            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
-                💰 Reglas de Precio por Cantidad *
+            <div className="form-group mb-4" style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '2px solid #fcd34d' }}>
+              <label style={{ fontSize: '16px', fontWeight: '700', color: '#b45309', marginBottom: '12px', display: 'block' }}>
+                💰 Mientras más llevan, más barato
               </label>
-              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
-                Define cuánto cuesta cada unidad según la cantidad comprada. Ejemplo: 1 unidad = $100, 5 unidades = $90 c/u, 10 unidades = $80 c/u
-              </small>
+              <p style={{ color: '#92400e', fontSize: '13px', marginBottom: '16px' }}>
+                💡 <strong>Ejemplo:</strong> "1 a 4 unidades: $500 c/u | 5 a 9 unidades: $450 c/u | 10 o más: $400 c/u"
+              </p>
 
-              {reglas.map((regla, idx) => (
-                <div key={idx} className="flex gap-2 mb-2 items-center">
-                  <div className="flex-1">
-                    <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad mínima</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={regla.cantidad}
-                      onChange={(e) => {
-                        const newReglas = [...reglas];
-                        newReglas[idx].cantidad = parseInt(e.target.value) || 1;
-                        setReglas(newReglas);
+              <div style={{ background: 'white', borderRadius: '10px', padding: '16px', border: '1px solid #f59e0b' }}>
+                {reglas.map((regla, idx) => (
+                  <div key={idx} className="flex gap-3 mb-3 items-end">
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '12px', color: '#b45309', fontWeight: '600' }}>
+                        {idx === 0 ? 'Desde 1 unidad' : `Desde ${regla.cantidad} unidades`}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={regla.cantidad}
+                        onChange={(e) => {
+                          const newReglas = [...reglas];
+                          newReglas[idx].cantidad = parseInt(e.target.value) || 1;
+                          setReglas(newReglas);
+                        }}
+                        placeholder="5"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid #fbbf24', fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '20px', color: '#d97706', paddingBottom: '10px' }}>→</div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '12px', color: '#b45309', fontWeight: '600' }}>Precio c/u $</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={regla.precio_unitario}
+                        onChange={(e) => {
+                          const newReglas = [...reglas];
+                          newReglas[idx].precio_unitario = parseFloat(e.target.value) || 0;
+                          setReglas(newReglas);
+                        }}
+                        placeholder="450"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid #fbbf24', fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReglas(reglas.filter((_, i) => i !== idx))}
+                      disabled={reglas.length === 1}
+                      style={{ 
+                        padding: '10px 14px', 
+                        borderRadius: '8px', 
+                        background: reglas.length === 1 ? '#e5e7eb' : '#ef4444',
+                        color: reglas.length === 1 ? '#9ca3af' : 'white',
+                        border: 'none',
+                        fontSize: '16px',
+                        cursor: reglas.length === 1 ? 'not-allowed' : 'pointer'
                       }}
-                      placeholder="Ej: 5"
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-                    />
+                    >
+                      🗑️
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Precio unitario $</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={regla.precio_unitario}
-                      onChange={(e) => {
-                        const newReglas = [...reglas];
-                        newReglas[idx].precio_unitario = parseFloat(e.target.value) || 0;
-                        setReglas(newReglas);
-                      }}
-                      placeholder="Ej: 90.00"
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-                    />
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setReglas([...reglas, { cantidad: (reglas[reglas.length - 1]?.cantidad || 0) + 5, precio_unitario: Math.max(50, (reglas[reglas.length - 1]?.precio_unitario || 100) - 10) }])}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    marginTop: '8px'
+                  }}
+                >
+                  ➕ Agregar otro escalón de precio
+                </button>
+              </div>
+              
+              {/* Vista previa */}
+              {reglas.length > 0 && (
+                <div className="mt-4" style={{ padding: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', borderRadius: '10px', color: 'white' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>📊 Vista previa de precios:</div>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                    {reglas.sort((a, b) => a.cantidad - b.cantidad).map((r, i) => (
+                      <span key={i}>
+                        {i > 0 && ' | '}
+                        {r.cantidad}+ unidades: <strong>${r.precio_unitario} c/u</strong>
+                      </span>
+                    ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setReglas(reglas.filter((_, i) => i !== idx))}
-                    className="btn-danger"
-                    disabled={reglas.length === 1}
-                    style={{ marginTop: '20px', minHeight: '36px' }}
-                  >
-                    ×
-                  </button>
                 </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setReglas([...reglas, { cantidad: (reglas[reglas.length - 1]?.cantidad || 0) + 5, precio_unitario: 100 }])}
-                className="btn-secondary text-sm mt-2"
-              >
-                ➕ Agregar Regla
-              </button>
+              )}
             </div>
           )}
 
           {/* TIPO: NxM (3x2, 2x1, etc) */}
           {tipoOferta === 'nxm' && (
-            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
-                🎯 Configuración NxM (Llevá X, Pagá Y) *
+            <div className="form-group mb-4" style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '2px solid #c4b5fd' }}>
+              <label style={{ fontSize: '16px', fontWeight: '700', color: '#6d28d9', marginBottom: '12px', display: 'block' }}>
+                🎯 Llevá más, pagá menos
               </label>
-              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
-                Ejemplos: 3x2 (llevá 3, pagá 2), 2x1 (llevá 2, pagá 1), 5x4 (llevá 5, pagá 4)
-              </small>
+              <p style={{ color: '#7c3aed', fontSize: '13px', marginBottom: '16px' }}>
+                💡 <strong>Ejemplos populares:</strong> 3x2 (llevá 3, pagá 2), 2x1 (llevá 2, pagá 1), 4x3 (llevá 4, pagá 3)
+              </p>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a llevar</label>
+                  <label style={{ fontSize: '13px', color: '#5b21b6', fontWeight: '600' }}>¿Cuántos se lleva el cliente?</label>
                   <input
                     type="number"
                     min="2"
                     step="1"
                     value={compraCantidad}
                     onChange={(e) => setCompraCantidad(parseInt(e.target.value) || 2)}
-                    placeholder="Ej: 3"
+                    placeholder="3"
                     required
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #a78bfa', fontSize: '18px', fontWeight: 'bold', textAlign: 'center' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a pagar</label>
+                  <label style={{ fontSize: '13px', color: '#5b21b6', fontWeight: '600' }}>¿Cuántos paga?</label>
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={pagaCantidad}
                     onChange={(e) => setPagaCantidad(parseInt(e.target.value) || 1)}
-                    placeholder="Ej: 2"
+                    placeholder="2"
                     required
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #a78bfa', fontSize: '18px', fontWeight: 'bold', textAlign: 'center' }}
                   />
                 </div>
               </div>
-              <div className="mt-2 text-center" style={{ padding: '10px', background: 'var(--color-bg-accent)', borderRadius: '6px' }}>
-                <strong style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
-                  {compraCantidad}x{pagaCantidad} - Llevá {compraCantidad}, Pagá {pagaCantidad}
-                </strong>
+              
+              {/* Vista previa visual */}
+              <div className="mt-4 text-center" style={{ padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', borderRadius: '10px', color: 'white' }}>
+                <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
+                  {compraCantidad}x{pagaCantidad}
+                </div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>
+                  Llevá {compraCantidad} → Paga solo {pagaCantidad} → <strong>Ahorra {compraCantidad - pagaCantidad}!</strong>
+                </div>
               </div>
+              
+              {pagaCantidad >= compraCantidad && (
+                <div style={{ marginTop: '10px', padding: '10px', background: '#fef2f2', border: '1px solid #ef4444', borderRadius: '8px', color: '#dc2626', fontSize: '13px' }}>
+                  ⚠️ <strong>Ojo:</strong> El cliente tiene que pagar MENOS de lo que lleva. Si lleva {compraCantidad}, tiene que pagar menos de {compraCantidad}.
+                </div>
+              )}
             </div>
           )}
 
           {/* TIPO: REGALO */}
           {tipoOferta === 'regalo' && (
-            <div className="form-group mb-4 highlight-success" style={{ padding: '15px', borderRadius: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text)', marginBottom: '10px', display: 'block' }}>
-                🎁 Producto de Regalo *
+            <div className="form-group mb-4" style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', border: '2px solid #f9a8d4' }}>
+              <label style={{ fontSize: '16px', fontWeight: '700', color: '#be185d', marginBottom: '12px', display: 'block' }}>
+                🎁 Regalá un producto extra
               </label>
-              <small style={{ color: 'var(--color-text-muted)', fontSize: '12px', display: 'block', marginBottom: '10px' }}>
-                Al comprar el producto principal, se regala automáticamente el producto seleccionado
-              </small>
+              <p style={{ color: '#9d174d', fontSize: '13px', marginBottom: '16px' }}>
+                💡 <strong>Ejemplo:</strong> "Comprando 2 chorizos, te regalamos 1 morcilla"
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Producto a regalar</label>
+                  <label style={{ fontSize: '13px', color: '#be185d', fontWeight: '600' }}>¿Qué producto regalás?</label>
                   <select
                     value={regaloProductoId}
                     onChange={(e) => setRegaloProductoId(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #f472b6', fontSize: '14px', background: 'white' }}
                   >
-                    <option value="">Seleccionar producto...</option>
+                    <option value="">🔍 Elegí un producto...</option>
                     {productos.map(p => (
-                      <option key={p.id} value={p.id}>{p.nombre} - ${p.precio}</option>
+                      <option key={p.id} value={p.id}>🎁 {p.nombre} (valor: ${p.precio})</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Cantidad a regalar</label>
+                  <label style={{ fontSize: '13px', color: '#be185d', fontWeight: '600' }}>¿Cuántos regalás?</label>
                   <input
                     type="number"
                     min="1"
+                    max="10"
                     step="1"
                     value={regaloCantidad}
                     onChange={(e) => setRegaloCantidad(parseInt(e.target.value) || 1)}
-                    placeholder="Ej: 1"
+                    placeholder="1"
                     required
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #f472b6', fontSize: '18px', fontWeight: 'bold', textAlign: 'center' }}
                   />
                 </div>
               </div>
+              
+              {/* Vista previa */}
+              {regaloProductoId && (
+                <div className="mt-4 text-center" style={{ padding: '16px', background: 'linear-gradient(135deg, #ec4899, #db2777)', borderRadius: '10px', color: 'white' }}>
+                  <div style={{ fontSize: '16px' }}>
+                    <span style={{ fontSize: '24px' }}>🎁</span><br />
+                    Al comprar los productos de esta oferta, <strong>regalás {regaloCantidad}× {productos.find(p => p.id === parseInt(regaloProductoId))?.nombre || '...'}</strong>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -895,21 +960,21 @@ export default function Ofertas() {
                     )}
 
                     {/* Detalles según tipo de oferta - mejorado */}
-                    <div className="mb-3 p-3 rounded-lg" style={{ 
+                    <div className="mb-3 p-3 rounded-lg" style={{
                       background: oferta.tipo === 'porcentaje' ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)' :
-                                  oferta.tipo === 'precio_cantidad' ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' :
-                                  oferta.tipo === 'nxm' ? 'linear-gradient(135deg, #f5f3ff, #ede9fe)' :
-                                  'linear-gradient(135deg, #fdf2f8, #fce7f3)',
+                        oferta.tipo === 'precio_cantidad' ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' :
+                          oferta.tipo === 'nxm' ? 'linear-gradient(135deg, #f5f3ff, #ede9fe)' :
+                            'linear-gradient(135deg, #fdf2f8, #fce7f3)',
                       border: oferta.tipo === 'porcentaje' ? '1px solid #a7f3d0' :
-                              oferta.tipo === 'precio_cantidad' ? '1px solid #fcd34d' :
-                              oferta.tipo === 'nxm' ? '1px solid #c4b5fd' :
-                              '1px solid #f9a8d4'
+                        oferta.tipo === 'precio_cantidad' ? '1px solid #fcd34d' :
+                          oferta.tipo === 'nxm' ? '1px solid #c4b5fd' :
+                            '1px solid #f9a8d4'
                     }}>
-                      <div className="text-sm font-semibold mb-1 flex items-center gap-2" style={{ 
+                      <div className="text-sm font-semibold mb-1 flex items-center gap-2" style={{
                         color: oferta.tipo === 'porcentaje' ? '#047857' :
-                               oferta.tipo === 'precio_cantidad' ? '#b45309' :
-                               oferta.tipo === 'nxm' ? '#6d28d9' :
-                               '#be185d'
+                          oferta.tipo === 'precio_cantidad' ? '#b45309' :
+                            oferta.tipo === 'nxm' ? '#6d28d9' :
+                              '#be185d'
                       }}>
                         {oferta.tipo === 'porcentaje' && '📊 Descuento por Porcentaje'}
                         {oferta.tipo === 'precio_cantidad' && '💰 Precio por Cantidad'}
@@ -927,7 +992,7 @@ export default function Ofertas() {
                         <div className="text-sm space-y-1" style={{ color: '#92400e' }}>
                           {oferta.reglas.map((regla, idx) => (
                             <div key={idx} className="flex items-center gap-1">
-                              <span style={{ color: '#d97706' }}>▸</span> 
+                              <span style={{ color: '#d97706' }}>▸</span>
                               Desde <strong>{regla.cantidad}</strong> unidades → <strong style={{ color: '#b45309' }}>${regla.precio_unitario}</strong> c/u
                             </div>
                           ))}
@@ -972,9 +1037,9 @@ export default function Ofertas() {
                               <span key={i}
                                 onClick={() => navigate('/productos')}
                                 className="text-xs px-2.5 py-1.5 rounded-lg cursor-pointer hover:scale-105 transition-transform"
-                                style={{ 
-                                  background: 'linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg))', 
-                                  color: 'var(--color-text)', 
+                                style={{
+                                  background: 'linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg))',
+                                  color: 'var(--color-text)',
                                   border: '1px solid var(--color-border)',
                                   boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                 }}
@@ -985,9 +1050,9 @@ export default function Ofertas() {
                           </div>
                         </>
                       ) : (
-                        <div className="text-xs px-3 py-2 rounded-lg flex items-center gap-2" 
-                          style={{ 
-                            background: 'linear-gradient(135deg, #fef3c7, #fde68a)', 
+                        <div className="text-xs px-3 py-2 rounded-lg flex items-center gap-2"
+                          style={{
+                            background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
                             color: '#92400e',
                             border: '1px dashed #f59e0b'
                           }}>
@@ -1003,7 +1068,7 @@ export default function Ofertas() {
                         <button
                           onClick={() => editarOferta(oferta)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
-                          style={{ 
+                          style={{
                             background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                             color: 'white',
                             boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
@@ -1014,12 +1079,12 @@ export default function Ofertas() {
                         <button
                           onClick={() => toggleOferta(oferta)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
-                          style={{ 
-                            background: oferta.activa 
-                              ? 'linear-gradient(135deg, #f59e0b, #d97706)' 
+                          style={{
+                            background: oferta.activa
+                              ? 'linear-gradient(135deg, #f59e0b, #d97706)'
                               : 'linear-gradient(135deg, #10b981, #059669)',
                             color: 'white',
-                            boxShadow: oferta.activa 
+                            boxShadow: oferta.activa
                               ? '0 2px 4px rgba(245, 158, 11, 0.3)'
                               : '0 2px 4px rgba(16, 185, 129, 0.3)'
                           }}>
@@ -1028,7 +1093,7 @@ export default function Ofertas() {
                         <button
                           onClick={() => confirmarEliminar(oferta)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
-                          style={{ 
+                          style={{
                             background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                             color: 'white',
                             boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
