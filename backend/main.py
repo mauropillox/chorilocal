@@ -21,7 +21,7 @@ import db
 import models
 from deps import limiter
 from exceptions_custom import ChorizaurioException, to_http_exception
-from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta, reportes, listas_precios, admin_migrations  # , websocket - Disabled: Render free tier doesn't support WebSocket
+from routers import pedidos, clientes, productos, auth, categorias, ofertas, migration, dashboard, estadisticas, usuarios, templates, tags, upload, admin, repartidores, hoja_ruta, reportes, listas_precios, admin_migrations, debug_ofertas  # , websocket - Disabled: Render free tier doesn't support WebSocket
 from logging_config import setup_logging, get_logger, set_request_id, get_request_id, Timer
 
 # --- Structured Logging Setup ---
@@ -270,6 +270,7 @@ app.include_router(reportes.router, prefix="/api", tags=["Reportes"])
 app.include_router(listas_precios.router, prefix="/api", tags=["Listas de Precios"])
 app.include_router(migration.router, prefix="/api/admin", tags=["Migration"])
 app.include_router(admin_migrations.router, prefix="/api", tags=["Admin Migrations"])
+app.include_router(debug_ofertas.router, prefix="/api", tags=["Debug"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 # app.include_router(websocket.router, prefix="/api", tags=["WebSocket"])  # Disabled: Render free tier doesn't support WebSocket
 
