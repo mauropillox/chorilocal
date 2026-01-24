@@ -812,9 +812,74 @@ export default function Ofertas() {
 
       {/* Lista de Ofertas */}
       <div className="card" style={{ background: 'var(--color-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--color-border)' }}>
-        <h2 className="text-lg font-bold mb-6 text-center" style={{ color: 'var(--color-text)' }}>
+        <h2 className="text-lg font-bold mb-4 text-center" style={{ color: 'var(--color-text)' }}>
           🎁 {isReadOnly ? 'Ofertas Vigentes' : 'Ofertas Registradas'} ({ofertas.length})
         </h2>
+
+        {/* Leyenda de colores */}
+        {ofertas.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '12px', 
+            justifyContent: 'center',
+            marginBottom: '24px',
+            padding: '12px',
+            background: 'var(--color-bg-secondary)',
+            borderRadius: '10px',
+            border: '1px dashed var(--color-border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <div style={{ 
+                width: '32px', 
+                height: '20px', 
+                background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
+                borderRadius: '4px',
+                border: '2px solid #10b981'
+              }} />
+              <span style={{ fontWeight: '600', color: '#047857' }}>🔥 ACTIVA AHORA</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>(podés venderla)</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <div style={{ 
+                width: '32px', 
+                height: '20px', 
+                background: 'linear-gradient(135deg, #dcfce7, #a7f3d0)',
+                borderRadius: '4px',
+                border: '2px solid #6ee7b7'
+              }} />
+              <span style={{ fontWeight: '600', color: '#059669' }}>⏳ Programada</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>(empieza pronto)</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <div style={{ 
+                width: '32px', 
+                height: '20px', 
+                background: 'linear-gradient(135deg, #fee2e2, #fca5a5)',
+                borderRadius: '4px',
+                border: '2px solid #ef4444'
+              }} />
+              <span style={{ fontWeight: '600', color: '#dc2626' }}>⏰ Vencida</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>(ya terminó)</span>
+            </div>
+
+            {!isReadOnly && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '20px', 
+                  background: 'linear-gradient(135deg, #e5e7eb, #d1d5db)',
+                  borderRadius: '4px',
+                  border: '1px solid #9ca3af'
+                }} />
+                <span style={{ fontWeight: '600', color: '#6b7280' }}>⏸ Pausada</span>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>(desactivada)</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {ofertas.length === 0 ? (
           <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
@@ -875,8 +940,8 @@ export default function Ofertas() {
                         ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'  // Rojo para vencidas
                         : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',  // Gris para pausadas
                     padding: oferta.activa ? '18px 20px' : '14px 18px',
-                    borderBottom: oferta.activa 
-                      ? vigente 
+                    borderBottom: oferta.activa
+                      ? vigente
                         ? '3px solid #34d399'  // Verde fuerte si está vigente ahora
                         : '2px solid #6ee7b7'  // Verde claro si está programada
                       : vencida
