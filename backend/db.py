@@ -2899,7 +2899,11 @@ def get_ofertas(solo_activas: bool = True) -> List[Dict[str, Any]]:
         for oferta in ofertas:
             if oferta.get('reglas_json'):
                 try:
-                    oferta['reglas'] = json.loads(oferta['reglas_json'])
+                    # Handle both string and bytes
+                    reglas_data = oferta['reglas_json']
+                    if isinstance(reglas_data, bytes):
+                        reglas_data = reglas_data.decode('utf-8')
+                    oferta['reglas'] = json.loads(reglas_data) if reglas_data else None
                 except:
                     oferta['reglas'] = None
             if 'reglas_json' in oferta:
@@ -2920,7 +2924,11 @@ def get_oferta_by_id(oferta_id: int) -> Optional[Dict[str, Any]]:
         # Parse reglas_json
         if oferta.get('reglas_json'):
             try:
-                oferta['reglas'] = json.loads(oferta['reglas_json'])
+                # Handle both string and bytes
+                reglas_data = oferta['reglas_json']
+                if isinstance(reglas_data, bytes):
+                    reglas_data = reglas_data.decode('utf-8')
+                oferta['reglas'] = json.loads(reglas_data) if reglas_data else None
             except:
                 oferta['reglas'] = None
         if 'reglas_json' in oferta:
