@@ -10,12 +10,12 @@ from fastapi.testclient import TestClient
 class TestBulkDelete:
     """Tests for POST /pedidos/bulk-delete endpoint"""
 
-    def test_bulk_delete_requires_admin(self, client, vendedor_token):
+    def test_bulk_delete_requires_admin(self, client, vendedor_headers):
         """Vendedor role should not be able to bulk delete"""
         response = client.post(
             "/api/pedidos/bulk-delete",
             json={"pedido_ids": [1, 2, 3]},
-            headers={"Authorization": f"Bearer {vendedor_token}"}
+            headers=vendedor_headers
         )
         assert response.status_code == 403
 

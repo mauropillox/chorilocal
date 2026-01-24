@@ -468,9 +468,9 @@ export default function Ofertas() {
                       type="button"
                       onClick={() => setReglas(reglas.filter((_, i) => i !== idx))}
                       disabled={reglas.length === 1}
-                      style={{ 
-                        padding: '10px 14px', 
-                        borderRadius: '8px', 
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
                         background: reglas.length === 1 ? '#e5e7eb' : '#ef4444',
                         color: reglas.length === 1 ? '#9ca3af' : 'white',
                         border: 'none',
@@ -486,10 +486,10 @@ export default function Ofertas() {
                 <button
                   type="button"
                   onClick={() => setReglas([...reglas, { cantidad: (reglas[reglas.length - 1]?.cantidad || 0) + 5, precio_unitario: Math.max(50, (reglas[reglas.length - 1]?.precio_unitario || 100) - 10) }])}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    borderRadius: '8px', 
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
                     background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                     color: 'white',
                     border: 'none',
@@ -502,7 +502,7 @@ export default function Ofertas() {
                   ➕ Agregar otro escalón de precio
                 </button>
               </div>
-              
+
               {/* Vista previa */}
               {reglas.length > 0 && (
                 <div className="mt-4" style={{ padding: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', borderRadius: '10px', color: 'white' }}>
@@ -558,7 +558,7 @@ export default function Ofertas() {
                   />
                 </div>
               </div>
-              
+
               {/* Vista previa visual */}
               <div className="mt-4 text-center" style={{ padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', borderRadius: '10px', color: 'white' }}>
                 <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
@@ -568,7 +568,7 @@ export default function Ofertas() {
                   Llevá {compraCantidad} → Paga solo {pagaCantidad} → <strong>Ahorra {compraCantidad - pagaCantidad}!</strong>
                 </div>
               </div>
-              
+
               {pagaCantidad >= compraCantidad && (
                 <div style={{ marginTop: '10px', padding: '10px', background: '#fef2f2', border: '1px solid #ef4444', borderRadius: '8px', color: '#dc2626', fontSize: '13px' }}>
                   ⚠️ <strong>Ojo:</strong> El cliente tiene que pagar MENOS de lo que lleva. Si lleva {compraCantidad}, tiene que pagar menos de {compraCantidad}.
@@ -617,7 +617,7 @@ export default function Ofertas() {
                   />
                 </div>
               </div>
-              
+
               {/* Vista previa */}
               {regaloProductoId && (
                 <div className="mt-4 text-center" style={{ padding: '16px', background: 'linear-gradient(135deg, #ec4899, #db2777)', borderRadius: '10px', color: 'white' }}>
