@@ -221,3 +221,71 @@ async def eliminar_oferta(
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     return
+
+
+@router.post("/ofertas/{oferta_id}/toggle")
+async def toggle_oferta(
+    oferta_id: int,
+    current_user: dict = Depends(get_admin_user)
+):
+    """Toggle offer active status - Admin only
+    
+    Activates or deactivates an offer. When activating, if the offer dates
+    are in the past, they will be automatically updated to start today.
+    """
+    try:
+        oferta = db.get_oferta_by_id(oferta_id)
+        if not oferta:
+            raise HTTPException(status_code=404, detail="Oferta no encontrada")
+        
+        # Toggle activa status (SQLite returns 0/1 for boolean)
+        nueva_activa = not bool(oferta.get('activa', 0))
+        oferta['activa'] = nueva_activa
+        
+        # If activating and dates are in the past, update them
+        fechas_actualizadas = False
+        
+        if nueva_activa:
+            from datetime import datetime, timedelta
+            hoy = datetime.now().date()
+            
+            # Handle date parsing (SQLite can return strings or dates)
+            desde_str = oferta.get('desde', '')
+            hasta_str = oferta.get('hasta', '')
+            
+            if isinstance(desde_str, str):
+                desde = datetime.fromisoformat(desde_str.replace('Z', '+00:00').split('T')[0]).date()
+            else:
+                desde = desde_str
+                
+            if isinstance(hasta_str, str):
+                hasta = datetime.fromisoformat(hasta_str.replace('Z', '+00:00').split('T')[0]).date()
+            else:
+                hasta = hasta_str
+            
+            # If offer ended or hasn't started yet, update dates
+            if hasta < hoy or desde > hoy:
+                oferta['desde'] = hoy.isoformat()
+                oferta['hasta'] = (hoy + timedelta(days=30)).isoformat()
+                fechas_actualizadas = True
+        
+        # Update the offer with all fields
+        result = db.update_oferta(oferta_id, oferta)
+        
+        response = {
+            "success": True,
+            "activa": nueva_activa,
+            "fechas_actualizadas": fechas_actualizadas
+        }
+        
+        if fechas_actualizadas:
+            response["desde"] = oferta['desde']
+            response["hasta"] = oferta['hasta']
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling oferta {oferta_id}: {type(e).__name__}: {str(e)}")
+        raise safe_error_handler(e, "ofertas", "toggle oferta")
