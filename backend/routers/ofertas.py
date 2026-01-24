@@ -138,40 +138,76 @@ async def get_oferta(oferta_id: int, current_user: dict = Depends(get_current_us
 
 @router.post("/ofertas", response_model=Oferta)
 async def crear_oferta(
-    oferta: OfertaCreate,
-    current_user: dict = Depends(get_admin_user)
+    current_user: dict = Depends(get_admin_user),
+    titulo: str = Form(...),
+    desde: str = Form(...),
+    hasta: str = Form(...),
+    tipo: str = Form("porcentaje"),
+    descripcion: Optional[str] = Form(None),
+    productos: Optional[str] = Form(None),  # JSON string
+    descuento_porcentaje: Optional[float] = Form(None),
+    reglas: Optional[str] = Form(None),  # JSON string
+    compra_cantidad: Optional[int] = Form(None),
+    paga_cantidad: Optional[int] = Form(None),
+    regalo_producto_id: Optional[int] = Form(None),
+    regalo_cantidad: Optional[int] = Form(1),
 ):
-    """Create new offer - Admin only"""
+    """Create new offer - Admin only - Form-based for frontend compatibility"""
+    # Parse JSON fields
+    productos_list = []
+    if productos:
+        try:
+            productos_list = json.loads(productos)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON in productos field")
+    
+    reglas_list = None
+    if reglas:
+        try:
+            reglas_list = json.loads(reglas)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON in reglas field")
+    
     # Validate offer type requirements
-    if oferta.tipo == TipoOferta.PORCENTAJE:
-        if oferta.descuento_porcentaje is None:
+    if tipo == "porcentaje":
+        if descuento_porcentaje is None:
             raise HTTPException(status_code=400, detail="descuento_porcentaje requerido para tipo porcentaje")
     
-    elif oferta.tipo == TipoOferta.PRECIO_CANTIDAD:
-        if not oferta.reglas or len(oferta.reglas) == 0:
+    elif tipo == "precio_cantidad":
+        if not reglas_list or len(reglas_list) == 0:
             raise HTTPException(status_code=400, detail="reglas requeridas para tipo precio_cantidad")
-        # Validate reglas are in ascending order
-        sorted_reglas = sorted(oferta.reglas, key=lambda x: x.cantidad)
-        if sorted_reglas != oferta.reglas:
-            oferta.reglas = sorted_reglas
     
-    elif oferta.tipo == TipoOferta.NXM:
-        if not oferta.compra_cantidad or not oferta.paga_cantidad:
+    elif tipo == "nxm":
+        if not compra_cantidad or not paga_cantidad:
             raise HTTPException(status_code=400, detail="compra_cantidad y paga_cantidad requeridos para tipo nxm")
-        if oferta.paga_cantidad >= oferta.compra_cantidad:
+        if paga_cantidad >= compra_cantidad:
             raise HTTPException(status_code=400, detail="paga_cantidad debe ser menor que compra_cantidad")
     
-    elif oferta.tipo == TipoOferta.REGALO:
-        if not oferta.regalo_producto_id:
+    elif tipo == "regalo":
+        if not regalo_producto_id:
             raise HTTPException(status_code=400, detail="regalo_producto_id requerido para tipo regalo")
     
+    oferta_data = {
+        "titulo": titulo,
+        "descripcion": descripcion,
+        "desde": desde,
+        "hasta": hasta,
+        "activa": True,
+        "tipo": tipo,
+        "descuento_porcentaje": descuento_porcentaje,
+        "reglas": reglas_list,
+        "compra_cantidad": compra_cantidad,
+        "paga_cantidad": paga_cantidad,
+        "regalo_producto_id": regalo_producto_id,
+        "regalo_cantidad": regalo_cantidad,
+        "productos": productos_list
+    }
+    
     try:
-        oferta_dict = oferta.model_dump()
-        logger.info(f"Creating oferta: type={type(oferta_dict)}, keys={list(oferta_dict.keys()) if oferta_dict else 'None'}")
-        result = db.add_oferta(oferta_dict)
+        result = db.add_oferta(oferta_data)
         return result
     except Exception as e:
-        logger.error(f"Error creating oferta: {type(e).__name__}: {str(e)}, oferta_dict={oferta_dict if 'oferta_dict' in locals() else 'not created'}")
+        logger.error(f"Error creating oferta: {type(e).__name__}: {str(e)}")
         raise safe_error_handler(e, "ofertas", "crear oferta")
 
 
