@@ -289,3 +289,4 @@ async def toggle_oferta(
     except Exception as e:
         logger.error(f"Error toggling oferta {oferta_id}: {type(e).__name__}: {str(e)}")
         raise safe_error_handler(e, "ofertas", "toggle oferta")
+# Force redeploy - Sat Jan 24 20:19:11 -03 2026
