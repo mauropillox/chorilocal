@@ -11,6 +11,9 @@ from deps import (
     RATE_LIMIT_READ, RATE_LIMIT_WRITE
 )
 from exceptions import safe_error_handler
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -163,9 +166,12 @@ async def crear_oferta(
             raise HTTPException(status_code=400, detail="regalo_producto_id requerido para tipo regalo")
     
     try:
-        result = db.add_oferta(oferta.model_dump())
+        oferta_dict = oferta.model_dump()
+        logger.info(f"Creating oferta: type={type(oferta_dict)}, keys={list(oferta_dict.keys()) if oferta_dict else 'None'}")
+        result = db.add_oferta(oferta_dict)
         return result
     except Exception as e:
+        logger.error(f"Error creating oferta: {type(e).__name__}: {str(e)}, oferta_dict={oferta_dict if 'oferta_dict' in locals() else 'not created'}")
         raise safe_error_handler(e, "ofertas", "crear oferta")
 
 
