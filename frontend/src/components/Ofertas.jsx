@@ -856,39 +856,48 @@ export default function Ofertas() {
                   className="rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg"
                   style={{
                     background: 'var(--color-bg)',
-                    border: oferta.activa && vigente
-                      ? '3px solid #10b981'
+                    border: oferta.activa
+                      ? '3px solid #10b981'  // Verde para todas las activas
                       : vencida
-                        ? '2px solid var(--color-danger)'
-                        : '1px solid var(--color-border)',
-                    boxShadow: oferta.activa && vigente
+                        ? '2px solid #ef4444'  // Rojo para vencidas
+                        : '1px solid #d1d5db',  // Gris para pausadas
+                    boxShadow: oferta.activa
                       ? '0 4px 20px rgba(16, 185, 129, 0.25)'
-                      : '0 2px 8px rgba(14, 165, 233, 0.1)',
+                      : '0 2px 8px rgba(0, 0, 0, 0.05)',
                     transform: oferta.activa && vigente ? 'scale(1.01)' : 'scale(1)'
                   }}>
 
-                  {/* Header con gradiente mejorado */}
+                  {/* Header con gradiente - verde para TODAS las activas */}
                   <div style={{
-                    background: oferta.activa && vigente
-                      ? 'linear-gradient(135deg, #dcfce7 0%, #a7f3d0 50%, #6ee7b7 100%)'
+                    background: oferta.activa
+                      ? 'linear-gradient(135deg, #dcfce7 0%, #a7f3d0 50%, #6ee7b7 100%)'  // Verde para todas las activas
                       : vencida
-                        ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'
-                        : 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                    padding: oferta.activa && vigente ? '18px 20px' : '14px 18px',
-                    borderBottom: oferta.activa && vigente ? '2px solid #34d399' : '1px solid #bae6fd'
+                        ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'  // Rojo para vencidas
+                        : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',  // Gris para pausadas
+                    padding: oferta.activa ? '18px 20px' : '14px 18px',
+                    borderBottom: oferta.activa 
+                      ? vigente 
+                        ? '3px solid #34d399'  // Verde fuerte si está vigente ahora
+                        : '2px solid #6ee7b7'  // Verde claro si está programada
+                      : vencida
+                        ? '2px solid #fca5a5'
+                        : '1px solid #d1d5db'
                   }}>
                     <div className="flex justify-between items-center flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         {oferta.activa && vigente && (
                           <span style={{ fontSize: '1.5rem', animation: 'pulse 2s infinite' }}>🔥</span>
                         )}
+                        {oferta.activa && !vigente && !vencida && (
+                          <span style={{ fontSize: '1.3rem' }}>⏳</span>
+                        )}
                         <h3 className="font-bold" style={{
-                          fontSize: oferta.activa && vigente ? '1.25rem' : '1.125rem',
-                          color: oferta.activa && vigente
-                            ? '#047857'
+                          fontSize: oferta.activa ? '1.25rem' : '1.125rem',
+                          color: oferta.activa
+                            ? '#047857'  // Verde oscuro para todas las activas
                             : vencida
-                              ? '#dc2626'
-                              : '#0c4a6e'
+                              ? '#dc2626'  // Rojo para vencidas
+                              : '#6b7280'  // Gris para pausadas
                         }}>{oferta.titulo}</h3>
                       </div>
                       <div className="flex gap-2 items-center">
