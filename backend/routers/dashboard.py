@@ -30,9 +30,9 @@ async def get_dashboard_metrics(request: Request, current_user: dict = Depends(g
             cur.execute("SELECT COUNT(*) FROM productos")
             total_productos = cur.fetchone()[0]
             
-            # Pedidos hoy
+            # Pedidos hoy (only from 2026-02-01 onwards)
             hoy = datetime.now().strftime("%Y-%m-%d")
-            cur.execute("SELECT COUNT(*) FROM pedidos WHERE DATE(fecha) = ?", (hoy,))
+            cur.execute("SELECT COUNT(*) FROM pedidos WHERE DATE(fecha) = ? AND fecha >= '2026-02-01'", (hoy,))
             pedidos_hoy = cur.fetchone()[0]
             
             # Stock bajo (productos con stock < stock_minimo)
@@ -43,24 +43,26 @@ async def get_dashboard_metrics(request: Request, current_user: dict = Depends(g
             """)
             stock_bajo = cur.fetchone()[0]
             
-            # Pedidos pendientes
+            # Pedidos pendientes (only from 2026-02-01 onwards)
             cur.execute("""
                 SELECT COUNT(*) 
                 FROM pedidos 
                 WHERE estado IN ('Pendiente', 'En Preparación', 'Listo')
+                AND fecha >= '2026-02-01'
             """)
             pedidos_pendientes = cur.fetchone()[0]
             
-            # Pedidos últimos 30 días
+            # Pedidos últimos 30 días (only from 2026-02-01 onwards)
             hace_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
             cur.execute("""
                 SELECT COUNT(*) 
                 FROM pedidos 
                 WHERE DATE(fecha) >= ?
+                AND fecha >= '2026-02-01'
             """, (hace_30_dias,))
             pedidos_mes = cur.fetchone()[0]
             
-            # Productos más vendidos (últimos 30 días)
+            # Productos más vendidos (últimos 30 días, only from 2026-02-01 onwards)
             cur.execute("""
                 SELECT 
                     p.id,
@@ -68,7 +70,9 @@ async def get_dashboard_metrics(request: Request, current_user: dict = Depends(g
                     COALESCE(SUM(dp.cantidad), 0) as total_vendido
                 FROM productos p
                 LEFT JOIN detalles_pedido dp ON dp.producto_id = p.id
-                LEFT JOIN pedidos pd ON dp.pedido_id = pd.id AND DATE(pd.fecha) >= ?
+                LEFT JOIN pedidos pd ON dp.pedido_id = pd.id 
+                    AND DATE(pd.fecha) >= ?
+                    AND pd.fecha >= '2026-02-01'
                 GROUP BY p.id, p.nombre
                 HAVING total_vendido > 0
                 ORDER BY total_vendido DESC
@@ -108,6 +112,7 @@ async def get_pedidos_por_dia(
                     COUNT(*) as cantidad
                 FROM pedidos
                 WHERE DATE(fecha) >= ?
+                AND fecha >= '2026-02-01'
                 GROUP BY DATE(fecha)
                 ORDER BY dia ASC
             """, (fecha_inicio,))

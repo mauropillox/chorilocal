@@ -25,7 +25,7 @@ async def get_estadisticas_usuarios(
         with db.get_db_connection() as conn:
             cur = conn.cursor()
             
-            # Pedidos por vendedor (últimos 30 días)
+            # Pedidos por vendedor (últimos 30 días, only from 2026-02-01)
             hace_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
             cur.execute("""
                 SELECT 
@@ -33,6 +33,7 @@ async def get_estadisticas_usuarios(
                     COUNT(*) as total_pedidos
                 FROM pedidos
                 WHERE DATE(fecha) >= ?
+                AND fecha >= '2026-02-01'
                 GROUP BY creado_por
                 ORDER BY total_pedidos DESC
                 LIMIT 10
@@ -80,7 +81,7 @@ async def get_estadisticas_ventas(
             
             fecha_inicio = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
             
-            # Total ventas por día
+            # Total ventas por día (only from 2026-02-01)
             cur.execute("""
                 SELECT 
                     DATE(p.fecha) as dia,
@@ -90,6 +91,7 @@ async def get_estadisticas_ventas(
                 LEFT JOIN detalles_pedido dp ON dp.pedido_id = p.id
                 LEFT JOIN productos pr ON pr.id = dp.producto_id
                 WHERE DATE(p.fecha) >= ?
+                AND p.fecha >= '2026-02-01'
                 GROUP BY DATE(p.fecha)
                 ORDER BY dia ASC
             """, (fecha_inicio,))
@@ -100,7 +102,7 @@ async def get_estadisticas_ventas(
                 "monto": row[2]
             } for row in cur.fetchall()]
             
-            # Productos más vendidos
+            # Productos más vendidos (only from 2026-02-01)
             cur.execute("""
                 SELECT 
                     pr.nombre,
@@ -110,6 +112,7 @@ async def get_estadisticas_ventas(
                 JOIN productos pr ON pr.id = dp.producto_id
                 JOIN pedidos p ON p.id = dp.pedido_id
                 WHERE DATE(p.fecha) >= ?
+                AND p.fecha >= '2026-02-01'
                 GROUP BY pr.id, pr.nombre
                 ORDER BY cantidad DESC
                 LIMIT 10
@@ -121,7 +124,7 @@ async def get_estadisticas_ventas(
                 "monto": row[2]
             } for row in cur.fetchall()]
             
-            # Por categoría
+            # Por categoría (only from 2026-02-01)
             cur.execute("""
                 SELECT 
                     COALESCE(c.nombre, 'Sin Categoría') as categoria,
@@ -131,6 +134,7 @@ async def get_estadisticas_ventas(
                 LEFT JOIN categorias c ON c.id = pr.categoria_id
                 JOIN pedidos p ON p.id = dp.pedido_id
                 WHERE DATE(p.fecha) >= ?
+                AND p.fecha >= '2026-02-01'
                 GROUP BY c.id, c.nombre
                 ORDER BY cantidad DESC
             """, (fecha_inicio,))

@@ -63,6 +63,7 @@ async def get_pedidos_antiguos(
                 JOIN clientes c ON p.cliente_id = c.id
                 WHERE p.estado IN ('Pendiente', 'pendiente', 'En Preparación', 'preparando')
                 AND p.fecha < ?
+                AND p.fecha >= '2026-02-01'
                 ORDER BY p.fecha ASC
                 LIMIT 10
             """, (fecha_limite,))
@@ -156,6 +157,10 @@ async def get_pedidos(
     query = "SELECT p.id, p.cliente_id, p.fecha, p.estado, p.notas, p.creado_por, c.nombre as cliente_nombre, p.pdf_generado, p.repartidor FROM pedidos p JOIN clientes c ON p.cliente_id = c.id"
     params = []
     conditions = []
+
+    # PRODUCTION LAUNCH: Only show orders from 2026-02-01 onwards
+    conditions.append("p.fecha >= ?")
+    params.append("2026-02-01")
 
     # For 'vendedor' role, force filter by their own username
     if current_user["rol"] == "vendedor":
