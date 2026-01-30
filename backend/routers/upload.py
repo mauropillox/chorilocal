@@ -11,13 +11,14 @@ from deps import get_current_user, limiter, RATE_LIMIT_WRITE
 router = APIRouter()
 
 # Allowed file extensions and MIME types
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"}
 MIME_TYPES = {
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg", 
     ".png": "image/png",
     ".gif": "image/gif",
-    ".webp": "image/webp"
+    ".webp": "image/webp",
+    ".avif": "image/avif"
 }
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
@@ -52,7 +53,7 @@ async def upload_file(
         )
     
     # Validate MIME type (defense in depth - don't trust extension alone)
-    allowed_mime_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    allowed_mime_types = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"}
     if file.content_type and file.content_type not in allowed_mime_types:
         raise HTTPException(
             status_code=400,
