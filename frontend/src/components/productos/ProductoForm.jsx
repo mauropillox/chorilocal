@@ -199,7 +199,7 @@ export function ProductoForm({
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
                 <div className="form-group">
                     <label>Stock inicial</label>
                     <input
@@ -224,29 +224,17 @@ export function ProductoForm({
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-                <div className="form-group">
-                    <label>Stock mínimo</label>
-                    <input
-                        type="number"
-                        placeholder="10"
-                        value={stockMinimo}
-                        min="0"
-                        step="0.5"
-                        onChange={e => setStockMinimo(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && agregarProducto()}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Tipo</label>
-                    <select value={stockMinimoTipo} onChange={e => setStockMinimoTipo(e.target.value)}>
-                        <option value="unidad">Unidad</option>
-                        <option value="kg">Kilo</option>
-                        <option value="caja">Caja</option>
-                        <option value="gancho">Gancho</option>
-                        <option value="tira">Tira</option>
-                    </select>
-                </div>
+            <div className="form-group">
+                <label>Stock mínimo</label>
+                <input
+                    type="number"
+                    placeholder="10"
+                    value={stockMinimo}
+                    min="0"
+                    step="0.5"
+                    onChange={e => setStockMinimo(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && agregarProducto()}
+                />
             </div>
 
             <div className="form-group">

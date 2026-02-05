@@ -682,7 +682,7 @@ export default function Productos() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="form-group">
               <label>Stock inicial</label>
               <input type="number" placeholder="0" value={stock} min="0" step="0.5"
@@ -693,6 +693,7 @@ export default function Productos() {
               <label>Tipo</label>
               <select value={stockTipo} onChange={e => setStockTipo(e.target.value)}>
                 <option value="unidad">Unidad</option>
+                <option value="kg">Kilo</option>
                 <option value="caja">Caja</option>
                 <option value="gancho">Gancho</option>
                 <option value="tira">Tira</option>
@@ -700,22 +701,11 @@ export default function Productos() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <div className="form-group">
-              <label>Stock mínimo</label>
-              <input type="number" placeholder="10" value={stockMinimo} min="0" step="0.5"
-                onChange={e => setStockMinimo(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && agregarProducto()} />
-            </div>
-            <div className="form-group">
-              <label>Tipo</label>
-              <select value={stockMinimoTipo} onChange={e => setStockMinimoTipo(e.target.value)}>
-                <option value="unidad">Unidad</option>
-                <option value="caja">Caja</option>
-                <option value="gancho">Gancho</option>
-                <option value="tira">Tira</option>
-              </select>
-            </div>
+          <div className="form-group">
+            <label>Stock mínimo</label>
+            <input type="number" placeholder="10" value={stockMinimo} min="0" step="0.5"
+              onChange={e => setStockMinimo(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && agregarProducto()} />
           </div>
 
           <div className="form-group">
@@ -885,6 +875,7 @@ export default function Productos() {
                                     <select value={newStockTipo} onChange={e => setNewStockTipo(e.target.value)}
                                       className="text-sm p-1 rounded" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
                                       <option value="unidad">U</option>
+                                      <option value="kg">Kg</option>
                                       <option value="caja">C</option>
                                       <option value="gancho">G</option>
                                       <option value="tira">T</option>
@@ -1421,6 +1412,7 @@ export default function Productos() {
                       className="w-full p-2 border rounded"
                     >
                       <option value="unidad">Unidad</option>
+                      <option value="kg">Kilo</option>
                       <option value="caja">Caja</option>
                       <option value="gancho">Gancho</option>
                       <option value="tira">Tira</option>
