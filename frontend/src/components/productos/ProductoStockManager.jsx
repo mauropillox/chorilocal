@@ -163,9 +163,15 @@ export function ProductoStockManager({
                                                     style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
                                                 >
                                                     <option value="unidad">U</option>
+                                                    <option value="kg">Kg</option>
+                                                    <option value="gramo">g</option>
+                                                    <option value="litro">L</option>
+                                                    <option value="mililitro">ml</option>
                                                     <option value="caja">C</option>
                                                     <option value="gancho">G</option>
                                                     <option value="tira">T</option>
+                                                    <option value="paquete">P</option>
+                                                    <option value="bandeja">B</option>
                                                 </select>
                                             </div>
                                         ) : (

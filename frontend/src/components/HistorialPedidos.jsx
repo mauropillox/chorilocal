@@ -844,7 +844,15 @@ export default function HistorialPedidos() {
                                     <select defaultValue={item.tipo} onChange={(e) => guardarItem(p.id, item.id, item.cantidad, e.target.value)}
                                       className="p-1 text-sm border rounded">
                                       <option value="unidad">U</option>
+                                      <option value="kg">Kg</option>
+                                      <option value="gramo">g</option>
+                                      <option value="litro">L</option>
+                                      <option value="mililitro">ml</option>
                                       <option value="caja">C</option>
+                                      <option value="gancho">G</option>
+                                      <option value="tira">T</option>
+                                      <option value="paquete">P</option>
+                                      <option value="bandeja">B</option>
                                     </select>
                                     <button onClick={() => eliminarItem(p.id, item.id)} className="btn-danger text-xs px-2 py-1" aria-label={`Eliminar ${item.nombre} del pedido`}>✕</button>
                                   </div>
@@ -864,7 +872,15 @@ export default function HistorialPedidos() {
                                 <select value={nuevoItem.tipo} onChange={e => setNuevoItem({ ...nuevoItem, tipo: e.target.value })}
                                   className="p-2 border rounded text-sm">
                                   <option value="unidad">Unidad</option>
+                                  <option value="kg">Kilogramo (kg)</option>
+                                  <option value="gramo">Gramo (g)</option>
+                                  <option value="litro">Litro (L)</option>
+                                  <option value="mililitro">Mililitro (ml)</option>
                                   <option value="caja">Caja</option>
+                                  <option value="gancho">Gancho</option>
+                                  <option value="tira">Tira</option>
+                                  <option value="paquete">Paquete</option>
+                                  <option value="bandeja">Bandeja</option>
                                 </select>
                                 <button onClick={() => agregarItem(p.id)} className="btn-primary text-sm px-3 py-2" aria-label="Agregar producto al pedido">➕ Agregar</button>
                                 <button onClick={() => setEditandoPedido(null)} className="btn-secondary text-sm px-3 py-2">Listo</button>

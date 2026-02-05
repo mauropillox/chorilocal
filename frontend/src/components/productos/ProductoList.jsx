@@ -140,6 +140,15 @@ export function ProductoList({
                 <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="text-sm p-2 border rounded">
                     <option value="todos">Tipo: Todos</option>
                     <option value="unidad">Tipo: Unidad</option>
+                    <option value="kg">Tipo: Kilogramo (kg)</option>
+                    <option value="gramo">Tipo: Gramo (g)</option>
+                    <option value="litro">Tipo: Litro (L)</option>
+                    <option value="mililitro">Tipo: Mililitro (ml)</option>
+                    <option value="caja">Tipo: Caja</option>
+                    <option value="gancho">Tipo: Gancho</option>
+                    <option value="tira">Tipo: Tira</option>
+                    <option value="paquete">Tipo: Paquete</option>
+                    <option value="bandeja">Tipo: Bandeja</option>
                     <option value="caja">Tipo: Caja</option>
                     <option value="gancho">Tipo: Gancho</option>
                     <option value="tira">Tipo: Tira</option>

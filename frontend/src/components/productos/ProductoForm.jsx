@@ -216,9 +216,15 @@ export function ProductoForm({
                     <label>Tipo</label>
                     <select value={stockTipo} onChange={e => setStockTipo(e.target.value)}>
                         <option value="unidad">Unidad</option>
+                        <option value="kg">Kilogramo (kg)</option>
+                        <option value="gramo">Gramo (g)</option>
+                        <option value="litro">Litro (L)</option>
+                        <option value="mililitro">Mililitro (ml)</option>
                         <option value="caja">Caja</option>
                         <option value="gancho">Gancho</option>
                         <option value="tira">Tira</option>
+                        <option value="paquete">Paquete</option>
+                        <option value="bandeja">Bandeja</option>
                     </select>
                 </div>
             </div>
@@ -240,9 +246,15 @@ export function ProductoForm({
                     <label>Tipo</label>
                     <select value={stockMinimoTipo} onChange={e => setStockMinimoTipo(e.target.value)}>
                         <option value="unidad">Unidad</option>
+                        <option value="kg">Kilogramo (kg)</option>
+                        <option value="gramo">Gramo (g)</option>
+                        <option value="litro">Litro (L)</option>
+                        <option value="mililitro">Mililitro (ml)</option>
                         <option value="caja">Caja</option>
                         <option value="gancho">Gancho</option>
                         <option value="tira">Tira</option>
+                        <option value="paquete">Paquete</option>
+                        <option value="bandeja">Bandeja</option>
                     </select>
                 </div>
             </div>
