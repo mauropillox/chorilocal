@@ -158,15 +158,10 @@ export function ProductoEditModal({
                                 className="w-full p-2 border rounded"
                             >
                                 <option value="unidad">Unidad</option>
-                                <option value="kg">Kilogramo (kg)</option>
-                                <option value="gramo">Gramo (g)</option>
-                                <option value="litro">Litro (L)</option>
-                                <option value="mililitro">Mililitro (ml)</option>
+                                <option value="kg">Kilo</option>
                                 <option value="caja">Caja</option>
                                 <option value="gancho">Gancho</option>
                                 <option value="tira">Tira</option>
-                                <option value="paquete">Paquete</option>
-                                <option value="bandeja">Bandeja</option>
                             </select>
                         </div>
                     </div>
