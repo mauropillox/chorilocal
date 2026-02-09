@@ -362,6 +362,15 @@ export default function LayoutApp({ onLogout }) {
                 🔐
               </button>
               <ThemeToggle />
+              {/* Mobile logout button - visible only on small screens */}
+              <button
+                onClick={handleLogout}
+                className="btn-logout-mobile"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+              >
+                🚪
+              </button>
             </div>
           </div>
         </header>
