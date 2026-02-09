@@ -42,48 +42,65 @@ async def get_productos(
     current_user: dict = Depends(get_current_user),
     q: Optional[str] = Query(None, description="Search productos by name"),
     limit: Optional[int] = Query(None, ge=1, le=1000, description="Limit results"),
-    offset: Optional[int] = Query(0, ge=0, description="Offset for pagination")
+    offset: Optional[int] = Query(0, ge=0, description="Offset for pagination"),
+    lite: Optional[bool] = Query(False, description="Return without images for faster loading")
 ):
     """Get all productos - optimized for large datasets.
     Returns raw JSON for memory efficiency instead of Pydantic models.
+    Use ?lite=true to exclude imagen_url for faster loading (useful for search/dropdowns).
     """
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
+        
+        # Select columns based on lite mode
+        if lite:
+            columns = "id, nombre, precio, categoria_id, stock, stock_minimo, stock_tipo"
+        else:
+            columns = "id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo"
+        
         if q:
             search_term = f"%{q}%"
             if limit:
                 cursor.execute(
-                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                    f"""SELECT {columns} 
                        FROM productos WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre LIMIT ? OFFSET ?""",
                     (search_term, limit, offset)
                 )
             else:
                 cursor.execute(
-                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                    f"""SELECT {columns} 
                        FROM productos WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre""",
                     (search_term,)
                 )
         else:
             if limit:
                 cursor.execute(
-                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                    f"""SELECT {columns} 
                        FROM productos ORDER BY nombre LIMIT ? OFFSET ?""",
                     (limit, offset)
                 )
             else:
                 cursor.execute(
-                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                    f"""SELECT {columns} 
                        FROM productos ORDER BY nombre"""
                 )
         productos = cursor.fetchall()
     
     # Return raw dicts for memory efficiency - avoid Pydantic overhead for large lists
-    return JSONResponse([
-        {
-            "id": p[0], "nombre": p[1], "precio": p[2], "categoria_id": p[3],
-            "imagen_url": p[4], "stock": p[5], "stock_minimo": p[6], "stock_tipo": p[7]
-        } for p in productos
-    ])
+    if lite:
+        return JSONResponse([
+            {
+                "id": p[0], "nombre": p[1], "precio": p[2], "categoria_id": p[3],
+                "imagen_url": None, "stock": p[4], "stock_minimo": p[5], "stock_tipo": p[6]
+            } for p in productos
+        ])
+    else:
+        return JSONResponse([
+            {
+                "id": p[0], "nombre": p[1], "precio": p[2], "categoria_id": p[3],
+                "imagen_url": p[4], "stock": p[5], "stock_minimo": p[6], "stock_tipo": p[7]
+            } for p in productos
+        ])
 
 
 @router.get("/productos/{producto_id}", response_model=models.Producto)

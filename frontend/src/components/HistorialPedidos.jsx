@@ -211,7 +211,7 @@ export default function HistorialPedidos() {
       const [pedRes, cliRes, prodRes] = await Promise.all([
         authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`),
         authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/productos`)
+        authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`)  // No images for faster load
       ]);
 
       if (pedRes.res.ok) setPedidos(Array.isArray(pedRes.data) ? pedRes.data : []);
