@@ -36,7 +36,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Production: Use gunicorn with uvicorn workers
-# NOTE: Using 2 workers for SQLite compatibility (SQLite allows only 1 writer at a time)
-# For PostgreSQL deployments, increase to: -w 4 or -w $(nproc)
+# NOTE: Using 1 worker for SQLite + 512MB RAM (Render hobby tier)
+# SQLite is single-writer anyway, so 1 worker is optimal for memory efficiency
+# For PostgreSQL deployments with more RAM, increase to: -w 2 or -w 4
 # For development, override with: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-CMD ["gunicorn", "main:app", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["gunicorn", "main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-"]
