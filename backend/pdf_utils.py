@@ -61,6 +61,12 @@ def estimate_pedido_height(pedido: Dict[str, Any]) -> float:
     # Total line + spacing
     height += 35
     
+    # Notas/Aclaraciones (if present)
+    notas = pedido.get('notas', '')
+    if notas and notas.strip():
+        wrapped_notas = wrap_text(notas.strip(), 80)
+        height += 12 + (12 * min(len(wrapped_notas), 3)) + 5  # Header + lines + spacing
+    
     # Bottom separator
     height += 15
     
@@ -190,7 +196,25 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 180, y - 8, "TOTAL:")
     pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 10, y - 8, format_currency(total))
     
-    y -= 30  # Spacing after pedido
+    y -= 25
+    
+    # Notas/Aclaraciones (if present)
+    notas = pedido.get('notas', '')
+    if notas and notas.strip():
+        pdf.setFillColor(COLOR_GRAY)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(LEFT_MARGIN + 10, y, "ACLARACIONES:")
+        y -= 12
+        pdf.setFont("Helvetica", 9)
+        pdf.setFillColor(COLOR_DARK)
+        # Wrap notes if too long
+        wrapped_notas = wrap_text(notas.strip(), 80)
+        for line in wrapped_notas[:3]:  # Max 3 lines of notes
+            pdf.drawString(LEFT_MARGIN + 10, y, line)
+            y -= 12
+        y -= 5
+    
+    y -= 10  # Spacing after pedido
     
     return y
 
