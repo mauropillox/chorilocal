@@ -27,6 +27,7 @@ slowapi==0.1.9
 python-multipart==0.0.20
 reportlab==4.2.5
 openpyxl==3.1.2
+Pillow==10.4.0
 
 # Database - PostgreSQL for Production
 psycopg2-binary==2.9.9
