@@ -1364,10 +1364,12 @@ input[type="checkbox"]:focus-visible {
     background: var(--color-bg) !important;
     border-radius: 0 !important;
     border-top: 1px solid var(--color-border) !important;
+    border-bottom: none !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1) !important;
     padding: 0 !important;
     padding-bottom: env(safe-area-inset-bottom) !important;
     margin: 0 !important;
+    flex-direction: row !important;
   }
 
   .nav-hamburger {
@@ -1387,10 +1389,19 @@ input[type="checkbox"]:focus-visible {
     box-shadow: none !important;
     overflow: visible !important;
     left: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .nav-links::before {
+    display: none !important;
+    content: none !important;
   }
 
   .nav-links-open {
     left: 0 !important;
+    position: static !important;
   }
 
   .nav-link {
@@ -1491,8 +1502,29 @@ input[type="checkbox"]:focus-visible {
     padding: 0.35rem 0.6rem !important;
   }
 
-  /* Hide global search on mobile - too small */
+  /* Hide global search container on mobile - too small */
   #global-search {
+    display: none !important;
+  }
+
+  /* Hide the entire search container (input + X button) */
+  #global-search + button,
+  .header-compact .relative {
+    display: none !important;
+  }
+
+  /* Simplify header user area on mobile */
+  .btn-ghost {
+    display: none !important;
+  }
+
+  /* Hide admin dropdown items on mobile - use bottom nav instead */
+  .nav-dropdown-menu {
+    display: none !important;
+  }
+
+  /* Hide sub-navigation on mobile */
+  .sub-nav {
     display: none !important;
   }
 
@@ -2141,8 +2173,9 @@ button {
   flex-shrink: 0;
 }
 
-/* Mobile responsive */
-@media (max-width: 900px) {
+/* Mobile responsive - Tablet only (640-900px) gets slide-out menu */
+/* Mobile (<640px) uses bottom nav bar instead - see earlier rules */
+@media (min-width: 640px) and (max-width: 900px) {
   .nav-hamburger {
     display: block;
   }
@@ -3855,7 +3888,8 @@ textarea.error {
 }
 
 /* === 25. MOBILE OVERLAY FOR MENU === */
-@media (max-width: 900px) {
+/* Only show menu label on tablet slide-out menu, NOT on mobile bottom nav */
+@media (min-width: 640px) and (max-width: 900px) {
   .nav-links::before {
     content: '☰ Menú';
     display: block;
@@ -3865,6 +3899,14 @@ textarea.error {
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     margin-bottom: 0.5rem;
+  }
+}
+
+/* Hide menu label on mobile - bottom nav doesn't need it */
+@media (max-width: 639px) {
+  .nav-links::before {
+    display: none !important;
+    content: none !important;
   }
 }
 
