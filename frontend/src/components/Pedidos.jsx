@@ -9,6 +9,8 @@ export default function Pedidos() {
   const { clientes, isLoading: clientesLoading, refetch: refetchClientes } = useClientesQuery({ showToast: false });
   const { productos, isLoading: productosLoading, refetch: refetchProductos } = useProductosQuery({ showToast: false });
   const [clienteId, setClienteId] = useState('');
+  const [busquedaCliente, setBusquedaCliente] = useState('');
+  const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('');
@@ -93,6 +95,17 @@ export default function Pedidos() {
     const id = setTimeout(() => setDebouncedBusqueda(busquedaProducto), 250);
     return () => clearTimeout(id);
   }, [busquedaProducto]);
+
+  // Close cliente suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('#cliente-search') && !e.target.closest('.cliente-suggestions')) {
+        setShowClienteSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const agregarProducto = (producto) => {
     if (!productosSeleccionados.some(p => p.id === producto.id)) {
@@ -291,12 +304,68 @@ export default function Pedidos() {
         <div className="panel">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Datos del Pedido</h3>
 
-          <div className="form-group">
-            <label htmlFor="cliente-select">Cliente *</label>
-            <select id="cliente-select" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="w-full" aria-label="Seleccionar cliente">
-              <option value="">-- Elegí un cliente --</option>
-              {clientes.map((c) => (<option key={c.id} value={c.id}>{c.nombre}</option>))}
-            </select>
+          <div className="form-group" style={{ position: 'relative' }}>
+            <label htmlFor="cliente-search">Cliente *</label>
+            <input
+              id="cliente-search"
+              type="text"
+              placeholder="🔍 Escribí para buscar cliente..."
+              value={clienteId ? clientes.find(c => c.id == clienteId)?.nombre || '' : busquedaCliente}
+              onChange={(e) => {
+                setBusquedaCliente(e.target.value);
+                setClienteId('');
+                setShowClienteSuggestions(true);
+              }}
+              onFocus={() => setShowClienteSuggestions(true)}
+              className="w-full"
+              autoComplete="off"
+            />
+            {showClienteSuggestions && busquedaCliente && (
+              <div className="cliente-suggestions" style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                zIndex: 1000,
+                marginTop: '4px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              }}>
+                {clientes
+                  .filter(c => c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()))
+                  .slice(0, 10)
+                  .map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setClienteId(c.id);
+                        setBusquedaCliente('');
+                        setShowClienteSuggestions(false);
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--color-border)',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-bg-hover)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ fontWeight: 600 }}>{c.nombre}</div>
+                      {c.telefono && <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>📞 {c.telefono}</div>}
+                    </div>
+                  ))}
+                {clientes.filter(c => c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase())).length === 0 && (
+                  <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                    No se encontraron clientes
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {clienteSeleccionado && (
