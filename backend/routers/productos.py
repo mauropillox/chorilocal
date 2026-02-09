@@ -1,5 +1,6 @@
 """Productos (Products) Router"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import ORJSONResponse
 from typing import List, Optional
 
 import db
@@ -36,27 +37,53 @@ async def crear_producto(request: Request, producto: models.ProductoCreate, curr
     return {**producto.model_dump(), "id": producto_id}
 
 
-@router.get("/productos", response_model=List[models.Producto])
-@router.get("/productos", response_model=List[models.Producto])
+@router.get("/productos")
 async def get_productos(
     current_user: dict = Depends(get_current_user),
-    q: Optional[str] = Query(None, description="Search productos by name")
+    q: Optional[str] = Query(None, description="Search productos by name"),
+    limit: Optional[int] = Query(None, ge=1, le=1000, description="Limit results"),
+    offset: Optional[int] = Query(0, ge=0, description="Offset for pagination")
 ):
+    """Get all productos - optimized for large datasets.
+    Returns raw JSON for memory efficiency instead of Pydantic models.
+    """
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
         if q:
-            # Search by name (case-insensitive)
             search_term = f"%{q}%"
-            cursor.execute("""SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
-                             FROM productos WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre""", (search_term,))
+            if limit:
+                cursor.execute(
+                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                       FROM productos WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre LIMIT ? OFFSET ?""",
+                    (search_term, limit, offset)
+                )
+            else:
+                cursor.execute(
+                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                       FROM productos WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre""",
+                    (search_term,)
+                )
         else:
-            cursor.execute("""SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
-                             FROM productos ORDER BY nombre""")
+            if limit:
+                cursor.execute(
+                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                       FROM productos ORDER BY nombre LIMIT ? OFFSET ?""",
+                    (limit, offset)
+                )
+            else:
+                cursor.execute(
+                    """SELECT id, nombre, precio, categoria_id, imagen_url, stock, stock_minimo, stock_tipo 
+                       FROM productos ORDER BY nombre"""
+                )
         productos = cursor.fetchall()
-    return [models.Producto(
-        id=p[0], nombre=p[1], precio=p[2], categoria_id=p[3], 
-        imagen_url=p[4], stock=p[5], stock_minimo=p[6], stock_tipo=p[7]
-    ) for p in productos]
+    
+    # Return raw dicts for memory efficiency - avoid Pydantic overhead for large lists
+    return ORJSONResponse([
+        {
+            "id": p[0], "nombre": p[1], "precio": p[2], "categoria_id": p[3],
+            "imagen_url": p[4], "stock": p[5], "stock_minimo": p[6], "stock_tipo": p[7]
+        } for p in productos
+    ])
 
 
 @router.get("/productos/{producto_id}", response_model=models.Producto)
