@@ -492,6 +492,13 @@ input::placeholder {
   gap: 1.5rem;
 }
 
+/* Hide on desktop (640px+) */
+@media (min-width: 640px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
 @media (min-width: 768px) {
   .two-column-layout {
     grid-template-columns: minmax(300px, 1fr) minmax(300px, 2fr);
@@ -1236,6 +1243,54 @@ input[type="checkbox"]:focus-visible {
     gap: 1rem;
   }
 
+  /* Mobile: Reverse order for pedidos - Catálogo first, then Datos */
+  .two-column-layout.pedidos-layout {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  .two-column-layout.pedidos-layout .panel-catalogo {
+    order: 1;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .two-column-layout.pedidos-layout .panel-datos {
+    order: 2;
+  }
+
+  /* Floating cart summary for mobile */
+  .mobile-cart-summary {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-cart-summary .cart-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-cart-summary .cart-total {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .mobile-cart-summary .cart-items {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
   .panel {
     padding: 1rem;
   }
@@ -1248,6 +1303,11 @@ input[type="checkbox"]:focus-visible {
     padding: 0.5rem 0.75rem !important;
     font-size: 0.875rem !important;
     min-height: 40px !important;
+  }
+
+  /* Add padding at bottom for mobile cart summary */
+  .pedidos-layout {
+    padding-bottom: 80px;
   }
 
   /* Touch-friendly button sizes */

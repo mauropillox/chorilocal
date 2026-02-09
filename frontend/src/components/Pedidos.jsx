@@ -316,9 +316,9 @@ export default function Pedidos() {
         ]}
       />
 
-      <div className="two-column-layout">
-        {/* LEFT: Panel de pedido */}
-        <div className="panel">
+      <div className="two-column-layout pedidos-layout">
+        {/* LEFT: Panel de pedido (shown second on mobile) */}
+        <div className="panel panel-datos">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Datos del Pedido</h3>
 
           <div className="form-group" style={{ position: 'relative' }}>
@@ -578,8 +578,8 @@ export default function Pedidos() {
           )}
         </div>
 
-        {/* RIGHT: Catálogo de productos */}
-        <div className="panel">
+        {/* RIGHT: Catálogo de productos (shown first on mobile) */}
+        <div className="panel panel-catalogo">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Catálogo</h3>
 
           <div className="flex gap-2 mb-3">
@@ -692,6 +692,24 @@ export default function Pedidos() {
           )}
         </div>
       </div>
+
+      {/* Mobile floating cart summary */}
+      {productosSeleccionados.length > 0 && (
+        <div className="mobile-cart-summary hide-desktop">
+          <div className="cart-info">
+            <span className="cart-total">{formatUYU(totalEstimado)}</span>
+            <span className="cart-items">{productosSeleccionados.length} producto(s)</span>
+          </div>
+          <button
+            onClick={guardarPedido}
+            disabled={!clienteId}
+            className="btn-success"
+            style={{ padding: '8px 16px', minHeight: '40px' }}
+          >
+            💾 Guardar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
