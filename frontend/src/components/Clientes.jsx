@@ -22,7 +22,6 @@ export default function Clientes() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [soloConTelefono, setSoloConTelefono] = useState(false);
   const [soloConDireccion, setSoloConDireccion] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -68,28 +67,31 @@ export default function Clientes() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nombre, telefono, direccion, creating]);
 
-  // Close suggestions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('#cliente-busqueda') && !e.target.closest('.cliente-suggestions')) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // Memoized filtered client options for performance
-  const clienteOptions = useMemo(() =>
-    clientes
-      .filter(c => (soloConTelefono ? !!c.telefono : true))
-      .filter(c => (soloConDireccion ? !!c.direccion : true))
+  const clienteOptions = useMemo(() => {
+    const busquedaLower = busqueda.toLowerCase().trim();
+    return clientes
+      .filter(c => {
+        // Filter by search text
+        if (busquedaLower) {
+          const matchNombre = c.nombre?.toLowerCase().includes(busquedaLower);
+          const matchTelefono = c.telefono?.toLowerCase().includes(busquedaLower);
+          const matchDireccion = c.direccion?.toLowerCase().includes(busquedaLower);
+          const matchZona = c.zona?.toLowerCase().includes(busquedaLower);
+          if (!matchNombre && !matchTelefono && !matchDireccion && !matchZona) {
+            return false;
+          }
+        }
+        // Filter by checkboxes
+        if (soloConTelefono && !c.telefono) return false;
+        if (soloConDireccion && !c.direccion) return false;
+        return true;
+      })
       .map(c => ({
         value: c.id,
         label: `${c.nombre} - ${c.direccion || 'Sin dirección'}`
-      })),
-    [clientes, soloConTelefono, soloConDireccion]
-  );
+      }));
+  }, [clientes, soloConTelefono, soloConDireccion, busqueda]);
 
   const agregarCliente = async () => {
     if (!nombre) return toastWarn("Debe ingresar el nombre del cliente");
@@ -314,81 +316,21 @@ export default function Clientes() {
             Buscar / Seleccionar
           </h3>
 
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group">
             <label>Buscar por nombre/teléfono/dirección</label>
             <input
               id="cliente-busqueda"
+              ref={searchInputRef}
               type="text"
               placeholder="🔍 Escribí para buscar..."
               value={busqueda}
               onChange={e => {
                 setBusqueda(e.target.value);
                 setPage(1);
-                setShowSuggestions(true);
               }}
-              onFocus={() => setShowSuggestions(true)}
               className="w-full"
               autoComplete="off"
             />
-            {showSuggestions && busqueda && (
-              <div className="cliente-suggestions" style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'var(--color-bg-card)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                maxHeight: '250px',
-                overflowY: 'auto',
-                zIndex: 1000,
-                marginTop: '4px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-              }}>
-                {clienteOptions.slice(0, 8).map(c => {
-                  const cliente = clientes.find(cl => cl.id === c.value);
-                  return (
-                    <div
-                      key={c.value}
-                      onClick={() => {
-                        setSelectedCliente(c);
-                        setShowSuggestions(false);
-                        // Scroll to cliente in list
-                        setTimeout(() => {
-                          const elem = document.querySelector(`[data-cliente-id="${c.value}"]`);
-                          elem?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 100);
-                      }}
-                      style={{
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid var(--color-border)',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-bg-hover)'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                    >
-                      <div style={{ fontWeight: 600 }}>{cliente?.nombre}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                        {cliente?.telefono && `📞 ${cliente.telefono}`}
-                        {cliente?.telefono && cliente?.direccion && ' • '}
-                        {cliente?.direccion && `📍 ${cliente.direccion.substring(0, 40)}${cliente.direccion.length > 40 ? '...' : ''}`}
-                      </div>
-                    </div>
-                  );
-                })}
-                {clienteOptions.length === 0 && (
-                  <div style={{ padding: '12px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                    No se encontraron clientes
-                  </div>
-                )}
-                {clienteOptions.length > 8 && (
-                  <div style={{ padding: '8px 12px', fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', borderTop: '1px solid var(--color-border)' }}>
-                    +{clienteOptions.length - 8} resultados más
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-3">

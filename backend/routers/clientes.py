@@ -20,32 +20,57 @@ async def crear_cliente(request: Request, cliente: models.ClienteCreate, current
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="El cliente ya existe")
         
+        # Validate vendedor_id exists if provided
+        vendedor_nombre = None
+        if cliente.vendedor_id is not None:
+            cursor.execute("SELECT id, username FROM usuarios WHERE id = ?", (cliente.vendedor_id,))
+            vendedor = cursor.fetchone()
+            if not vendedor:
+                raise HTTPException(status_code=400, detail=f"Vendedor con ID {cliente.vendedor_id} no existe")
+            vendedor_nombre = vendedor[1]
+        
         cursor.execute(
-            "INSERT INTO clientes (nombre, telefono, direccion, zona) VALUES (?, ?, ?, ?)",
-            (cliente.nombre, cliente.telefono, cliente.direccion, cliente.zona)
+            "INSERT INTO clientes (nombre, telefono, direccion, zona, vendedor_id) VALUES (?, ?, ?, ?, ?)",
+            (cliente.nombre, cliente.telefono, cliente.direccion, cliente.zona, cliente.vendedor_id)
         )
         cliente_id = cursor.lastrowid
-    return {**cliente.model_dump(), "id": cliente_id}
+    return {**cliente.model_dump(), "id": cliente_id, "vendedor_nombre": vendedor_nombre}
 
 
 @router.get("/clientes", response_model=List[models.Cliente])
 async def get_clientes(current_user: dict = Depends(get_current_user)):
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nombre, telefono, direccion, zona FROM clientes ORDER BY nombre")
+        cursor.execute("""
+            SELECT c.id, c.nombre, c.telefono, c.direccion, c.zona, c.vendedor_id, u.username
+            FROM clientes c
+            LEFT JOIN usuarios u ON c.vendedor_id = u.id
+            ORDER BY c.nombre
+        """)
         clientes = cursor.fetchall()
-    return [models.Cliente(id=c[0], nombre=c[1], telefono=c[2], direccion=c[3], zona=c[4]) for c in clientes]
+    return [models.Cliente(
+        id=c[0], nombre=c[1], telefono=c[2], direccion=c[3], zona=c[4],
+        vendedor_id=c[5], vendedor_nombre=c[6]
+    ) for c in clientes]
 
 
 @router.get("/clientes/{cliente_id}", response_model=models.Cliente)
 async def get_cliente(cliente_id: int, current_user: dict = Depends(get_current_user)):
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nombre, telefono, direccion, zona FROM clientes WHERE id = ?", (cliente_id,))
+        cursor.execute("""
+            SELECT c.id, c.nombre, c.telefono, c.direccion, c.zona, c.vendedor_id, u.username
+            FROM clientes c
+            LEFT JOIN usuarios u ON c.vendedor_id = u.id
+            WHERE c.id = ?
+        """, (cliente_id,))
         cliente = cursor.fetchone()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    return models.Cliente(id=cliente[0], nombre=cliente[1], telefono=cliente[2], direccion=cliente[3], zona=cliente[4])
+    return models.Cliente(
+        id=cliente[0], nombre=cliente[1], telefono=cliente[2], direccion=cliente[3], zona=cliente[4],
+        vendedor_id=cliente[5], vendedor_nombre=cliente[6]
+    )
 
 
 @router.put("/clientes/{cliente_id}", response_model=models.Cliente)
@@ -55,11 +80,20 @@ async def actualizar_cliente(cliente_id: int, cliente: models.ClienteCreate, cur
         if cursor.fetchone() is None:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
+        # Validate vendedor_id exists if provided
+        vendedor_nombre = None
+        if cliente.vendedor_id is not None:
+            cursor.execute("SELECT id, username FROM usuarios WHERE id = ?", (cliente.vendedor_id,))
+            vendedor = cursor.fetchone()
+            if not vendedor:
+                raise HTTPException(status_code=400, detail=f"Vendedor con ID {cliente.vendedor_id} no existe")
+            vendedor_nombre = vendedor[1]
+
         cursor.execute(
-            "UPDATE clientes SET nombre = ?, telefono = ?, direccion = ?, zona = ? WHERE id = ?",
-            (cliente.nombre, cliente.telefono, cliente.direccion, cliente.zona, cliente_id)
+            "UPDATE clientes SET nombre = ?, telefono = ?, direccion = ?, zona = ?, vendedor_id = ? WHERE id = ?",
+            (cliente.nombre, cliente.telefono, cliente.direccion, cliente.zona, cliente.vendedor_id, cliente_id)
         )
-    return {**cliente.model_dump(), "id": cliente_id}
+    return {**cliente.model_dump(), "id": cliente_id, "vendedor_nombre": vendedor_nombre}
 
 
 @router.delete("/clientes/{cliente_id}", status_code=204)

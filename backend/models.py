@@ -76,12 +76,15 @@ class Cliente(BaseModel):
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     zona: Optional[str] = None
+    vendedor_id: Optional[int] = None
+    vendedor_nombre: Optional[str] = None
 
 class ClienteCreate(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
     telefono: Optional[str] = Field(None, max_length=50)
     direccion: Optional[str] = Field(None, max_length=300)
     zona: Optional[str] = Field(None, max_length=100)
+    vendedor_id: Optional[int] = None
 
 class Producto(BaseModel):
     id: int
