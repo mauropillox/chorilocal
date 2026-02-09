@@ -43,7 +43,7 @@ export default function Clientes() {
   useEffect(() => {
     const fetchVendedores = async () => {
       try {
-        const res = await authFetch(`${import.meta.env.VITE_API_URL}/auth/vendedores`);
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/vendedores`);
         if (res.ok) {
           const data = await res.json();
           setVendedores(data);
@@ -115,10 +115,10 @@ export default function Clientes() {
     if (!nombre) return toastWarn("Debe ingresar el nombre del cliente");
     setCreating(true);
     try {
-      const clienteData = { 
-        nombre, 
-        telefono, 
-        direccion, 
+      const clienteData = {
+        nombre,
+        telefono,
+        direccion,
         zona,
         vendedor_id: vendedorId ? parseInt(vendedorId) : null
       };
@@ -326,8 +326,8 @@ export default function Clientes() {
 
           <div className="form-group">
             <label>Vendedor asignado</label>
-            <select 
-              value={vendedorId} 
+            <select
+              value={vendedorId}
               onChange={e => setVendedorId(e.target.value)}
               style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)', color: 'var(--color-text)' }}
             >
