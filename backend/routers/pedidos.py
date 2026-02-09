@@ -737,9 +737,9 @@ async def generar_pdfs(
                     "estado": row[6],
                     "notas": row[7],
                     "creado_por": row[8],
-                    "items": [{
-                        "producto_id": i[0],
-                        "producto_nombre": i[1],
+                    "productos": [{
+                        "id": i[0],
+                        "nombre": i[1],
                         "cantidad": i[2],
                         "precio": i[3],
                         "tipo": i[4]

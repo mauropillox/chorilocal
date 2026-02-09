@@ -532,8 +532,8 @@ export default function Clientes() {
                               backgroundColor: 'var(--color-bg)',
                               border: '1px solid var(--color-border)',
                               color: cliente?.vendedor_nombre ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                              minWidth: '90px',
-                              maxWidth: '110px'
+                              minWidth: '140px',
+                              maxWidth: '180px'
                             }}
                             title="Asignar vendedor"
                           >
