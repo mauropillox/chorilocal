@@ -1526,6 +1526,272 @@ input[type="checkbox"]:focus-visible {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
+
+  /* =============================================
+     MODULE-LEVEL MOBILE FIXES
+     ============================================= */
+
+  /* --- TITLES smaller on mobile --- */
+  h2.text-xl,
+  h2 {
+    font-size: 1.15rem !important;
+  }
+
+  h3.text-lg,
+  h3 {
+    font-size: 0.95rem !important;
+  }
+
+  /* --- FORM GROUPS tighter --- */
+  .form-group {
+    margin-bottom: 0.4rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .form-group label {
+    font-size: 0.8rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Form rows side by side on mobile too */
+  .form-row {
+    gap: 0.5rem !important;
+  }
+
+  /* Grid 2-cols should stay 2 cols on mobile for compact forms */
+  .grid.grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* But 3+ col grids should collapse */
+  .grid.grid-cols-3,
+  .grid.grid-cols-4 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Single col on very narrow for date filters */
+  .grid.grid-cols-1.sm\\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* --- PANELS tighter --- */
+  .panel {
+    padding: 0.625rem !important;
+  }
+
+  .panel-light,
+  .card-accent {
+    padding: 0.5rem !important;
+  }
+
+  /* --- MODALS full-width on mobile --- */
+  .modal-backdrop {
+    padding: 0.5rem !important;
+    align-items: flex-start !important;
+    padding-top: 2rem !important;
+  }
+
+  .modal-box {
+    min-width: auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* --- TWO-COLUMN LAYOUT stacking --- */
+  .two-column-layout {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* --- INLINE FLEX ROWS wrapping --- */
+  div[style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* --- CUSTOM SCROLLBAR areas shorter --- */
+  .custom-scrollbar {
+    max-height: 40vh !important;
+  }
+
+  /* --- CHECKBOX ROWS inline --- */
+  .flex.items-center.gap-2,
+  .flex.items-center.gap-3,
+  .flex.items-center.gap-4 {
+    flex-wrap: wrap !important;
+  }
+
+  /* --- BUTTON GROUPS --- */
+  .flex.gap-2,
+  .flex.gap-3 {
+    flex-wrap: wrap !important;
+  }
+
+  /* Small buttons for actions inside cards */
+  .card-item button,
+  .card-item .btn-ghost,
+  .card-item .btn-danger,
+  .card-item .btn-secondary {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-height: 32px !important;
+  }
+
+  /* --- PRODUCTOS MODULE --- */
+  /* Collapse "Agregar Producto" by default idea - just make form compact */
+  .drag-zone {
+    padding: 0.75rem !important;
+  }
+
+  /* Stock manager table scrollable */
+  .stock-table-container,
+  div:has(> table.stock-table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Filter selects in a row */
+  .grid.grid-cols-2.md\\:grid-cols-4 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.4rem !important;
+  }
+
+  /* --- CLIENTES MODULE --- */
+  /* Vendedor selects should be full width */
+  select[style*="width: 140px"],
+  select[style*="width: 180px"],
+  select[style*="width: 200px"] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Client cards - compact layout */
+  .card-item > div[style*="display: flex"] {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  /* --- HISTORIAL MODULE --- */
+  /* Tab buttons compact */
+  .flex > button[style*="flex: 1"] {
+    font-size: 0.8rem !important;
+    padding: 0.5rem !important;
+    min-height: 36px !important;
+  }
+
+  /* Order cards tighter */
+  .card-item > div > div {
+    font-size: 0.8rem !important;
+  }
+
+  /* Badge compact */
+  .badge,
+  .badge-success,
+  .badge-warning,
+  .badge-pending,
+  .badge-danger,
+  .badge-muted {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.4rem !important;
+  }
+
+  /* Pagination compact */
+  .flex.items-center.justify-between:has(button:has(span)) {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    justify-content: center !important;
+  }
+
+  /* --- PEDIDOS MODULE --- */
+  /* Quantity controls tighter */
+  .card-accent button[style*="width: 28px"],
+  .card-accent button[style*="width: 30px"] {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    font-size: 1rem !important;
+  }
+
+  /* Total panel compact */
+  div[style*="background: linear-gradient"][style*="border-radius: 12px"] {
+    padding: 0.625rem !important;
+  }
+
+  /* Selected products list shorter */
+  .card-accent .custom-scrollbar,
+  div[style*="max-height: 300px"],
+  div[style*="maxHeight: 300px"] {
+    max-height: 35vh !important;
+  }
+
+  /* Catalog product list */
+  div[style*="max-height: 500px"],
+  div[style*="maxHeight: 500px"],
+  div[style*="max-height: 600px"],
+  div[style*="maxHeight: 600px"] {
+    max-height: 45vh !important;
+  }
+
+  /* Smaller section titles */
+  .text-lg {
+    font-size: 0.95rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.1rem !important;
+  }
+
+  /* Margins between sections tighter */
+  .mb-4 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .mb-6 {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .mt-4 {
+    margin-top: 0.5rem !important;
+  }
+
+  .mt-6 {
+    margin-top: 0.75rem !important;
+  }
+
+  .py-4 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .space-y-4 {
+    gap: 0.5rem !important;
+  }
+
+  .space-y-3 {
+    gap: 0.4rem !important;
+  }
+
+  /* Gap utilities tighter */
+  .gap-4 {
+    gap: 0.5rem !important;
+  }
+
+  .gap-3 {
+    gap: 0.4rem !important;
+  }
+
+  .gap-2 {
+    gap: 0.3rem !important;
+  }
 }
 
 /* =============================================
@@ -1658,6 +1924,7 @@ input[type="checkbox"]:focus-visible {
    These ADD to the shared <1024px rules above
    ============================================= */
 @media (min-width: 640px) and (max-width: 1023px) {
+
   /* Tablet gets slightly bigger images */
   .product-image {
     width: 64px !important;
@@ -1705,6 +1972,37 @@ input[type="checkbox"]:focus-visible {
   .btn-success,
   .btn-danger {
     font-size: 0.875rem !important;
+  }
+
+  /* Two-col grid for forms on tablet */
+  .grid.grid-cols-2 {
+    gap: 0.75rem !important;
+  }
+
+  /* 3-col filter grid on tablet */
+  .grid.grid-cols-1.sm\\:grid-cols-3 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+
+  /* Panels a bit more room on tablet */
+  .panel {
+    padding: 0.875rem !important;
+  }
+
+  /* Modals don't need full width on tablet */
+  .modal-box {
+    max-width: 500px !important;
+    width: auto !important;
+  }
+
+  /* Custom scrollbar areas taller on tablet */
+  .custom-scrollbar {
+    max-height: 50vh !important;
+  }
+
+  /* Form groups slightly more spacious */
+  .form-group {
+    margin-bottom: 0.5rem !important;
   }
 }
 
