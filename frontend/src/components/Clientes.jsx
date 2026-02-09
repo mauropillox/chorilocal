@@ -29,6 +29,8 @@ export default function Clientes() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const [editingVendedor, setEditingVendedor] = useState(false); // Para editar vendedor inline
+  const [updatingVendedor, setUpdatingVendedor] = useState(false);
 
   // Paginación
   const [page, setPage] = useState(1);
@@ -233,6 +235,40 @@ export default function Clientes() {
     setConfirmBulkOpen(false);
   };
 
+  // Actualizar vendedor de un cliente directamente (inline)
+  const actualizarVendedorCliente = async (clienteId, nuevoVendedorId) => {
+    setUpdatingVendedor(true);
+    try {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) return;
+
+      const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/${clienteId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: cliente.nombre,
+          telefono: cliente.telefono,
+          direccion: cliente.direccion,
+          zona: cliente.zona,
+          vendedor_id: nuevoVendedorId ? parseInt(nuevoVendedorId) : null
+        })
+      });
+      if (res.ok) {
+        await refetchClientes();
+        setEditingVendedor(false);
+        const vendedor = vendedores.find(v => v.id === parseInt(nuevoVendedorId));
+        toastSuccess(vendedor ? `Vendedor asignado: ${vendedor.username}` : 'Vendedor removido');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toastError(err.detail || 'Error al actualizar vendedor');
+      }
+    } catch (e) {
+      toastError('Error de conexión');
+    } finally {
+      setUpdatingVendedor(false);
+    }
+  };
+
   const startEditCliente = (id) => {
     const cli = clientes.find(c => c.id === id);
     if (!cli) return;
@@ -259,6 +295,11 @@ export default function Clientes() {
   };
 
   const clienteDetalle = selectedCliente ? clientes.find(c => c.id === selectedCliente.value) : null;
+
+  // Reset editingVendedor cuando cambia el cliente seleccionado
+  useEffect(() => {
+    setEditingVendedor(false);
+  }, [selectedCliente]);
 
   const customSelectStyles = getSelectStyles();
 
@@ -503,11 +544,56 @@ export default function Clientes() {
               <div className="font-semibold text-lg mb-2" style={{ color: 'var(--color-text)' }}>
                 {clienteDetalle.nombre}
               </div>
-              <div className="text-sm space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
+              <div className="text-sm space-y-2" style={{ color: 'var(--color-text-secondary)' }}>
                 <div>📞 <strong>Teléfono:</strong> {clienteDetalle.telefono || 'No registrado'}</div>
                 <div>📍 <strong>Dirección:</strong> {clienteDetalle.direccion || 'No registrada'}</div>
                 <div>🗺️ <strong>Zona:</strong> {clienteDetalle.zona || 'No registrada'}</div>
-                <div>👤 <strong>Vendedor:</strong> {clienteDetalle.vendedor_nombre || 'Sin asignar'}</div>
+
+                {/* Vendedor con edición inline */}
+                <div className="flex items-center gap-2">
+                  <span>👤 <strong>Vendedor:</strong></span>
+                  {editingVendedor ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={clienteDetalle.vendedor_id || ''}
+                        onChange={(e) => actualizarVendedorCliente(clienteDetalle.id, e.target.value)}
+                        disabled={updatingVendedor}
+                        className="text-sm p-1 rounded"
+                        style={{
+                          backgroundColor: 'var(--color-bg)',
+                          border: '1px solid var(--color-primary)',
+                          minWidth: '140px'
+                        }}
+                        autoFocus
+                      >
+                        <option value="">Sin asignar</option>
+                        {vendedores.map(v => (
+                          <option key={v.id} value={v.id}>{v.username}</option>
+                        ))}
+                      </select>
+                      {updatingVendedor && <span className="text-xs">⏳</span>}
+                      <button
+                        onClick={() => setEditingVendedor(false)}
+                        className="text-xs"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <span
+                      onClick={() => setEditingVendedor(true)}
+                      className="cursor-pointer hover:underline"
+                      style={{
+                        color: clienteDetalle.vendedor_nombre ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                        fontWeight: clienteDetalle.vendedor_nombre ? '500' : 'normal'
+                      }}
+                      title="Click para cambiar vendedor"
+                    >
+                      {clienteDetalle.vendedor_nombre || 'Sin asignar'} ✏️
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button onClick={() => startEditCliente(clienteDetalle.id)} className="btn-secondary">

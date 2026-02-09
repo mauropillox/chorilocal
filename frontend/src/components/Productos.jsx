@@ -51,6 +51,9 @@ export default function Productos() {
   const [deleting, setDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set()); // Multi-select
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  // Paginación para performance con muchos productos
+  const [productsPage, setProductsPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 30;
   const searchInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -565,6 +568,11 @@ export default function Productos() {
     }
   };
 
+  // Reset página cuando cambia la búsqueda o filtros
+  useEffect(() => {
+    setProductsPage(1);
+  }, [busqueda, filtroStockBajo, filtroTipo, categoriaFiltro, tagFiltro, precioMin, precioMax]);
+
   const productosFiltrados = useMemo(() => {
     if (!busqueda.trim() && !showAll) return [];
     const q = busqueda.trim().toLowerCase();
@@ -594,6 +602,14 @@ export default function Productos() {
     }
     return list;
   }, [productos, busqueda, showAll, filtroStockBajo, filtroTipo, categoriaFiltro, tagFiltro, productosTags, precioMin, precioMax]);
+
+  // Productos paginados para mejor rendimiento
+  const productosPaginados = useMemo(() => {
+    const start = (productsPage - 1) * PRODUCTS_PER_PAGE;
+    return productosFiltrados.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [productosFiltrados, productsPage]);
+
+  const totalProductsPages = Math.ceil(productosFiltrados.length / PRODUCTS_PER_PAGE);
 
   const stockBajo = useMemo(() => {
     return productos.filter(p => {
@@ -1029,310 +1045,361 @@ export default function Productos() {
               ) : productosFiltrados.length === 0 ? (
                 <div className="empty-state"><div className="empty-state-icon">📦</div><div className="empty-state-text">No se encontraron</div></div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="checkbox"
-                      className="custom-checkbox"
-                      checked={selectedIds.size === productosFiltrados.length && productosFiltrados.length > 0}
-                      onChange={toggleSelectAllVisible}
-                      aria-label="Seleccionar todos los productos"
-                    />
-                    <span className="text-xs text-muted">Seleccionar todos</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="custom-checkbox"
+                        checked={selectedIds.size === productosFiltrados.length && productosFiltrados.length > 0}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Seleccionar todos los productos"
+                      />
+                      <span className="text-xs text-muted">Seleccionar todos</span>
+                    </div>
+                    <span className="text-xs text-muted">
+                      {productosFiltrados.length} productos
+                      {totalProductsPages > 1 && ` (pág ${productsPage}/${totalProductsPages})`}
+                    </span>
                   </div>
-                  {productosFiltrados.map(p => {
-                    const bajo = (p.stock || 0) < (p.stock_minimo || 10);
-                    const categoria = categorias.find(c => c.id === p?.categoria_id);
-                    return (
-                      <div key={p?.id} className={`card-item ${bajo ? 'stock-bajo-item' : ''}`} style={{ padding: '12px' }}>
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            className="custom-checkbox mt-2"
-                            checked={selectedIds.has(p.id)}
-                            onChange={() => toggleSelection(p.id)}
-                            aria-label={`Seleccionar producto ${p?.nombre || ''}`}
-                          />
-                          {/* Imagen */}
-                          <div
-                            className="relative group cursor-pointer flex-shrink-0"
-                            onClick={() => setEditingImage(editingImage === p.id ? null : p.id)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => e.key === 'Enter' && setEditingImage(editingImage === p.id ? null : p.id)}
-                            aria-label={`Cambiar imagen de ${p?.nombre || 'producto'}`}
-                            title="Click para cambiar imagen"
-                            onDragEnter={(e) => handleDrag(e)}
-                            onDragOver={(e) => handleDrag(e)}
-                            onDragLeave={(e) => handleDrag(e)}
-                            onDrop={(e) => handleDrop(e, p.id)}
-                          >
-                            {p?.imagen_url ? (
-                              <img
-                                src={p.imagen_url}
-                                alt={p?.nombre || 'Producto'}
-                                className="product-image"
-                                loading="lazy"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.style.display = 'none';
-                                  if (e.target.nextElementSibling) {
-                                    e.target.nextElementSibling.style.display = 'flex';
-                                  }
-                                }}
-                              />
-                            ) : null}
+                  <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-3">
+                    {productosPaginados.map(p => {
+                      const bajo = (p.stock || 0) < (p.stock_minimo || 10);
+                      const categoria = categorias.find(c => c.id === p?.categoria_id);
+                      return (
+                        <div key={p?.id} className={`card-item ${bajo ? 'stock-bajo-item' : ''}`} style={{ padding: '12px' }}>
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              className="custom-checkbox mt-2"
+                              checked={selectedIds.has(p.id)}
+                              onChange={() => toggleSelection(p.id)}
+                              aria-label={`Seleccionar producto ${p?.nombre || ''}`}
+                            />
+                            {/* Imagen */}
                             <div
-                              className={`product-image-placeholder ${dragActive ? 'border-primary' : ''}`}
-                              style={{
-                                display: p?.imagen_url ? 'none' : 'flex',
-                                borderColor: dragActive ? 'var(--color-primary)' : undefined,
-                                backgroundColor: dragActive ? 'var(--color-bg-accent)' : undefined
-                              }}
-                            >
-                              {dragActive ? '📤' : '📦'}
-                            </div>
-                            <div
-                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg ${dragActive ? 'opacity-100 bg-primary/20' : ''
-                                }`}
-                              style={{
-                                background: dragActive ?
-                                  'linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1))' :
-                                  'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))'
-                              }}
-                            >
-                              <span className="text-2xl mb-1" aria-hidden="true">{dragActive ? '📤' : '📷'}</span>
-                              <span className="text-white text-xs font-medium">
-                                {dragActive ? 'Soltar imagen aquí' : 'Cambiar Imagen'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-                                {p?.nombre || 'Sin nombre'}
-                              </span>
-                              {productosEnOferta.has(p?.id) && (
-                                <span style={{
-                                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                                  color: '#fff', fontSize: '0.6rem', padding: '2px 6px',
-                                  borderRadius: '6px', fontWeight: 700, flexShrink: 0
-                                }}>OFERTA</span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 text-sm mb-2">
-                              <span className="font-bold" style={{ color: 'var(--color-success)' }}>${p?.precio || 0}</span>
-                              <span className={`${bajo ? 'text-orange-600 font-bold' : ''}`} style={{ color: bajo ? undefined : 'var(--color-text-muted)' }}>
-                                📦 {p?.stock || 0} {p?.stock_tipo || 'unidad'}
-                              </span>
-                            </div>
-
-                            {/* Badge de categoría mejorado */}
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs cursor-pointer hover:opacity-80 transition-opacity"
-                              style={{
-                                backgroundColor: categoria ? `${categoria.color}20` : 'var(--color-bg-secondary)',
-                                border: `1px solid ${categoria?.color || 'var(--color-border)'}`,
-                                color: categoria?.color || 'var(--color-text-muted)'
-                              }}
-                              onClick={(e) => { e.stopPropagation(); setEditingCategoria(editingCategoria === p.id ? null : p.id); }}
-                              title="Click para cambiar categoría"
-                            >
-                              <span style={{
-                                width: '8px', height: '8px', borderRadius: '50%',
-                                backgroundColor: categoria?.color || '#9ca3af'
-                              }} />
-                              <span style={{ fontWeight: 500 }}>{categoria?.nombre || 'Sin categoría'}</span>
-                              <span style={{ opacity: 0.6 }}>▼</span>
-                            </button>
-
-                            {/* Tags del producto */}
-                            {productosTags[p.id] && productosTags[p.id].length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {productosTags[p.id].slice(0, 4).map(tag => (
-                                  <span
-                                    key={tag.id}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs"
-                                    style={{
-                                      backgroundColor: `${tag.color || '#6b7280'}20`,
-                                      color: tag.color || '#6b7280',
-                                      fontSize: '0.65rem'
-                                    }}
-                                    title={tag.nombre}
-                                  >
-                                    {tag.icono || '🏷️'} {tag.nombre?.replace(/^[^\s]+ /, '')}
-                                  </span>
-                                ))}
-                                {productosTags[p.id].length > 4 && (
-                                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                                    +{productosTags[p.id].length - 4}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Botones editar y eliminar */}
-                          <div className="flex gap-1" style={{ flexShrink: 0 }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                abrirEdicionProducto(p);
-                              }}
-                              className="btn-ghost"
-                              style={{ padding: '6px 10px', minHeight: 'auto' }}
-                              title="Editar producto"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                setConfirmDelete(p);
-                              }}
-                              className="btn-ghost"
-                              style={{ padding: '6px 10px', minHeight: 'auto', color: 'var(--color-danger, #ef4444)' }}
-                              title="Eliminar producto"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Editor de categoría inline mejorado */}
-                        {editingCategoria === p.id && (
-                          <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                            <div className="text-xs mb-2 font-semibold" style={{ color: 'var(--color-text-muted)' }}>Seleccionar categoría:</div>
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={() => { actualizarCategoriaProducto(p.id, ''); }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!p.categoria_id ? 'ring-2 ring-offset-1' : ''}`}
-                                style={{
-                                  backgroundColor: 'var(--color-bg)',
-                                  border: '1px solid var(--color-border)',
-                                  color: 'var(--color-text-muted)'
-                                }}
-                              >
-                                Sin categoría
-                              </button>
-                              {categorias.map(cat => (
-                                <button
-                                  key={cat.id}
-                                  onClick={() => actualizarCategoriaProducto(p.id, cat.id)}
-                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${p.categoria_id === cat.id ? 'ring-2 ring-offset-1' : ''}`}
-                                  style={{
-                                    backgroundColor: `${cat.color}20`,
-                                    border: `1px solid ${cat.color}`,
-                                    color: cat.color
-                                  }}
-                                >
-                                  {cat.nombre}
-                                </button>
-                              ))}
-                            </div>
-                            <button
-                              onClick={() => setEditingCategoria(null)}
-                              className="mt-2 text-xs"
-                              style={{ color: 'var(--color-text-muted)' }}
-                            >
-                              ✕ Cerrar
-                            </button>
-                          </div>
-                        )}
-
-                        {editingImage === p.id && (
-                          <div className="mt-3 p-4 rounded-xl" style={{
-                            backgroundColor: 'var(--color-bg-secondary)',
-                            border: '2px dashed var(--color-primary)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                          }}>
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-2xl">📷</span>
-                              <span className="font-bold" style={{ color: 'var(--color-primary)' }}>Cambiar Imagen</span>
-                            </div>
-
-                            <label
-                              className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer drag-zone ${dragActive ? 'drag-active' : ''
-                                } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                              style={{
-                                backgroundColor: 'var(--color-bg-tertiary, var(--color-bg-secondary))',
-                                border: '2px solid var(--color-border)',
-                                minHeight: '100px'
-                              }}
-                              onDragEnter={handleDrag}
-                              onDragLeave={handleDrag}
-                              onDragOver={handleDrag}
+                              className="relative group cursor-pointer flex-shrink-0"
+                              onClick={() => setEditingImage(editingImage === p.id ? null : p.id)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => e.key === 'Enter' && setEditingImage(editingImage === p.id ? null : p.id)}
+                              aria-label={`Cambiar imagen de ${p?.nombre || 'producto'}`}
+                              title="Click para cambiar imagen"
+                              onDragEnter={(e) => handleDrag(e)}
+                              onDragOver={(e) => handleDrag(e)}
+                              onDragLeave={(e) => handleDrag(e)}
                               onDrop={(e) => handleDrop(e, p.id)}
                             >
-                              <span className="text-3xl mb-2">{dragActive ? '📤' : '📷'}</span>
-                              <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                                {fileUploading ? (
-                                  <span className="upload-loading">⏳ Subiendo imagen...</span>
-                                ) : dragActive ? (
-                                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>✨ Suelta la imagen aquí</span>
-                                ) : (
-                                  'Arrastra aquí o click para seleccionar'
-                                )}
-                              </span>
-                              {!fileUploading && (
-                                <span className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                                  JPG, PNG, GIF, WEBP • Máximo 5MB
-                                </span>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleFileChange(e, p.id)}
-                                className="hidden"
-                                disabled={fileUploading}
-                              />
-                            </label>
-
-                            <div className="flex justify-between items-center mt-3">
-                              <button
-                                onClick={() => quitarImagenProducto(p.id)}
-                                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                              {p?.imagen_url ? (
+                                <img
+                                  src={p.imagen_url}
+                                  alt={p?.nombre || 'Producto'}
+                                  className="product-image"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.style.display = 'none';
+                                    if (e.target.nextElementSibling) {
+                                      e.target.nextElementSibling.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={`product-image-placeholder ${dragActive ? 'border-primary' : ''}`}
                                 style={{
-                                  backgroundColor: 'var(--color-danger, #dc3545)',
-                                  color: 'white'
+                                  display: p?.imagen_url ? 'none' : 'flex',
+                                  borderColor: dragActive ? 'var(--color-primary)' : undefined,
+                                  backgroundColor: dragActive ? 'var(--color-bg-accent)' : undefined
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger-hover, #c82333)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger, #dc3545)'}
-                                disabled={!p.imagen_url}
-                                title={p.imagen_url ? "Quitar imagen actual" : "Este producto no tiene imagen"}
                               >
-                                🗑️ Quitar Imagen
+                                {dragActive ? '📤' : '📦'}
+                              </div>
+                              <div
+                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center rounded-lg ${dragActive ? 'opacity-100 bg-primary/20' : ''
+                                  }`}
+                                style={{
+                                  background: dragActive ?
+                                    'linear-gradient(135deg, rgba(14,165,233,0.3), rgba(14,165,233,0.1))' :
+                                    'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))'
+                                }}
+                              >
+                                <span className="text-2xl mb-1" aria-hidden="true">{dragActive ? '📤' : '📷'}</span>
+                                <span className="text-white text-xs font-medium">
+                                  {dragActive ? 'Soltar imagen aquí' : 'Cambiar Imagen'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold truncate" style={{ color: 'var(--color-text)' }}>
+                                  {p?.nombre || 'Sin nombre'}
+                                </span>
+                                {productosEnOferta.has(p?.id) && (
+                                  <span style={{
+                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    color: '#fff', fontSize: '0.6rem', padding: '2px 6px',
+                                    borderRadius: '6px', fontWeight: 700, flexShrink: 0
+                                  }}>OFERTA</span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 text-sm mb-2">
+                                <span className="font-bold" style={{ color: 'var(--color-success)' }}>${p?.precio || 0}</span>
+                                <span className={`${bajo ? 'text-orange-600 font-bold' : ''}`} style={{ color: bajo ? undefined : 'var(--color-text-muted)' }}>
+                                  📦 {p?.stock || 0} {p?.stock_tipo || 'unidad'}
+                                </span>
+                              </div>
+
+                              {/* Badge de categoría mejorado */}
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                                style={{
+                                  backgroundColor: categoria ? `${categoria.color}20` : 'var(--color-bg-secondary)',
+                                  border: `1px solid ${categoria?.color || 'var(--color-border)'}`,
+                                  color: categoria?.color || 'var(--color-text-muted)'
+                                }}
+                                onClick={(e) => { e.stopPropagation(); setEditingCategoria(editingCategoria === p.id ? null : p.id); }}
+                                title="Click para cambiar categoría"
+                              >
+                                <span style={{
+                                  width: '8px', height: '8px', borderRadius: '50%',
+                                  backgroundColor: categoria?.color || '#9ca3af'
+                                }} />
+                                <span style={{ fontWeight: 500 }}>{categoria?.nombre || 'Sin categoría'}</span>
+                                <span style={{ opacity: 0.6 }}>▼</span>
+                              </button>
+
+                              {/* Tags del producto */}
+                              {productosTags[p.id] && productosTags[p.id].length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {productosTags[p.id].slice(0, 4).map(tag => (
+                                    <span
+                                      key={tag.id}
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs"
+                                      style={{
+                                        backgroundColor: `${tag.color || '#6b7280'}20`,
+                                        color: tag.color || '#6b7280',
+                                        fontSize: '0.65rem'
+                                      }}
+                                      title={tag.nombre}
+                                    >
+                                      {tag.icono || '🏷️'} {tag.nombre?.replace(/^[^\s]+ /, '')}
+                                    </span>
+                                  ))}
+                                  {productosTags[p.id].length > 4 && (
+                                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                      +{productosTags[p.id].length - 4}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Botones editar y eliminar */}
+                            <div className="flex gap-1" style={{ flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  abrirEdicionProducto(p);
+                                }}
+                                className="btn-ghost"
+                                style={{ padding: '6px 10px', minHeight: 'auto' }}
+                                title="Editar producto"
+                              >
+                                ✏️
                               </button>
                               <button
-                                onClick={() => setEditingImage(null)}
-                                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                style={{
-                                  backgroundColor: 'var(--color-bg-accent)',
-                                  color: 'var(--color-text-muted)'
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setConfirmDelete(p);
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover, var(--color-bg-accent))'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-accent)'}
+                                className="btn-ghost"
+                                style={{ padding: '6px 10px', minHeight: 'auto', color: 'var(--color-danger, #ef4444)' }}
+                                title="Eliminar producto"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Editor de categoría inline mejorado */}
+                          {editingCategoria === p.id && (
+                            <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                              <div className="text-xs mb-2 font-semibold" style={{ color: 'var(--color-text-muted)' }}>Seleccionar categoría:</div>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => { actualizarCategoriaProducto(p.id, ''); }}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!p.categoria_id ? 'ring-2 ring-offset-1' : ''}`}
+                                  style={{
+                                    backgroundColor: 'var(--color-bg)',
+                                    border: '1px solid var(--color-border)',
+                                    color: 'var(--color-text-muted)'
+                                  }}
+                                >
+                                  Sin categoría
+                                </button>
+                                {categorias.map(cat => (
+                                  <button
+                                    key={cat.id}
+                                    onClick={() => actualizarCategoriaProducto(p.id, cat.id)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${p.categoria_id === cat.id ? 'ring-2 ring-offset-1' : ''}`}
+                                    style={{
+                                      backgroundColor: `${cat.color}20`,
+                                      border: `1px solid ${cat.color}`,
+                                      color: cat.color
+                                    }}
+                                  >
+                                    {cat.nombre}
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => setEditingCategoria(null)}
+                                className="mt-2 text-xs"
+                                style={{ color: 'var(--color-text-muted)' }}
                               >
                                 ✕ Cerrar
                               </button>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          )}
+
+                          {editingImage === p.id && (
+                            <div className="mt-3 p-4 rounded-xl" style={{
+                              backgroundColor: 'var(--color-bg-secondary)',
+                              border: '2px dashed var(--color-primary)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            }}>
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">📷</span>
+                                <span className="font-bold" style={{ color: 'var(--color-primary)' }}>Cambiar Imagen</span>
+                              </div>
+
+                              <label
+                                className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer drag-zone ${dragActive ? 'drag-active' : ''
+                                  } ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                                style={{
+                                  backgroundColor: 'var(--color-bg-tertiary, var(--color-bg-secondary))',
+                                  border: '2px solid var(--color-border)',
+                                  minHeight: '100px'
+                                }}
+                                onDragEnter={handleDrag}
+                                onDragLeave={handleDrag}
+                                onDragOver={handleDrag}
+                                onDrop={(e) => handleDrop(e, p.id)}
+                              >
+                                <span className="text-3xl mb-2">{dragActive ? '📤' : '📷'}</span>
+                                <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                                  {fileUploading ? (
+                                    <span className="upload-loading">⏳ Subiendo imagen...</span>
+                                  ) : dragActive ? (
+                                    <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>✨ Suelta la imagen aquí</span>
+                                  ) : (
+                                    'Arrastra aquí o click para seleccionar'
+                                  )}
+                                </span>
+                                {!fileUploading && (
+                                  <span className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                                    JPG, PNG, GIF, WEBP • Máximo 5MB
+                                  </span>
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleFileChange(e, p.id)}
+                                  className="hidden"
+                                  disabled={fileUploading}
+                                />
+                              </label>
+
+                              <div className="flex justify-between items-center mt-3">
+                                <button
+                                  onClick={() => quitarImagenProducto(p.id)}
+                                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                  style={{
+                                    backgroundColor: 'var(--color-danger, #dc3545)',
+                                    color: 'white'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger-hover, #c82333)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-danger, #dc3545)'}
+                                  disabled={!p.imagen_url}
+                                  title={p.imagen_url ? "Quitar imagen actual" : "Este producto no tiene imagen"}
+                                >
+                                  🗑️ Quitar Imagen
+                                </button>
+                                <button
+                                  onClick={() => setEditingImage(null)}
+                                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-accent)',
+                                    color: 'var(--color-text-muted)'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover, var(--color-bg-accent))'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-accent)'}
+                                >
+                                  ✕ Cerrar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Paginación */}
+                  {totalProductsPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+                      <button
+                        onClick={() => setProductsPage(1)}
+                        disabled={productsPage === 1}
+                        className="btn-ghost text-sm"
+                        style={{ padding: '6px 10px' }}
+                        title="Primera página"
+                      >
+                        ⏮️
+                      </button>
+                      <button
+                        onClick={() => setProductsPage(p => Math.max(1, p - 1))}
+                        disabled={productsPage === 1}
+                        className="btn-secondary text-sm"
+                        style={{ padding: '6px 12px' }}
+                      >
+                        ← Anterior
+                      </button>
+                      <span className="text-sm px-3" style={{ color: 'var(--color-text-muted)' }}>
+                        {productsPage} / {totalProductsPages}
+                      </span>
+                      <button
+                        onClick={() => setProductsPage(p => Math.min(totalProductsPages, p + 1))}
+                        disabled={productsPage === totalProductsPages}
+                        className="btn-secondary text-sm"
+                        style={{ padding: '6px 12px' }}
+                      >
+                        Siguiente →
+                      </button>
+                      <button
+                        onClick={() => setProductsPage(totalProductsPages)}
+                        disabled={productsPage === totalProductsPages}
+                        className="btn-ghost text-sm"
+                        style={{ padding: '6px 10px' }}
+                        title="Última página"
+                      >
+                        ⏭️
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {(busqueda || showAll) && productosFiltrados.length > 0 && (
+              {(busqueda || showAll) && productosFiltrados.length > 0 && totalProductsPages <= 1 && (
                 <div className="mt-3 text-sm text-muted text-center">
                   Mostrando {productosFiltrados.length} de {productos.length}
                 </div>
