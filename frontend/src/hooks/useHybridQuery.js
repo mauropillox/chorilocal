@@ -24,7 +24,7 @@ import { toastSuccess } from '../toast';
 /**
  * Hybrid hook for productos with lazy image loading
  * Uses React Query for fetching, syncs to Zustand for global access
- * Images are loaded on-demand for visible products only
+ * First page loads WITH images, rest loads on-demand
  */
 export const useProductosQuery = (options = {}) => {
     const queryClient = useQueryClient();
@@ -36,15 +36,42 @@ export const useProductosQuery = (options = {}) => {
     const query = useQuery({
         queryKey: CACHE_KEYS.productos,
         queryFn: async () => {
-            // Load products WITHOUT images for fast initial load
-            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`);
-            if (res.ok) {
-                const productos = Array.isArray(data) ? data : (data?.data || []);
-                // Sync to Zustand store
-                setProductosInStore?.(productos);
-                return productos;
+            // Load ALL products without images for fast list
+            const { res: resLite, data: dataLite } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`);
+            if (!resLite.ok) return [];
+            
+            const productos = Array.isArray(dataLite) ? dataLite : (dataLite?.data || []);
+            
+            // Immediately load images for first 30 products (first page)
+            if (productos.length > 0) {
+                const firstPageIds = productos.slice(0, 30).map(p => p.id);
+                try {
+                    const imgRes = await authFetch(`${import.meta.env.VITE_API_URL}/productos/images`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: firstPageIds })
+                    });
+                    if (imgRes.ok) {
+                        const imgData = await imgRes.json();
+                        if (imgData.images) {
+                            // Merge images into products
+                            productos.forEach(p => {
+                                if (imgData.images[p.id]) {
+                                    p.imagen_url = imgData.images[p.id];
+                                }
+                            });
+                            // Also set in state for consistency
+                            setProductImages(imgData.images);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error loading first page images:', e);
+                }
             }
-            return [];
+            
+            // Sync to Zustand store
+            setProductosInStore?.(productos);
+            return productos;
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
         ...options,
