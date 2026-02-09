@@ -715,6 +715,9 @@ def _ensure_schema_sqlite() -> None:
         
         # Asignar lista de precios al cliente
         _ensure_column(cur, "clientes", "lista_precio_id", "INTEGER REFERENCES listas_precios(id)")
+        
+        # Asignar vendedor al cliente
+        _ensure_column(cur, "clientes", "vendedor_id", "INTEGER REFERENCES usuarios(id)")
 
         # === PEDIDOS RECURRENTES (Templates) ===
         cur.execute("""
