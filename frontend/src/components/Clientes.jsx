@@ -513,10 +513,13 @@ export default function Clientes() {
                             <div className="font-medium" style={{ color: 'var(--color-text)' }}>
                               {cliente?.nombre}
                             </div>
-                            <div className="text-xs text-muted flex gap-4 mt-1">
-                              <span>📞 {cliente?.telefono || 'Sin teléfono'}</span>
-                              <span>📍 {cliente?.direccion || 'Sin dirección'}</span>
-                              <span>🗺️ {cliente?.zona || 'Sin zona'}</span>
+                            <div className="text-xs text-muted flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                              <span>📞 {cliente?.telefono || '-'}</span>
+                              <span>📍 {cliente?.direccion ? (cliente.direccion.length > 20 ? cliente.direccion.substring(0, 20) + '...' : cliente.direccion) : '-'}</span>
+                              <span>🗺️ {cliente?.zona || '-'}</span>
+                              <span style={{ color: cliente?.vendedor_nombre ? 'var(--color-primary)' : undefined }}>
+                                👤 {cliente?.vendedor_nombre || '-'}
+                              </span>
                             </div>
                           </div>
                         </div>
