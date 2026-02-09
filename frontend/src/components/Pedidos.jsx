@@ -293,7 +293,8 @@ export default function Pedidos() {
     if (loadImagesForIds && idsToLoadImages.length > 0) {
       loadImagesForIds(idsToLoadImages);
     }
-  }, [JSON.stringify(idsToLoadImages), loadImagesForIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(idsToLoadImages)]);
 
   const clienteSeleccionado = clientes.find(c => c.id === parseInt(clienteId));
 
@@ -492,6 +493,7 @@ export default function Pedidos() {
                       </div>
                       <select value={p.tipo} onChange={(e) => cambiarTipo(p.id, e.target.value)} className="p-1 text-sm rounded" style={{ minHeight: '32px' }} aria-label={`Tipo de ${p.nombre}`}>
                         <option value="unidad">Unidad</option>
+                        <option value="kg">Kilo</option>
                         <option value="caja">Caja</option>
                         <option value="gancho">Gancho</option>
                         <option value="tira">Tira</option>

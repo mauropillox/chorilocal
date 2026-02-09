@@ -612,8 +612,8 @@ export default function Productos() {
   const totalProductsPages = Math.ceil(productosFiltrados.length / PRODUCTS_PER_PAGE);
 
   // Get IDs of current page products for image loading
-  const currentPageIds = useMemo(() => 
-    productosPaginados.map(p => p.id).sort((a, b) => a - b), 
+  const currentPageIds = useMemo(() =>
+    productosPaginados.map(p => p.id).sort((a, b) => a - b),
     [productosPaginados]
   );
 
@@ -622,7 +622,8 @@ export default function Productos() {
     if (currentPageIds.length > 0 && loadImagesForIds) {
       loadImagesForIds(currentPageIds);
     }
-  }, [JSON.stringify(currentPageIds), loadImagesForIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(currentPageIds)]);
 
   const stockBajo = useMemo(() => {
     return productos.filter(p => {

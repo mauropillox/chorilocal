@@ -31,7 +31,6 @@ export const useProductosQuery = (options = {}) => {
     const setProductosInStore = useAppStore(state => state.setProductos);
     const setProductImagesInStore = useAppStore(state => state.setProductImages);
     const productImages = useAppStore(state => state.entities.productImages);
-    const loadingImageIds = useAppStore(state => state.entities.loadingImageIds);
     const markImagesLoading = useAppStore(state => state.markImagesLoading);
     const toastShown = useRef(false);
 
@@ -81,13 +80,17 @@ export const useProductosQuery = (options = {}) => {
     });
 
     // Function to load images for specific product IDs - uses global store
+    // Uses getState() to always read the latest loadingImageIds, making this callback stable
     const loadImagesForIds = useCallback(async (ids) => {
-        // Filter out already loaded images (check global store)
-        const idsToLoad = ids.filter(id => !loadingImageIds[id]);
+        // Read latest state directly from store to avoid stale closures
+        const { loadingImageIds: currentLoadingIds, productImages: currentImages } = useAppStore.getState().entities;
+
+        // Filter out already loaded or in-progress images
+        const idsToLoad = ids.filter(id => !currentLoadingIds[id] && !(id in currentImages));
 
         if (idsToLoad.length === 0) return;
 
-        // Mark as loading in global store
+        // Mark as loading in global store (synchronous - immediately prevents duplicate loads)
         markImagesLoading(idsToLoad);
 
         try {
@@ -106,7 +109,7 @@ export const useProductosQuery = (options = {}) => {
         } catch (e) {
             console.error('Error loading product images:', e);
         }
-    }, [loadingImageIds, markImagesLoading, setProductImagesInStore]);
+    }, [markImagesLoading, setProductImagesInStore]); // Stable deps - no loadingImageIds!
 
     // Show toast when data is ready (either from cache or fresh fetch)
     useEffect(() => {
