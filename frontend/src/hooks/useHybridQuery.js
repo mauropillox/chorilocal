@@ -83,7 +83,7 @@ export const useProductosQuery = (options = {}) => {
     // Function to load images for specific product IDs - uses global store
     const loadImagesForIds = useCallback(async (ids) => {
         // Filter out already loaded images (check global store)
-        const idsToLoad = ids.filter(id => !loadingImageIds.has(id));
+        const idsToLoad = ids.filter(id => !loadingImageIds[id]);
 
         if (idsToLoad.length === 0) return;
 

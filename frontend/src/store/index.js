@@ -151,7 +151,7 @@ export const useAppStore = create(
                     categorias: [],
                     ofertas: [],
                     productImages: {}, // Global cache for product images
-                    loadingImageIds: new Set(), // Track IDs currently being loaded
+                    loadingImageIds: {}, // Track IDs currently being loaded (plain obj for Immer compat)
                     isLoading: {
                         clientes: false,
                         productos: false,
@@ -377,7 +377,7 @@ export const useAppStore = create(
 
                 markImagesLoading: (ids) => {
                     set(state => {
-                        ids.forEach(id => state.entities.loadingImageIds.add(id));
+                        ids.forEach(id => { state.entities.loadingImageIds[id] = true; });
                     });
                 },
 
