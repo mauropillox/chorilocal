@@ -295,3 +295,19 @@ def migrate_007_ofertas_advanced_types(cursor):
         logger.info(f"migration_007: Added ofertas columns: {added}")
     else:
         logger.info("migration_007: All ofertas columns already exist")
+
+
+@register_migration("008_add_vendedor_to_clientes")
+def migrate_008_add_vendedor_to_clientes(cursor):
+    """
+    Add vendedor_id column to clientes table.
+    This allows assigning a vendedor (user) to each client.
+    """
+    cursor.execute("PRAGMA table_info(clientes)")
+    existing = {row[1] for row in cursor.fetchall()}
+    
+    if 'vendedor_id' not in existing:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN vendedor_id INTEGER REFERENCES usuarios(id)")
+        logger.info("migration_008: Added vendedor_id column to clientes")
+    else:
+        logger.info("migration_008: vendedor_id column already exists")

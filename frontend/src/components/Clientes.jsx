@@ -16,6 +16,8 @@ export default function Clientes() {
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
   const [zona, setZona] = useState('');
+  const [vendedorId, setVendedorId] = useState('');
+  const [vendedores, setVendedores] = useState([]);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [editingClienteId, setEditingClienteId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set()); // Multi-select
@@ -36,6 +38,22 @@ export default function Clientes() {
 
   const searchInputRef = useRef(null);
   const nombreInputRef = useRef(null);
+
+  // Cargar vendedores para el selector
+  useEffect(() => {
+    const fetchVendedores = async () => {
+      try {
+        const res = await authFetch(`${import.meta.env.VITE_API_URL}/auth/vendedores`);
+        if (res.ok) {
+          const data = await res.json();
+          setVendedores(data);
+        }
+      } catch (e) {
+        console.error('Error cargando vendedores:', e);
+      }
+    };
+    fetchVendedores();
+  }, []);
 
   // Handle URL params
   useEffect(() => {
@@ -97,17 +115,24 @@ export default function Clientes() {
     if (!nombre) return toastWarn("Debe ingresar el nombre del cliente");
     setCreating(true);
     try {
+      const clienteData = { 
+        nombre, 
+        telefono, 
+        direccion, 
+        zona,
+        vendedor_id: vendedorId ? parseInt(vendedorId) : null
+      };
       if (editingClienteId) {
         const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes/${editingClienteId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre, telefono, direccion, zona })
+          body: JSON.stringify(clienteData)
         });
         if (res.ok) {
           await refetchClientes();
           toastSuccess('Cliente actualizado correctamente');
           setEditingClienteId(null);
-          setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+          setNombre(''); setTelefono(''); setDireccion(''); setZona(''); setVendedorId('');
         } else {
           const err = await res.json().catch(() => ({}));
           toastError(err.detail || 'Error al actualizar cliente');
@@ -116,12 +141,12 @@ export default function Clientes() {
         const res = await authFetch(`${import.meta.env.VITE_API_URL}/clientes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre, telefono, direccion, zona })
+          body: JSON.stringify(clienteData)
         });
         if (res.ok) {
           setPage(1);
           await refetchClientes();
-          setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+          setNombre(''); setTelefono(''); setDireccion(''); setZona(''); setVendedorId('');
           toastSuccess('Cliente creado correctamente');
         } else {
           const err = await res.json().catch(() => ({}));
@@ -215,6 +240,7 @@ export default function Clientes() {
     setTelefono(cli.telefono || '');
     setDireccion(cli.direccion || '');
     setZona(cli.zona || '');
+    setVendedorId(cli.vendedor_id ? String(cli.vendedor_id) : '');
     setEditingClienteId(id);
     setShowCreateForm(true);
     setTimeout(() => nombreInputRef.current?.focus(), 80);
@@ -297,6 +323,21 @@ export default function Clientes() {
               onChange={e => setZona(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && agregarCliente()} />
           </div>
+
+          <div className="form-group">
+            <label>Vendedor asignado</label>
+            <select 
+              value={vendedorId} 
+              onChange={e => setVendedorId(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)', color: 'var(--color-text)' }}
+            >
+              <option value="">Sin vendedor asignado</option>
+              {vendedores.map(v => (
+                <option key={v.id} value={v.id}>{v.username}</option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={agregarCliente} disabled={creating} className="btn-success" style={{ flex: 1 }}>
               {creating ? (editingClienteId ? '⏳ Guardando...' : '⏳ Creando...') : (editingClienteId ? '💾 Guardar cambios' : '➕ Agregar Cliente')}
@@ -304,7 +345,7 @@ export default function Clientes() {
             {editingClienteId && (
               <button onClick={() => {
                 setEditingClienteId(null);
-                setNombre(''); setTelefono(''); setDireccion(''); setZona('');
+                setNombre(''); setTelefono(''); setDireccion(''); setZona(''); setVendedorId('');
               }} className="btn-ghost" style={{ minWidth: '110px' }}>✕ Cancelar</button>
             )}
           </div>
@@ -466,6 +507,7 @@ export default function Clientes() {
                 <div>📞 <strong>Teléfono:</strong> {clienteDetalle.telefono || 'No registrado'}</div>
                 <div>📍 <strong>Dirección:</strong> {clienteDetalle.direccion || 'No registrada'}</div>
                 <div>🗺️ <strong>Zona:</strong> {clienteDetalle.zona || 'No registrada'}</div>
+                <div>👤 <strong>Vendedor:</strong> {clienteDetalle.vendedor_nombre || 'Sin asignar'}</div>
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button onClick={() => startEditCliente(clienteDetalle.id)} className="btn-secondary">

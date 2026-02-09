@@ -95,6 +95,16 @@ async def get_users(current_user: dict = Depends(get_admin_user)):
     return [models.User(id=u[0], username=u[1], rol=u[2], activo=u[3]) for u in users]
 
 
+@router.get("/vendedores", response_model=List[models.User])
+async def get_vendedores(current_user: dict = Depends(get_current_user)):
+    """Obtiene lista de usuarios activos con rol vendedor para asignar a clientes."""
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, rol, activo FROM usuarios WHERE activo = 1 AND rol = 'vendedor'")
+        users = cursor.fetchall()
+    return [models.User(id=u[0], username=u[1], rol=u[2], activo=u[3]) for u in users]
+
+
 @router.put("/users/{user_id}/rol", response_model=models.User)
 async def cambiar_rol_usuario(user_id: int, rol_update: models.RolUpdate, current_user: dict = Depends(get_admin_user)):
     nuevo_rol = rol_update.rol
