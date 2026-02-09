@@ -517,11 +517,31 @@ export default function Clientes() {
                               <span>📞 {cliente?.telefono || '-'}</span>
                               <span>📍 {cliente?.direccion ? (cliente.direccion.length > 20 ? cliente.direccion.substring(0, 20) + '...' : cliente.direccion) : '-'}</span>
                               <span>🗺️ {cliente?.zona || '-'}</span>
-                              <span style={{ color: cliente?.vendedor_nombre ? 'var(--color-primary)' : undefined }}>
-                                👤 {cliente?.vendedor_nombre || '-'}
-                              </span>
                             </div>
                           </div>
+                          {/* Selector de vendedor inline */}
+                          <select
+                            value={cliente?.vendedor_id || ''}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              actualizarVendedorCliente(cliente.id, e.target.value);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs p-1 rounded"
+                            style={{
+                              backgroundColor: 'var(--color-bg)',
+                              border: '1px solid var(--color-border)',
+                              color: cliente?.vendedor_nombre ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                              minWidth: '90px',
+                              maxWidth: '110px'
+                            }}
+                            title="Asignar vendedor"
+                          >
+                            <option value="">👤 Sin asignar</option>
+                            {vendedores.map(v => (
+                              <option key={v.id} value={v.id}>👤 {v.username}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     );
