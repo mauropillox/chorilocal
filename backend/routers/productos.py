@@ -103,6 +103,38 @@ async def get_productos(
         ])
 
 
+@router.post("/productos/images")
+async def get_productos_images(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get images for specific product IDs - for lazy loading.
+    Send JSON body: {"ids": [1, 2, 3, ...]}
+    Returns: {"images": {1: "data:image/...", 2: "data:image/...", ...}}
+    """
+    body = await request.json()
+    ids = body.get("ids", [])
+    
+    if not ids or not isinstance(ids, list):
+        return JSONResponse({"images": {}})
+    
+    # Limit to 50 products per request to avoid memory issues
+    ids = ids[:50]
+    
+    with db.get_db_connection() as conn:
+        cursor = conn.cursor()
+        placeholders = ",".join("?" * len(ids))
+        cursor.execute(
+            f"SELECT id, imagen_url FROM productos WHERE id IN ({placeholders})",
+            ids
+        )
+        rows = cursor.fetchall()
+    
+    return JSONResponse({
+        "images": {row[0]: row[1] for row in rows if row[1]}
+    })
+
+
 @router.get("/productos/{producto_id}", response_model=models.Producto)
 async def get_producto(producto_id: int, current_user: dict = Depends(get_current_user)):
     with db.get_db_connection() as conn:

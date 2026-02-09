@@ -15,25 +15,29 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppStore } from '../store';
-import { authFetchJson } from '../authFetch';
+import { authFetchJson, authFetch } from '../authFetch';
 import { CACHE_KEYS } from '../utils/queryClient';
 import { toastSuccess } from '../toast';
 
 /**
- * Hybrid hook for productos
+ * Hybrid hook for productos with lazy image loading
  * Uses React Query for fetching, syncs to Zustand for global access
+ * Images are loaded on-demand for visible products only
  */
 export const useProductosQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setProductosInStore = useAppStore(state => state.setProductos);
     const toastShown = useRef(false);
+    const [productImages, setProductImages] = useState({});
+    const loadingImagesRef = useRef(new Set());
 
     const query = useQuery({
         queryKey: CACHE_KEYS.productos,
         queryFn: async () => {
-            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
+            // Load products WITHOUT images for fast initial load
+            const { res, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`);
             if (res.ok) {
                 const productos = Array.isArray(data) ? data : (data?.data || []);
                 // Sync to Zustand store
@@ -46,6 +50,39 @@ export const useProductosQuery = (options = {}) => {
         ...options,
     });
 
+    // Function to load images for specific product IDs
+    const loadImagesForIds = useCallback(async (ids) => {
+        // Filter out already loaded or currently loading images
+        const idsToLoad = ids.filter(id => 
+            !productImages[id] && !loadingImagesRef.current.has(id)
+        );
+        
+        if (idsToLoad.length === 0) return;
+        
+        // Mark as loading
+        idsToLoad.forEach(id => loadingImagesRef.current.add(id));
+        
+        try {
+            const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/images`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: idsToLoad })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.images) {
+                    setProductImages(prev => ({ ...prev, ...data.images }));
+                }
+            }
+        } catch (e) {
+            console.error('Error loading product images:', e);
+        } finally {
+            // Remove from loading set
+            idsToLoad.forEach(id => loadingImagesRef.current.delete(id));
+        }
+    }, [productImages]);
+
     // Show toast when data is ready (either from cache or fresh fetch)
     useEffect(() => {
         if (!query.isLoading && query.data && options.showToast !== false && !toastShown.current) {
@@ -54,9 +91,17 @@ export const useProductosQuery = (options = {}) => {
         }
     }, [query.isLoading, query.data, options.showToast]);
 
+    // Merge images into productos
+    const productosWithImages = (query.data || []).map(p => ({
+        ...p,
+        imagen_url: productImages[p.id] || p.imagen_url
+    }));
+
     return {
         ...query,
-        productos: query.data || [],
+        productos: productosWithImages,
+        loadImagesForIds,
+        productImages,
     };
 };
 

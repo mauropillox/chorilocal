@@ -13,7 +13,7 @@ import { logger } from '../utils/logger';
 
 export default function Productos() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { productos, isLoading: productsLoading, refetch: refetchProductos } = useProductosQuery();
+  const { productos, isLoading: productsLoading, refetch: refetchProductos, loadImagesForIds } = useProductosQuery();
   const deleteProductoMutation = useDeleteProducto();
   const updateStockMutation = useUpdateProductoStock();
   const [nombre, setNombre] = useState('');
@@ -610,6 +610,18 @@ export default function Productos() {
   }, [productosFiltrados, productsPage]);
 
   const totalProductsPages = Math.ceil(productosFiltrados.length / PRODUCTS_PER_PAGE);
+
+  // Lazy load images for visible products on current page
+  useEffect(() => {
+    if (productosPaginados.length > 0 && loadImagesForIds) {
+      const idsToLoad = productosPaginados
+        .filter(p => !p.imagen_url)
+        .map(p => p.id);
+      if (idsToLoad.length > 0) {
+        loadImagesForIds(idsToLoad);
+      }
+    }
+  }, [productosPaginados, loadImagesForIds]);
 
   const stockBajo = useMemo(() => {
     return productos.filter(p => {
