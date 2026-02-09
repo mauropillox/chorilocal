@@ -150,6 +150,8 @@ export const useAppStore = create(
                     pedidos: [],
                     categorias: [],
                     ofertas: [],
+                    productImages: {}, // Global cache for product images
+                    loadingImageIds: new Set(), // Track IDs currently being loaded
                     isLoading: {
                         clientes: false,
                         productos: false,
@@ -363,6 +365,19 @@ export const useAppStore = create(
                     set(state => {
                         state.entities.productos = productos;
                         state.entities.lastFetched.productos = Date.now();
+                    });
+                },
+
+                // Product images cache actions
+                setProductImages: (images) => {
+                    set(state => {
+                        state.entities.productImages = { ...state.entities.productImages, ...images };
+                    });
+                },
+
+                markImagesLoading: (ids) => {
+                    set(state => {
+                        ids.forEach(id => state.entities.loadingImageIds.add(id));
                     });
                 },
 
