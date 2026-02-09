@@ -62,6 +62,7 @@ export default function LayoutApp({ onLogout }) {
   const hasLimitedAccess = isOficina || isVendedor;
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [ofertasCount, setOfertasCount] = useState(0);
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -548,8 +549,8 @@ export default function LayoutApp({ onLogout }) {
           </div>
         )}
 
-        {/* Footer con atajos */}
-        <footer className="app-footer">
+        {/* Footer con atajos - Desktop only */}
+        <footer className="app-footer hide-mobile">
           <div className="footer-left">
             © 2025 Frio Sur - Casa de Congelados
           </div>
@@ -581,6 +582,58 @@ export default function LayoutApp({ onLogout }) {
           </div>
         </footer>
       </div>
+
+      {/* ============================================
+          MOBILE BOTTOM NAV - Only visible on mobile
+          ============================================ */}
+      <nav className="mobile-bottom-nav" role="navigation" aria-label="Navegación móvil">
+        <Link to="/pedidos" className={`mobile-nav-item ${isActive('/pedidos') ? 'active' : ''}`} onClick={() => setMobileMoreOpen(false)}>
+          <span className="mobile-nav-icon">🛒</span>
+          <span className="mobile-nav-label">Pedidos</span>
+        </Link>
+        <Link to="/productos" className={`mobile-nav-item ${isActive('/productos') ? 'active' : ''}`} onClick={() => setMobileMoreOpen(false)}>
+          <span className="mobile-nav-icon">📦</span>
+          <span className="mobile-nav-label">Productos</span>
+        </Link>
+        <Link to="/historial" className={`mobile-nav-item ${isActive('/historial') ? 'active' : ''}`} onClick={() => setMobileMoreOpen(false)}>
+          <span className="mobile-nav-icon">📋</span>
+          <span className="mobile-nav-label">Historial</span>
+        </Link>
+        <Link to="/clientes" className={`mobile-nav-item ${isActive('/clientes') ? 'active' : ''}`} onClick={() => setMobileMoreOpen(false)}>
+          <span className="mobile-nav-icon">👥</span>
+          <span className="mobile-nav-label">Clientes</span>
+        </Link>
+        <button className={`mobile-nav-item ${mobileMoreOpen ? 'active' : ''}`} onClick={() => setMobileMoreOpen(!mobileMoreOpen)}>
+          <span className="mobile-nav-icon">☰</span>
+          <span className="mobile-nav-label">Más</span>
+        </button>
+
+        {/* Expandable "More" panel */}
+        {mobileMoreOpen && (
+          <>
+            <div className="mobile-more-backdrop" onClick={() => setMobileMoreOpen(false)} />
+            <div className="mobile-more-panel">
+              <Link to="/ofertas" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>
+                🎁 Ofertas {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
+              </Link>
+              {isAdmin && (
+                <>
+                  <Link to="/hoja-ruta" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>🚚 Hoja de Ruta</Link>
+                  <Link to="/dashboard" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>📊 Dashboard</Link>
+                  <Link to="/reportes" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>📈 Reportes</Link>
+                  <Link to="/templates" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>🔄 Recurrentes</Link>
+                  <Link to="/listas-precios" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>💲 Listas Precios</Link>
+                  <Link to="/categorias" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>🏷️ Categorías</Link>
+                  <Link to="/usuarios" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>⚙️ Admin</Link>
+                </>
+              )}
+              <button className="mobile-more-item mobile-more-logout" onClick={() => { setMobileMoreOpen(false); handleLogout(); }}>
+                🚪 Cerrar sesión
+              </button>
+            </div>
+          </>
+        )}
+      </nav>
     </div>
   );
 }
