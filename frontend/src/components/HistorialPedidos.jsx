@@ -585,7 +585,7 @@ export default function HistorialPedidos() {
             </button>
             <button
               onClick={generarPDFs}
-              disabled={selectedIds.length === 0 || generando || activeTab !== 'pendientes'}
+              disabled={selectedIds.length === 0 || generando}
               className="btn-success"
             >
               {generando ? '⏳ Generando...' : `📄 Generar PDFs (${selectedIds.length})`}
