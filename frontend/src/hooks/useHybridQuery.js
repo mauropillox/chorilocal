@@ -39,9 +39,9 @@ export const useProductosQuery = (options = {}) => {
             // Load ALL products without images for fast list
             const { res: resLite, data: dataLite } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`);
             if (!resLite.ok) return [];
-            
+
             const productos = Array.isArray(dataLite) ? dataLite : (dataLite?.data || []);
-            
+
             // Immediately load images for first 30 products (first page)
             if (productos.length > 0) {
                 const firstPageIds = productos.slice(0, 30).map(p => p.id);
@@ -68,7 +68,7 @@ export const useProductosQuery = (options = {}) => {
                     console.error('Error loading first page images:', e);
                 }
             }
-            
+
             // Sync to Zustand store
             setProductosInStore?.(productos);
             return productos;
@@ -80,22 +80,22 @@ export const useProductosQuery = (options = {}) => {
     // Function to load images for specific product IDs
     const loadImagesForIds = useCallback(async (ids) => {
         // Filter out already loaded or currently loading images
-        const idsToLoad = ids.filter(id => 
+        const idsToLoad = ids.filter(id =>
             !productImages[id] && !loadingImagesRef.current.has(id)
         );
-        
+
         if (idsToLoad.length === 0) return;
-        
+
         // Mark as loading
         idsToLoad.forEach(id => loadingImagesRef.current.add(id));
-        
+
         try {
             const res = await authFetch(`${import.meta.env.VITE_API_URL}/productos/images`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ids: idsToLoad })
             });
-            
+
             if (res.ok) {
                 const data = await res.json();
                 if (data.images) {

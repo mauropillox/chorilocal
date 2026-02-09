@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 
 export default function Pedidos() {
   const { clientes, isLoading: clientesLoading, refetch: refetchClientes } = useClientesQuery({ showToast: false });
-  const { productos, isLoading: productosLoading, refetch: refetchProductos } = useProductosQuery({ showToast: false });
+  const { productos, isLoading: productosLoading, refetch: refetchProductos, loadImagesForIds } = useProductosQuery({ showToast: false });
   const [clienteId, setClienteId] = useState('');
   const [busquedaCliente, setBusquedaCliente] = useState('');
   const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
@@ -278,6 +278,19 @@ export default function Pedidos() {
     if (sortBy === 'precio_desc') list.sort((a, b) => b.precio - a.precio);
     return list;
   }, [debouncedBusqueda, showAll, productos, sortBy]);
+
+  // Lazy load images for visible products (filtered list + selected)
+  useEffect(() => {
+    if (loadImagesForIds) {
+      const idsToLoad = [
+        ...productosFiltrados.filter(p => !p.imagen_url).map(p => p.id),
+        ...productosSeleccionados.filter(p => !p.imagen_url).map(p => p.id)
+      ];
+      if (idsToLoad.length > 0) {
+        loadImagesForIds([...new Set(idsToLoad)]); // Remove duplicates
+      }
+    }
+  }, [productosFiltrados, productosSeleccionados, loadImagesForIds]);
 
   const clienteSeleccionado = clientes.find(c => c.id === parseInt(clienteId));
 
