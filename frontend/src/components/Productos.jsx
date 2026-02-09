@@ -613,7 +613,7 @@ export default function Productos() {
 
   // Get IDs of current page products for image loading
   const currentPageIds = useMemo(() => 
-    productosPaginados.map(p => p.id), 
+    productosPaginados.map(p => p.id).sort((a, b) => a - b), 
     [productosPaginados]
   );
 
@@ -622,7 +622,7 @@ export default function Productos() {
     if (currentPageIds.length > 0 && loadImagesForIds) {
       loadImagesForIds(currentPageIds);
     }
-  }, [currentPageIds.join(','), loadImagesForIds]);
+  }, [JSON.stringify(currentPageIds), loadImagesForIds]);
 
   const stockBajo = useMemo(() => {
     return productos.filter(p => {

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 import io
 import csv
@@ -749,8 +749,9 @@ async def generar_pdfs(
             if not pedidos_data:
                 raise HTTPException(status_code=404, detail="No se encontraron pedidos")
             
-            # Generate PDF using generar_pdf_multiple
-            fecha_generacion = datetime.now().strftime("%d/%m/%Y %H:%M")
+            # Generate PDF using generar_pdf_multiple (Uruguay timezone UTC-3)
+            tz_uruguay = timezone(timedelta(hours=-3))
+            fecha_generacion = datetime.now(tz_uruguay).strftime("%d/%m/%Y %H:%M")
             pdf_content = generar_pdf_multiple(pedidos_data, clientes_data, fecha_generacion)
             
             # Mark pedidos as pdf_generado = 1

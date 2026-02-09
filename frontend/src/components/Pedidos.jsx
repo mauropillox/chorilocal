@@ -285,7 +285,7 @@ export default function Pedidos() {
       ...productosFiltrados.map(p => p.id),
       ...productosSeleccionados.map(p => p.id)
     ];
-    return [...new Set(ids)]; // Remove duplicates
+    return [...new Set(ids)].sort((a, b) => a - b); // Remove duplicates and sort for stable key
   }, [productosFiltrados, productosSeleccionados]);
 
   // Lazy load images for visible products (filtered list + selected)
@@ -293,7 +293,7 @@ export default function Pedidos() {
     if (loadImagesForIds && idsToLoadImages.length > 0) {
       loadImagesForIds(idsToLoadImages);
     }
-  }, [idsToLoadImages.join(','), loadImagesForIds]);
+  }, [JSON.stringify(idsToLoadImages), loadImagesForIds]);
 
   const clienteSeleccionado = clientes.find(c => c.id === parseInt(clienteId));
 
