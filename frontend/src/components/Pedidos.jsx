@@ -279,18 +279,21 @@ export default function Pedidos() {
     return list;
   }, [debouncedBusqueda, showAll, productos, sortBy]);
 
+  // Get IDs for image loading - memoized to prevent loops
+  const idsToLoadImages = useMemo(() => {
+    const ids = [
+      ...productosFiltrados.map(p => p.id),
+      ...productosSeleccionados.map(p => p.id)
+    ];
+    return [...new Set(ids)]; // Remove duplicates
+  }, [productosFiltrados, productosSeleccionados]);
+
   // Lazy load images for visible products (filtered list + selected)
   useEffect(() => {
-    if (loadImagesForIds) {
-      const idsToLoad = [
-        ...productosFiltrados.filter(p => !p.imagen_url).map(p => p.id),
-        ...productosSeleccionados.filter(p => !p.imagen_url).map(p => p.id)
-      ];
-      if (idsToLoad.length > 0) {
-        loadImagesForIds([...new Set(idsToLoad)]); // Remove duplicates
-      }
+    if (loadImagesForIds && idsToLoadImages.length > 0) {
+      loadImagesForIds(idsToLoadImages);
     }
-  }, [productosFiltrados, productosSeleccionados, loadImagesForIds]);
+  }, [idsToLoadImages.join(','), loadImagesForIds]);
 
   const clienteSeleccionado = clientes.find(c => c.id === parseInt(clienteId));
 

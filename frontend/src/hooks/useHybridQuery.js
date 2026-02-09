@@ -15,7 +15,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAppStore } from '../store';
 import { authFetchJson, authFetch } from '../authFetch';
 import { CACHE_KEYS } from '../utils/queryClient';
@@ -81,7 +81,7 @@ export const useProductosQuery = (options = {}) => {
     const loadImagesForIds = useCallback(async (ids) => {
         // Filter out already loaded or currently loading images
         const idsToLoad = ids.filter(id =>
-            !productImages[id] && !loadingImagesRef.current.has(id)
+            !loadingImagesRef.current.has(id)
         );
 
         if (idsToLoad.length === 0) return;
@@ -104,11 +104,9 @@ export const useProductosQuery = (options = {}) => {
             }
         } catch (e) {
             console.error('Error loading product images:', e);
-        } finally {
-            // Remove from loading set
-            idsToLoad.forEach(id => loadingImagesRef.current.delete(id));
         }
-    }, [productImages]);
+        // Note: We don't remove from loadingImagesRef to prevent re-fetching
+    }, []);
 
     // Show toast when data is ready (either from cache or fresh fetch)
     useEffect(() => {
@@ -118,11 +116,13 @@ export const useProductosQuery = (options = {}) => {
         }
     }, [query.isLoading, query.data, options.showToast]);
 
-    // Merge images into productos
-    const productosWithImages = (query.data || []).map(p => ({
-        ...p,
-        imagen_url: productImages[p.id] || p.imagen_url
-    }));
+    // Merge images into productos - memoized to prevent infinite loops
+    const productosWithImages = useMemo(() => {
+        return (query.data || []).map(p => ({
+            ...p,
+            imagen_url: productImages[p.id] || p.imagen_url
+        }));
+    }, [query.data, productImages]);
 
     return {
         ...query,

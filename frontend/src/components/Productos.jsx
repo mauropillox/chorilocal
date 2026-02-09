@@ -611,17 +611,18 @@ export default function Productos() {
 
   const totalProductsPages = Math.ceil(productosFiltrados.length / PRODUCTS_PER_PAGE);
 
+  // Get IDs of current page products for image loading
+  const currentPageIds = useMemo(() => 
+    productosPaginados.map(p => p.id), 
+    [productosPaginados]
+  );
+
   // Lazy load images for visible products on current page
   useEffect(() => {
-    if (productosPaginados.length > 0 && loadImagesForIds) {
-      const idsToLoad = productosPaginados
-        .filter(p => !p.imagen_url)
-        .map(p => p.id);
-      if (idsToLoad.length > 0) {
-        loadImagesForIds(idsToLoad);
-      }
+    if (currentPageIds.length > 0 && loadImagesForIds) {
+      loadImagesForIds(currentPageIds);
     }
-  }, [productosPaginados, loadImagesForIds]);
+  }, [currentPageIds.join(','), loadImagesForIds]);
 
   const stockBajo = useMemo(() => {
     return productos.filter(p => {
