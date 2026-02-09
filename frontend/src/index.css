@@ -1225,8 +1225,8 @@ input[type="checkbox"]:focus-visible {
   background: transparent;
 }
 
-/* Responsive utilities */
-@media (max-width: 639px) {
+/* Responsive utilities - Mobile & Tablet (< 1024px) */
+@media (max-width: 1023px) {
   .hide-mobile {
     display: none !important;
   }
@@ -1530,12 +1530,13 @@ input[type="checkbox"]:focus-visible {
 
 /* =============================================
    MOBILE BOTTOM NAVIGATION - Component Styles
+   Visible on mobile AND tablet (< 1024px)
    ============================================= */
 .mobile-bottom-nav {
   display: none;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 1023px) {
   .mobile-bottom-nav {
     display: flex;
     position: fixed;
@@ -1653,109 +1654,57 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* =============================================
-   TABLET OPTIMIZATIONS (640px - 1023px)
+   TABLET-ONLY tweaks (640px - 1023px)
+   These ADD to the shared <1024px rules above
    ============================================= */
 @media (min-width: 640px) and (max-width: 1023px) {
-  .two-column-layout {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Tablet: Side navigation becomes top bar */
-  .nav-main {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-    gap: 0.25rem !important;
-    padding: 0.5rem !important;
-  }
-
-  .nav-links {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-    gap: 0.25rem !important;
-  }
-
-  .nav-hamburger {
-    display: none !important;
-  }
-
-  .nav-link {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  .nav-icon {
-    font-size: 1rem !important;
-  }
-
-  /* Header tablet */
-  .header-compact {
-    padding: 0.75rem 0 !important;
-  }
-
-  .header-logo {
-    height: 45px !important;
-  }
-
-  .header-subtitle {
-    font-size: 0.7rem !important;
-  }
-
-  /* Global search visible but compact */
-  #global-search {
-    width: 160px !important;
-    font-size: 0.85rem !important;
-  }
-
-  /* Cards en tablet */
-  .card-item {
-    padding: 0.875rem !important;
-  }
-
+  /* Tablet gets slightly bigger images */
   .product-image {
-    width: 60px !important;
-    height: 60px !important;
+    width: 64px !important;
+    height: 64px !important;
   }
 
   .product-image-sm {
-    width: 50px !important;
-    height: 50px !important;
+    width: 52px !important;
+    height: 52px !important;
   }
 
-  /* Pedidos layout para tablet - catálogo arriba */
+  /* Header slightly bigger on tablet */
+  .header-logo {
+    height: 40px !important;
+  }
+
+  /* More panel in 3 columns on tablet */
+  .mobile-more-panel {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+
+  /* Pedidos layout para tablet */
   .two-column-layout.pedidos-layout {
     display: flex !important;
     flex-direction: column-reverse !important;
   }
 
   .two-column-layout.pedidos-layout .panel-catalogo {
-    max-height: 40vh !important;
+    max-height: 45vh !important;
     overflow-y: auto !important;
   }
 
-  /* Mobile cart summary en tablet también */
-  .mobile-cart-summary {
-    display: flex !important;
+  /* Main content slightly more padding on tablet */
+  .main-content {
+    padding: 1rem !important;
+    padding-bottom: 72px !important;
   }
 
-  .pedidos-layout {
-    padding-bottom: 80px !important;
-  }
-
-  /* Breadcrumb visible pero compacto */
-  .breadcrumb {
-    font-size: 0.75rem !important;
-    padding: 0.25rem 0 !important;
-  }
-
-  /* Action bar */
-  .action-bar {
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
-  }
-
-  /* Filtros en 2 columnas */
-  .grid.grid-cols-2.md\\:grid-cols-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
+  /* Buttons a bit more spacious */
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    font-size: 0.875rem !important;
   }
 }
 
@@ -1768,8 +1717,8 @@ input[type="checkbox"]:focus-visible {
     padding-right: env(safe-area-inset-right);
   }
 
-  @media (max-width: 639px) {
-    .nav-main {
+  @media (max-width: 1023px) {
+    .mobile-bottom-nav {
       padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
     }
 
@@ -1778,7 +1727,7 @@ input[type="checkbox"]:focus-visible {
     }
 
     .main-content {
-      padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
     }
   }
 }
@@ -2211,53 +2160,11 @@ button {
   flex-shrink: 0;
 }
 
-/* Mobile responsive - Tablet only (640-900px) gets slide-out menu */
-/* Mobile (<640px) uses bottom nav bar instead - see earlier rules */
-@media (min-width: 640px) and (max-width: 900px) {
-  .nav-hamburger {
-    display: block;
-  }
+/* Slide-out menu removed - all devices < 1024px use bottom nav */
+/* Desktop (>= 1024px) uses the standard .nav-main horizontal bar */
 
-  .nav-links {
-    position: fixed;
-    top: 0;
-    left: -280px;
-    width: 260px;
-    height: 100vh;
-    background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.25rem;
-    padding: 1.5rem 1rem;
-    z-index: 1000;
-    transition: left 0.3s ease;
-    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.3);
-    overflow-y: auto;
-  }
-
-  .nav-links-open {
-    left: 0;
-  }
-
-  .nav-link {
-    font-size: 0.9rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    justify-content: flex-start;
-  }
-
-  .nav-separator {
-    display: none;
-  }
-
-  .btn-logout {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.8rem;
-  }
-}
-
-/* Hide text on very small screens, show only icons */
-@media (max-width: 1100px) and (min-width: 901px) {
+/* Hide text on medium screens, show only icons */
+@media (max-width: 1100px) and (min-width: 1024px) {
   .nav-text {
     display: none;
   }
@@ -3925,28 +3832,8 @@ textarea.error {
   border-color: var(--color-primary);
 }
 
-/* === 25. MOBILE OVERLAY FOR MENU === */
-/* Only show menu label on tablet slide-out menu, NOT on mobile bottom nav */
-@media (min-width: 640px) and (max-width: 900px) {
-  .nav-links::before {
-    content: '☰ Menú';
-    display: block;
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #fff;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    margin-bottom: 0.5rem;
-  }
-}
-
-/* Hide menu label on mobile - bottom nav doesn't need it */
-@media (max-width: 639px) {
-  .nav-links::before {
-    display: none !important;
-    content: none !important;
-  }
-}
+/* === 25. MOBILE OVERLAY FOR MENU - REMOVED === */
+/* All devices < 1024px use mobile-bottom-nav, no slide-out needed */
 
 /* ============================================
    26. DARK MODE SPECIFIC FIXES
