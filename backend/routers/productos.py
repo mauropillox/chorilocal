@@ -1,6 +1,6 @@
 """Productos (Products) Router"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 
 import db
@@ -78,7 +78,7 @@ async def get_productos(
         productos = cursor.fetchall()
     
     # Return raw dicts for memory efficiency - avoid Pydantic overhead for large lists
-    return ORJSONResponse([
+    return JSONResponse([
         {
             "id": p[0], "nombre": p[1], "precio": p[2], "categoria_id": p[3],
             "imagen_url": p[4], "stock": p[5], "stock_minimo": p[6], "stock_tipo": p[7]
