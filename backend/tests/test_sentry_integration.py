@@ -28,7 +28,7 @@ class TestSentryIntegration:
         """Verify server handles unhandled exceptions gracefully"""
         # Try to access an endpoint that might trigger an error
         # Using invalid ID to trigger error handling
-        response = client.get("/clientes/invalid_id", headers=auth_headers)
+        response = client.get("/api/clientes/invalid_id", headers=auth_headers)
         
         # Should return proper error structure, not 500
         assert response.status_code in [400, 422, 404]
@@ -39,7 +39,7 @@ class TestSentryIntegration:
     
     def test_validation_error_has_proper_structure(self, client, auth_headers):
         """Verify validation errors are properly formatted"""
-        response = client.post("/clientes", headers=auth_headers, json={
+        response = client.post("/api/clientes", headers=auth_headers, json={
             # Invalid: empty nombre fails validation
         })
         
@@ -59,7 +59,7 @@ class TestSentryIntegration:
         try:
             # Make many requests to trigger rate limit
             for i in range(15):
-                response = client.get("/clientes", headers=auth_headers)
+                response = client.get("/api/clientes", headers=auth_headers)
                 if response.status_code == 429:
                     # Got rate limited
                     data = response.json()
@@ -73,7 +73,7 @@ class TestSentryIntegration:
     def test_authentication_error_structure(self, client):
         """Verify auth errors are properly formatted"""
         # Request without auth headers
-        response = client.get("/clientes")
+        response = client.get("/api/clientes")
         
         # Should fail auth
         assert response.status_code in [401, 403]
@@ -84,7 +84,7 @@ class TestSentryIntegration:
     
     def test_not_found_error_structure(self, client, auth_headers):
         """Verify 404 errors are properly formatted"""
-        response = client.get("/clientes/999999", headers=auth_headers)
+        response = client.get("/api/clientes/999999", headers=auth_headers)
         
         # Should be not found
         assert response.status_code == 404
@@ -97,14 +97,14 @@ class TestSentryIntegration:
     def test_duplicate_error_structure(self, client, auth_headers):
         """Verify duplicate/conflict errors are properly formatted"""
         # Create a client
-        client.post("/clientes", headers=auth_headers, json={
+        client.post("/api/clientes", headers=auth_headers, json={
             "nombre": "Unique Client"
         })
         
         # Try to create duplicate (if API enforces uniqueness)
         # This depends on whether the API enforces unique client names
         # If it does, we should get a proper error structure
-        response = client.post("/clientes", headers=auth_headers, json={
+        response = client.post("/api/clientes", headers=auth_headers, json={
             "nombre": "Unique Client"
         })
         

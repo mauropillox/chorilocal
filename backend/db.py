@@ -261,12 +261,7 @@ def conectar() -> Union[sqlite3.Connection, Any]:
         con.execute("PRAGMA query_timeout=10000")  # 10 seconds max per query
     except Exception:
         pass  # Older SQLite versions don't support this
-    
-    # Ensure 'zona' column exists in 'clientes' (migration)
-    try:
-        con.execute("ALTER TABLE clientes ADD COLUMN zona TEXT")
-    except Exception:
-        pass  # Already exists
+    # NOTE: 'zona' column migration handled by ensure_schema() at startup
     return con
 
 

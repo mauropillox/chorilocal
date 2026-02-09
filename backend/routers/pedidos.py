@@ -187,50 +187,49 @@ async def get_pedidos(
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY p.fecha DESC"
+    query += " ORDER BY p.fecha DESC LIMIT 500"
 
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
         pedidos_raw = cursor.fetchall()
         
-        # Build result with productos for each pedido
+        if not pedidos_raw:
+            return []
+        
+        # Batch load all products for all pedidos in ONE query (avoid N+1)
+        pedido_ids = [p[0] for p in pedidos_raw]
+        placeholders = ",".join("?" * len(pedido_ids))
+        cursor.execute(f"""
+            SELECT d.pedido_id, d.producto_id, pr.nombre, pr.precio, d.cantidad, d.tipo
+            FROM detalles_pedido d
+            JOIN productos pr ON d.producto_id = pr.id
+            WHERE d.pedido_id IN ({placeholders})
+        """, pedido_ids)
+        
+        # Group products by pedido_id
+        productos_by_pedido = {}
+        for row in cursor.fetchall():
+            pid = row[0]
+            if pid not in productos_by_pedido:
+                productos_by_pedido[pid] = []
+            productos_by_pedido[pid].append({
+                "id": row[1], "producto_id": row[1], "nombre": row[2],
+                "precio": row[3], "cantidad": row[4], "tipo": row[5] or "unidad"
+            })
+        
+        # Build result using dicts for memory efficiency
+        from fastapi.responses import JSONResponse
         result = []
         for p in pedidos_raw:
-            pedido_id = p[0]
-            # Get productos for this pedido
-            cursor.execute("""
-                SELECT d.producto_id, pr.nombre, pr.precio, d.cantidad, d.tipo
-                FROM detalles_pedido d
-                JOIN productos pr ON d.producto_id = pr.id
-                WHERE d.pedido_id = ?
-            """, (pedido_id,))
-            productos_raw = cursor.fetchall()
-            productos = [
-                models.ProductoPedido(
-                    id=prod[0],
-                    producto_id=prod[0],
-                    nombre=prod[1],
-                    precio=prod[2],
-                    cantidad=prod[3],
-                    tipo=prod[4] or "unidad"
-                ) for prod in productos_raw
-            ]
-            
-            result.append(models.Pedido(
-                id=p[0], 
-                cliente_id=p[1], 
-                fecha=p[2], 
-                estado=p[3], 
-                notas=p[4], 
-                creado_por=p[5], 
-                cliente_nombre=p[6], 
-                pdf_generado=p[7],
-                repartidor=p[8],
-                productos=productos
-            ))
+            result.append({
+                "id": p[0], "cliente_id": p[1], "fecha": p[2], "estado": p[3],
+                "notas": p[4], "creado_por": p[5], "cliente_nombre": p[6],
+                "pdf_generado": p[7], "repartidor": p[8],
+                "productos": productos_by_pedido.get(p[0], [])
+            })
         
-        return result
+        return JSONResponse(result)
 
 
 # --- Static routes MUST come before dynamic /{pedido_id} routes ---

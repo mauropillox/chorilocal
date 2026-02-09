@@ -37,8 +37,9 @@ async def crear_cliente(request: Request, cliente: models.ClienteCreate, current
     return {**cliente.model_dump(), "id": cliente_id, "vendedor_nombre": vendedor_nombre}
 
 
-@router.get("/clientes", response_model=List[models.Cliente])
+@router.get("/clientes")
 async def get_clientes(current_user: dict = Depends(get_current_user)):
+    from fastapi.responses import JSONResponse
     with db.get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -48,10 +49,11 @@ async def get_clientes(current_user: dict = Depends(get_current_user)):
             ORDER BY c.nombre
         """)
         clientes = cursor.fetchall()
-    return [models.Cliente(
-        id=c[0], nombre=c[1], telefono=c[2], direccion=c[3], zona=c[4],
-        vendedor_id=c[5], vendedor_nombre=c[6]
-    ) for c in clientes]
+    return JSONResponse([
+        {"id": c[0], "nombre": c[1], "telefono": c[2], "direccion": c[3], "zona": c[4],
+         "vendedor_id": c[5], "vendedor_nombre": c[6]}
+        for c in clientes
+    ])
 
 
 @router.get("/clientes/{cliente_id}", response_model=models.Cliente)

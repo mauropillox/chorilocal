@@ -289,19 +289,7 @@ if ENVIRONMENT != "production":
     except Exception as e:
         logger.warning(f"Could not create upload directory: {e}")
 
-# Backward-compatible routes without /api prefix (for legacy clients/tests)
-app.include_router(auth.router, tags=["Autenticación (Legacy)"])
-app.include_router(pedidos.router, tags=["Pedidos (Legacy)"])
-app.include_router(clientes.router, tags=["Clientes (Legacy)"])
-app.include_router(productos.router, tags=["Productos (Legacy)"])
-app.include_router(categorias.router, tags=["Categorías (Legacy)"])
-app.include_router(ofertas.router, tags=["Ofertas (Legacy)"])
-app.include_router(dashboard.router, tags=["Dashboard (Legacy)"])
-app.include_router(estadisticas.router, tags=["Estadísticas (Legacy)"])
-app.include_router(usuarios.router, tags=["Usuarios (Legacy)"])
-app.include_router(templates.router, tags=["Templates (Legacy)"])
-app.include_router(tags.router, tags=["Tags (Legacy)"])
-app.include_router(upload.router, tags=["Upload (Legacy)"])
+# Legacy routes removed for memory optimization (all routes use /api prefix now)
 
 
 # --- Startup Event ---

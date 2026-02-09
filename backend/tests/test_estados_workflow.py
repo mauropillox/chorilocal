@@ -6,7 +6,7 @@ import pytest
 
 def obtener_pedido_por_id(client, auth_headers, pedido_id):
     """Helper function para obtener un pedido específico por ID"""
-    response = client.get("/pedidos", headers=auth_headers)
+    response = client.get("/api/pedidos", headers=auth_headers)
     assert response.status_code == 200
     
     pedidos = response.json()
@@ -24,14 +24,14 @@ def obtener_pedido_por_id(client, auth_headers, pedido_id):
 def crear_pedido_test(client, auth_headers, cliente_nombre="Cliente Test", producto_nombre="Producto Test"):
     """Helper function para crear pedidos de test"""
     # Crear cliente
-    cliente_response = client.post("/clientes", headers=auth_headers, json={
+    cliente_response = client.post("/api/clientes", headers=auth_headers, json={
         "nombre": cliente_nombre,
         "telefono": "099123456"
     })
     cliente_id = cliente_response.json()["id"]
     
     # Crear producto
-    producto_response = client.post("/productos", headers=auth_headers, json={
+    producto_response = client.post("/api/productos", headers=auth_headers, json={
         "nombre": producto_nombre,
         "precio": 10.0,
         "categoria": "Test",
@@ -56,7 +56,7 @@ def crear_pedido_test(client, auth_headers, cliente_nombre="Cliente Test", produ
         ]
     }
     
-    response = client.post("/pedidos", headers=auth_headers, json=pedido_data)
+    response = client.post("/api/pedidos", headers=auth_headers, json=pedido_data)
     assert response.status_code == 200
     return response.json()["id"]
 
@@ -79,7 +79,7 @@ class TestEstadosWorkflow:
         pedido_id = crear_pedido_test(client, auth_headers)
         
         # Cambiar a preparando
-        response = client.put(f"/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "preparando"})
+        response = client.put(f"/api/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "preparando"})
         assert response.status_code == 200
         
         # Verificar cambio
@@ -92,10 +92,10 @@ class TestEstadosWorkflow:
         pedido_id = crear_pedido_test(client, auth_headers)
         
         # Llevar a preparando
-        client.put(f"/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "preparando"})
+        client.put(f"/api/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "preparando"})
         
         # Cambiar a entregado
-        response = client.put(f"/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "entregado"})
+        response = client.put(f"/api/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "entregado"})
         assert response.status_code == 200
         
         # Verificar cambio
@@ -108,7 +108,7 @@ class TestEstadosWorkflow:
         pedido_id = crear_pedido_test(client, auth_headers)
         
         # Cancelar desde pendiente
-        response = client.put(f"/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "cancelado"})
+        response = client.put(f"/api/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": "cancelado"})
         assert response.status_code == 200
         
         # Verificar estado
@@ -122,7 +122,7 @@ class TestEstadosWorkflow:
         
         # Intentar estados obsoletos
         for estado_obsoleto in ["tomado", "listo"]:
-            response = client.put(f"/pedidos/{pedido_id}/estado", 
+            response = client.put(f"/api/pedidos/{pedido_id}/estado", 
                                 headers=auth_headers, json={"estado": estado_obsoleto})
             assert response.status_code == 400  # Error de validación
     
@@ -136,12 +136,12 @@ class TestEstadosWorkflow:
         assert pedido["estado"] == "pendiente"
         
         # Paso 1: pendiente → preparando
-        response = client.put(f"/pedidos/{pedido_id}/estado", 
+        response = client.put(f"/api/pedidos/{pedido_id}/estado", 
                             headers=auth_headers, json={"estado": "preparando"})
         assert response.status_code == 200
         
         # Paso 2: preparando → entregado
-        response = client.put(f"/pedidos/{pedido_id}/estado", 
+        response = client.put(f"/api/pedidos/{pedido_id}/estado", 
                             headers=auth_headers, json={"estado": "entregado"})
         assert response.status_code == 200
         
@@ -161,11 +161,11 @@ class TestEstadosWorkflow:
             
             # Cambiar a estado específico si no es pendiente
             if estado != "pendiente":
-                client.put(f"/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": estado})
+                client.put(f"/api/pedidos/{pedido_id}/estado", headers=auth_headers, json={"estado": estado})
         
         # Probar filtros
         for estado in ["pendiente", "preparando", "entregado", "cancelado"]:
-            response = client.get(f"/pedidos?estado={estado}", headers=auth_headers)
+            response = client.get(f"/api/pedidos?estado={estado}", headers=auth_headers)
             assert response.status_code == 200
             
             pedidos_filtrados = response.json()
@@ -180,7 +180,7 @@ class TestMigracionEstados:
     def test_no_hay_estados_obsoletos_en_base(self, client, auth_headers):
         """Verificar que no quedan estados obsoletos después de la migración"""
         # Obtener todos los pedidos
-        response = client.get("/pedidos", headers=auth_headers)
+        response = client.get("/api/pedidos", headers=auth_headers)
         assert response.status_code == 200
         
         pedidos = response.json()
@@ -193,7 +193,7 @@ class TestMigracionEstados:
     def test_estados_validos_solamente(self, client, auth_headers):
         """Verificar que solo existen estados válidos en la base"""
         # Obtener todos los pedidos
-        response = client.get("/pedidos", headers=auth_headers)
+        response = client.get("/api/pedidos", headers=auth_headers)
         assert response.status_code == 200
         
         pedidos = response.json()

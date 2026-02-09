@@ -9,7 +9,7 @@ class TestHealth:
     
     def test_health_endpoint(self, client):
         """Health endpoint should return 200"""
-        response = client.get("/health")
+        response = client.get("/api/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
@@ -83,7 +83,7 @@ class TestAuthentication:
         con.commit()
         con.close()
         
-        response = client.post("/login", data={
+        response = client.post("/api/login", data={
             "username": "inactiveuser",
             "password": "password"
         })
@@ -94,20 +94,20 @@ class TestAuthentication:
         headers = {"Authorization": f"Bearer {admin_token}"}
         
         # Verify token works
-        response = client.get("/clientes", headers=headers)
+        response = client.get("/api/clientes", headers=headers)
         assert response.status_code == 200
         
         # Logout
-        response = client.post("/logout", headers=headers)
+        response = client.post("/api/logout", headers=headers)
         assert response.status_code == 200
         
         # Token should now be rejected
-        response = client.get("/clientes", headers=headers)
+        response = client.get("/api/clientes", headers=headers)
         assert response.status_code == 401
     
     def test_protected_endpoint_without_token(self, client, temp_db):
         """Protected endpoints should require authentication"""
-        response = client.get("/clientes")
+        response = client.get("/api/clientes")
         assert response.status_code == 401
 
 
