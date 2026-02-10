@@ -588,12 +588,13 @@ export default function HistorialPedidos() {
               disabled={selectedIds.length === 0}
               className="btn-secondary"
             >
-              🔍 Preview Stock ({selectedIds.length})
+              � Verificar Stock ({selectedIds.length})
             </button>
             <button
               onClick={generarPDFs}
               disabled={selectedIds.length === 0 || generando}
-              className="btn-success"
+              className="btn-success generar-pdfs-btn"
+              style={{ fontWeight: 700 }}
             >
               {generando ? '⏳ Generando...' : `📄 Generar PDFs (${selectedIds.length})`}
             </button>

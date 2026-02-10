@@ -1659,9 +1659,30 @@ input[type="checkbox"]:focus-visible {
     font-size: 0.85rem !important;
   }
 
-  /* Help banner oculto en móvil */
+  /* Help banner compact on mobile - show collapsed */
   .help-banner {
-    display: none !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .help-banner-header {
+    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+  }
+
+  .help-banner-title {
+    font-size: 0.85rem !important;
+  }
+
+  .help-banner-content {
+    padding: 8px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .help-banner-item {
+    padding: 4px 0 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
   }
 
   /* Empty states compactos */
@@ -1679,10 +1700,11 @@ input[type="checkbox"]:focus-visible {
     padding: 0.625rem !important;
   }
 
-  /* Action bar scrolleable */
+  /* Action bar - stacked on mobile for discoverability */
   .action-bar {
-    overflow-x: auto !important;
-    flex-wrap: nowrap !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
     -webkit-overflow-scrolling: touch !important;
     padding: 0.5rem !important;
   }
@@ -2006,9 +2028,9 @@ input[type="checkbox"]:focus-visible {
     flex-wrap: wrap !important;
   }
 
-  /* Clientes list scroll */
+  /* Clientes list scroll - no max height cap on mobile */
   .clientes-list-scroll {
-    max-height: 50vh !important;
+    max-height: none !important;
   }
 
   /* Clientes detail actions */
@@ -2289,14 +2311,22 @@ input[type="checkbox"]:focus-visible {
   }
 
   .historial-action-bar .badge {
-    font-size: 0.6rem !important;
-    padding: 3px 6px !important;
+    font-size: 0.75rem !important;
+    padding: 4px 8px !important;
   }
 
   .historial-action-bar button {
-    font-size: 0.75rem !important;
-    padding: 6px 10px !important;
-    min-height: 32px !important;
+    font-size: 0.8rem !important;
+    padding: 8px 12px !important;
+    min-height: 40px !important;
+  }
+
+  /* Generar PDFs button: always prominent */
+  .generar-pdfs-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+    font-size: 0.9rem !important;
+    order: -1 !important;
   }
 
   /* Pagination bars */
@@ -2518,7 +2548,7 @@ input[type="checkbox"]:focus-visible {
   }
 
   .mobile-nav-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 500;
     white-space: nowrap;
     letter-spacing: 0.01em;
@@ -2617,11 +2647,6 @@ input[type="checkbox"]:focus-visible {
     scroll-margin-top: 16px;
   }
 
-  /* --- Hide vendedor inline select on mobile (too cramped) --- */
-  .vendedor-inline-select {
-    display: none !important;
-  }
-
   /* --- Productos: list first, form second on mobile (grid order) --- */
   .productos-layout {
     grid-template-columns: 1fr !important;
@@ -2693,6 +2718,61 @@ input[type="checkbox"]:focus-visible {
     flex: 1 1 auto !important;
     min-width: 140px !important;
     font-weight: 600 !important;
+  }
+
+  /* --- Filter checkbox rows: 44px touch targets --- */
+  .filter-checkbox-row {
+    min-height: 44px !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border) !important;
+  }
+
+  .filter-checkbox-row:active {
+    background: var(--color-bg-hover) !important;
+  }
+
+  /* --- Pagination buttons: 44px min touch targets --- */
+  .historial-pagination button,
+  .btn-secondary[style*="6px 12px"] {
+    min-height: 44px !important;
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* --- Catalog add button: clear labels --- */
+  .catalog-add-btn {
+    min-width: 80px !important;
+    min-height: 44px !important;
+    border-radius: 10px !important;
+  }
+
+  /* --- Edit/Delete buttons: more visual separation --- */
+  .cliente-detail-actions {
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .cliente-detail-actions .btn-danger {
+    margin-left: auto !important;
+  }
+
+  /* --- Historial date filter labels: readable --- */
+  .historial-filters .form-group label {
+    font-size: 0.8rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* --- Vendedor inline: show as compact row below name on mobile --- */
+  .vendedor-inline-select {
+    display: none !important;
+  }
+
+  /* --- Badges minimum readable size --- */
+  .badge {
+    font-size: 0.75rem !important;
+    padding: 4px 8px !important;
   }
 }
 

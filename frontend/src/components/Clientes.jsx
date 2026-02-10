@@ -425,11 +425,11 @@ export default function Clientes() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer filter-checkbox-row">
               <input type="checkbox" className="custom-checkbox" checked={soloConTelefono} onChange={e => setSoloConTelefono(e.target.checked)} />
               Con teléfono
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer filter-checkbox-row">
               <input type="checkbox" className="custom-checkbox" checked={soloConDireccion} onChange={e => setSoloConDireccion(e.target.checked)} />
               Con dirección
             </label>
@@ -445,7 +445,7 @@ export default function Clientes() {
                   checked={clienteOptions.length > 0 && clienteOptions.every(c => selectedIds.has(c.value))}
                   onChange={toggleSelectAll}
                 />
-                Seleccionar todos
+                Seleccionar {clienteOptions.length > 1 ? `los ${clienteOptions.length} visibles` : 'todos'}
               </label>
               <div className="flex items-center gap-2">
                 {selectedIds.size === 1 && (

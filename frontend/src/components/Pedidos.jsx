@@ -3,6 +3,7 @@ import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
 import { useClientesQuery, useProductosQuery } from '../hooks/useHybridQuery';
 import HelpBanner from './HelpBanner';
+import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../utils/logger';
 
 export default function Pedidos() {
@@ -19,6 +20,8 @@ export default function Pedidos() {
   const [ofertasActivas, setOfertasActivas] = useState([]);
   const [notas, setNotas] = useState(''); // Notas/observaciones del pedido
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmLimpiar, setConfirmLimpiar] = useState(false);
   const searchInputRef = useRef(null);
   const guardarPedidoRef = useRef(null);
 
@@ -207,8 +210,10 @@ export default function Pedidos() {
   };
 
   const guardarPedido = useCallback(async () => {
+    if (saving) return;
     if (!clienteId) { toastWarn("Debes seleccionar un cliente primero"); return; }
     if (productosSeleccionados.length === 0) { toastWarn("Debes agregar al menos un producto"); return; }
+    setSaving(true);
 
     // Verificar stock antes de guardar
     const sinStock = productosSeleccionados.filter(ps => {
@@ -250,6 +255,7 @@ export default function Pedidos() {
       // Recargar productos para actualizar stock
       const { res: rp, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
       if (rp.ok && Array.isArray(data)) setProductos(data);
+      setSaving(false);
     } else {
       const err = await res.json().catch(() => ({}));
       if (err.detail?.errores) {
@@ -258,6 +264,7 @@ export default function Pedidos() {
       } else {
         toastError(err.detail?.message || "Error al guardar pedido");
       }
+      setSaving(false);
     }
   }, [clienteId, productosSeleccionados, productos, clientes, notas]);
 
@@ -400,8 +407,8 @@ export default function Pedidos() {
                 <h4 className="font-semibold" style={{ color: 'var(--color-text)' }}>
                   🧊 Productos ({productosSeleccionados.length})
                 </h4>
-                <button onClick={() => setProductosSeleccionados([])} className="btn-ghost text-sm px-3 py-1" aria-label="Limpiar todos los productos seleccionados">
-                  ✕ Limpiar
+                <button onClick={() => setConfirmLimpiar(true)} className="btn-ghost text-sm px-3 py-1" style={{ color: '#ef4444' }} aria-label="Limpiar todos los productos seleccionados">
+                  ✕ Limpiar todo
                 </button>
               </div>
               <div className="space-y-2 pedidos-selected-scroll overflow-y-auto custom-scrollbar">
@@ -438,10 +445,10 @@ export default function Pedidos() {
                                   <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{formatUYU(p.precio)}</span>
                                   {' → '}
                                   <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatUYU(itemInfo.precioFinal)}</span>
-                                  {' c/u'}
+                                  {' /u'}
                                 </>
                               ) : (
-                                `${formatUYU(p.precio)} c/u`
+                                `${formatUYU(p.precio)} /u`
                               )}
                             </>
                           )}
@@ -545,10 +552,11 @@ export default function Pedidos() {
 
           <button
             onClick={guardarPedido}
-            disabled={!clienteId || productosSeleccionados.length === 0}
+            disabled={!clienteId || productosSeleccionados.length === 0 || saving}
             className="btn-success w-full mt-4"
+            style={{ minHeight: '48px', fontSize: '1rem' }}
           >
-            💾 Guardar Pedido
+            {saving ? '⏳ Guardando pedido...' : '💾 Guardar Pedido'}
           </button>
 
           {!clienteId && (
@@ -577,10 +585,10 @@ export default function Pedidos() {
               aria-label="Buscar productos"
             />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="sort-select" aria-label="Ordenar productos">
-              <option value="nombre_asc">Nombre ↑</option>
-              <option value="nombre_desc">Nombre ↓</option>
-              <option value="precio_asc">Precio ↑</option>
-              <option value="precio_desc">Precio ↓</option>
+              <option value="nombre_asc">A → Z</option>
+              <option value="nombre_desc">Z → A</option>
+              <option value="precio_asc">Menor precio</option>
+              <option value="precio_desc">Mayor precio</option>
             </select>
           </div>
 
@@ -652,10 +660,10 @@ export default function Pedidos() {
                     <button
                       onClick={() => agregarProducto(p)}
                       disabled={yaAgregado || (p.stock || 0) === 0}
-                      className={yaAgregado ? "btn-ghost px-3 py-1 text-sm" : (p.stock || 0) === 0 ? "btn-ghost px-3 py-1 text-sm text-red-500" : "btn-primary px-3 py-1 text-sm"}
-                      style={{ minHeight: '36px' }}
+                      className={`catalog-add-btn ${yaAgregado ? 'btn-ghost' : (p.stock || 0) === 0 ? 'btn-ghost text-red-500' : 'btn-primary'}`}
+                      style={{ minHeight: '44px', padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                     >
-                      {yaAgregado ? '✓' : (p.stock || 0) === 0 ? '✕' : '+'}
+                      {yaAgregado ? '✓ Listo' : (p.stock || 0) === 0 ? 'Sin stock' : '+ Agregar'}
                     </button>
                   </div>
                 );
@@ -680,14 +688,23 @@ export default function Pedidos() {
           </div>
           <button
             onClick={guardarPedido}
-            disabled={!clienteId}
+            disabled={!clienteId || saving}
             className="btn-success"
-            style={{ padding: '8px 16px', minHeight: '40px' }}
+            style={{ padding: '8px 16px', minHeight: '44px' }}
           >
-            💾 Guardar
+            {saving ? '⏳ Guardando...' : '💾 Guardar'}
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmLimpiar}
+        onClose={() => setConfirmLimpiar(false)}
+        onConfirm={() => { setProductosSeleccionados([]); setConfirmLimpiar(false); }}
+        title="¿Quitar todos los productos?"
+        message={`Se van a quitar ${productosSeleccionados.length} producto(s) del pedido. Esta acción no se puede deshacer.`}
+        confirmText="Sí, limpiar todo"
+      />
     </div>
   );
 }
