@@ -1474,8 +1474,8 @@ input[type="checkbox"]:focus-visible {
     padding-bottom: 70px;
   }
 
-  /* Touch-friendly button sizes - not too big */
-  button,
+  /* Touch-friendly button sizes - scoped to primary actions */
+  .form-group button,
   .btn-primary,
   .btn-secondary,
   .btn-success,
@@ -1486,10 +1486,14 @@ input[type="checkbox"]:focus-visible {
     font-size: 0.85rem !important;
   }
 
-  /* Inputs - comfortable but not huge */
-  input,
-  select,
-  textarea {
+  /* Inputs in form context - comfortable + prevent iOS zoom */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .panel > input,
+  .panel > select,
+  .historial-filters input,
+  .historial-filters select {
     min-height: 40px !important;
     font-size: 16px !important;
     padding: 0.5rem 0.75rem !important;
@@ -1789,15 +1793,15 @@ input[type="checkbox"]:focus-visible {
   }
 
   /* --- CHECKBOX ROWS inline --- */
-  .flex.items-center.gap-2,
-  .flex.items-center.gap-3,
-  .flex.items-center.gap-4 {
+  .clientes-list-scroll .flex.items-center.gap-2,
+  .historial-edit-form .flex.items-center.gap-2,
+  .historial-add-item .flex.items-center.gap-2 {
     flex-wrap: wrap !important;
   }
 
-  /* --- BUTTON GROUPS --- */
-  .flex.gap-2,
-  .flex.gap-3 {
+  /* --- BUTTON GROUPS (only in specific containers) --- */
+  .cliente-detail-actions,
+  .historial-add-item {
     flex-wrap: wrap !important;
   }
 
@@ -1973,12 +1977,7 @@ input[type="checkbox"]:focus-visible {
     color: var(--color-text) !important;
   }
 
-  .vendedor-inline-select {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    font-size: 0.75rem !important;
-  }
+  /* vendedor-inline-select hidden on mobile (see bottom of this block) */
 
   /* Clientes: card items - stack vendedor below content */
   .card-item .flex.items-start.gap-3 {
@@ -2006,14 +2005,14 @@ input[type="checkbox"]:focus-visible {
 
   /* Quantity buttons */
   .qty-btn {
-    min-width: 32px !important;
-    min-height: 32px !important;
-    width: 32px !important;
-    height: 32px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
     padding: 0 !important;
-    font-size: 1rem !important;
+    font-size: 1.1rem !important;
     font-weight: 700 !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     border: none !important;
     cursor: pointer !important;
     color: white !important;
@@ -2031,12 +2030,12 @@ input[type="checkbox"]:focus-visible {
   }
 
   .qty-input {
-    width: 48px !important;
-    min-height: 32px !important;
-    padding: 2px 4px !important;
-    font-size: 0.85rem !important;
+    width: 52px !important;
+    min-height: 44px !important;
+    padding: 4px !important;
+    font-size: 1rem !important;
     text-align: center !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     border: 1px solid !important;
   }
 
@@ -2074,14 +2073,42 @@ input[type="checkbox"]:focus-visible {
     max-height: 30vh !important;
   }
 
-  /* Selected product row - wrap on narrow screens */
+  /* Selected product row - 2-line grid on mobile */
   .pedidos-selected-scroll .card-item {
-    padding: 6px 8px !important;
+    padding: 8px !important;
+    display: grid !important;
+    grid-template-columns: 44px 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 4px 8px !important;
+    align-items: center !important;
   }
 
-  .pedidos-selected-scroll .card-item .flex.items-center.gap-2 {
-    flex-wrap: wrap !important;
-    gap: 4px !important;
+  /* Image spans both rows */
+  .pedidos-selected-scroll .card-item .product-image-sm,
+  .pedidos-selected-scroll .card-item .product-image-placeholder-sm {
+    grid-row: 1 / 3 !important;
+  }
+
+  /* Name+price on first row */
+  .pedidos-selected-scroll .card-item .flex-1.min-w-0 {
+    grid-column: 2 !important;
+  }
+
+  /* Controls on second row, spanning full width */
+  .pedidos-selected-scroll .card-item .qty-controls,
+  .pedidos-selected-scroll .card-item .tipo-select,
+  .pedidos-selected-scroll .card-item .subtotal-display,
+  .pedidos-selected-scroll .card-item .btn-remove-item {
+    /* These will flow in the natural grid */
+  }
+
+  .pedidos-selected-scroll .card-item > .flex.items-center.gap-2 {
+    display: contents !important;
+  }
+
+  .pedidos-selected-scroll .card-item .flex.items-center.gap-1.qty-controls {
+    display: flex !important;
+    grid-column: 2 !important;
   }
 
   /* Total Panel */
@@ -2234,7 +2261,7 @@ input[type="checkbox"]:focus-visible {
     margin-bottom: 0.5rem !important;
   }
 
-  .historial-action-bar > * {
+  .historial-action-bar>* {
     flex-shrink: 0 !important;
     white-space: nowrap !important;
   }
@@ -2449,17 +2476,30 @@ input[type="checkbox"]:focus-visible {
 
   .mobile-nav-item.active {
     color: var(--color-primary);
+    position: relative;
+  }
+
+  .mobile-nav-item.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 0 0 3px 3px;
   }
 
   .mobile-nav-icon {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
     line-height: 1;
   }
 
   .mobile-nav-label {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     font-weight: 500;
     white-space: nowrap;
+    letter-spacing: 0.01em;
   }
 
   .mobile-nav-item.active .mobile-nav-label {
@@ -2527,6 +2567,92 @@ input[type="checkbox"]:focus-visible {
     background: #ef4444;
     color: white;
   }
+
+  /* --- Tap-to-call phone links --- */
+  .tap-to-call {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+  }
+
+  .tap-to-call:active {
+    opacity: 0.7;
+  }
+
+  /* --- Client address: CSS line-clamp on mobile --- */
+  .cliente-direccion {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+  }
+
+  /* --- Client detail panel scroll into view target --- */
+  .cliente-detail-panel {
+    scroll-margin-top: 16px;
+  }
+
+  /* --- Hide vendedor inline select on mobile (too cramped) --- */
+  .vendedor-inline-select {
+    display: none !important;
+  }
+
+  /* --- Productos: list first, form second on mobile --- */
+  .productos-layout {
+    flex-direction: column-reverse !important;
+  }
+
+  .productos-form-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .productos-list-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* --- Order products list: expand on mobile --- */
+  .order-products-list {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* --- Client suggestion item: touch feedback --- */
+  .cliente-suggestion-item {
+    padding: 14px 16px !important;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .cliente-suggestion-item:active {
+    background: var(--color-bg-accent) !important;
+    transform: scale(0.98);
+  }
+
+  /* --- More panel items: active feedback --- */
+  .mobile-more-item:active {
+    transform: scale(0.97);
+    transition: transform 0.08s;
+  }
+
+  /* --- Historial action bar: wrap properly --- */
+  .historial-action-bar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .historial-action-bar .btn-primary,
+  .historial-action-bar .btn-success {
+    flex: 1 1 auto !important;
+    min-width: 140px !important;
+    font-weight: 600 !important;
+  }
 }
 
 /* =============================================
@@ -2576,7 +2702,7 @@ input[type="checkbox"]:focus-visible {
   }
 
   /* Buttons a bit more spacious */
-  button,
+  .form-group button,
   .btn-primary,
   .btn-secondary,
   .btn-success,
@@ -2636,8 +2762,9 @@ input[type="checkbox"]:focus-visible {
     font-size: 0.8rem !important;
   }
 
-  /* Tablet: inline vendedor select wider */
+  /* Tablet: inline vendedor select wider - restore from mobile hide */
   .vendedor-inline-select {
+    display: inline-flex !important;
     width: auto !important;
     min-width: 130px !important;
     max-width: 160px !important;

@@ -363,11 +363,12 @@ export default function Pedidos() {
                         setBusquedaCliente('');
                         setShowClienteSuggestions(false);
                       }}
+                      className="cliente-suggestion-item"
                       style={{
-                        padding: '10px 12px',
+                        padding: '14px 16px',
                         cursor: 'pointer',
                         borderBottom: '1px solid var(--color-border)',
-                        transition: 'background 0.2s'
+                        transition: 'background 0.15s'
                       }}
                       onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-bg-hover)'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}

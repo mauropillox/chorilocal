@@ -489,13 +489,22 @@ export default function HistorialPedidos() {
       )}
 
       {/* Filters - responsive grid simplificado */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="Desde" />
-        <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="Hasta" />
-        <input type="text" value={busquedaTexto} onChange={e => setBusquedaTexto(e.target.value)}
-          className="text-sm p-2 border rounded w-full" placeholder="🔍 Buscar cliente/producto..." />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 historial-filters">
+        <div className="form-group">
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>📅 Desde</label>
+          <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
+            className="text-sm p-2 border rounded w-full" />
+        </div>
+        <div className="form-group">
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>📅 Hasta</label>
+          <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
+            className="text-sm p-2 border rounded w-full" />
+        </div>
+        <div className="form-group">
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>🔍 Buscar</label>
+          <input type="text" value={busquedaTexto} onChange={e => setBusquedaTexto(e.target.value)}
+            className="text-sm p-2 border rounded w-full" placeholder="Cliente o producto..." />
+        </div>
       </div>
 
       {/* Filtro por usuario creador - solo visible para admin/oficina */}
@@ -808,11 +817,9 @@ export default function HistorialPedidos() {
 
                           {/* Lista compacta de productos */}
                           {p?.productos && p.productos.length > 0 && (
-                            <div className="mt-2 p-2 rounded" style={{
+                            <div className="mt-2 p-2 rounded order-products-list" style={{
                               background: 'var(--color-border-light)',
-                              border: '1px solid var(--color-border)',
-                              maxHeight: '80px',
-                              overflowY: 'auto'
+                              border: '1px solid var(--color-border)'
                             }}>
                               <div className="space-y-1">
                                 {p.productos.map((item, idx) => (
@@ -821,7 +828,7 @@ export default function HistorialPedidos() {
                                     wordWrap: 'break-word',
                                     lineHeight: '1.4'
                                   }}>
-                                    <strong>{item.nombre}</strong> (cant: {item.cantidad} {item.tipo === 'caja' ? 'caja' : 'u'}) - ${item.precio || 0}
+                                    <strong>{item.nombre}</strong> × {item.cantidad} {item.tipo === 'caja' ? 'caja' : item.tipo === 'kg' ? 'kg' : 'u'} — ${item.precio || 0}
                                   </div>
                                 ))}
                               </div>

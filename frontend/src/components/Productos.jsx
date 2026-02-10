@@ -663,9 +663,9 @@ export default function Productos() {
         ]}
       />
 
-      <div className="two-column-layout">
+      <div className="two-column-layout productos-layout">
         {/* LEFT: Formulario */}
-        <div className="panel">
+        <div className="panel productos-form-panel">
           {stockBajo.length > 0 && (
             <div className="alert-warning mb-4" style={{ padding: '0.75rem 1rem' }}>
               <div className="flex items-center justify-between">
@@ -794,7 +794,7 @@ export default function Productos() {
         </div>
 
         {/* RIGHT */}
-        <div className="panel">
+        <div className="panel productos-list-panel">
           {vistaStock ? (
             /* VISTA GESTOR DE STOCK */
             productsLoading ? (
@@ -946,17 +946,17 @@ export default function Productos() {
                   {/* Paginación inferior */}
                   <div className="stock-pagination"
                     style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    marginTop: '12px',
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--color-border)'
-                  }}>
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      marginTop: '12px',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)'
+                    }}>
                     <button
                       onClick={() => setStockPage(Math.max(1, stockPage - 1))}
                       disabled={stockPage === 1}

@@ -301,6 +301,15 @@ export default function Clientes() {
     setEditingVendedor(false);
   }, [selectedCliente]);
 
+  // Scroll detail panel into view on mobile when client selected
+  useEffect(() => {
+    if (clienteDetalle) {
+      setTimeout(() => {
+        document.querySelector('.cliente-detail-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [clienteDetalle]);
+
   const customSelectStyles = getSelectStyles();
 
   return (
@@ -513,8 +522,8 @@ export default function Clientes() {
                               {cliente?.nombre}
                             </div>
                             <div className="text-xs text-muted flex flex-wrap gap-x-3 gap-y-1 mt-1">
-                              <span>📞 {cliente?.telefono || '-'}</span>
-                              <span>📍 {cliente?.direccion ? (cliente.direccion.length > 20 ? cliente.direccion.substring(0, 20) + '...' : cliente.direccion) : '-'}</span>
+                              <span>{cliente?.telefono ? <a href={`tel:${cliente.telefono}`} onClick={e => e.stopPropagation()} className="tap-to-call">📞 {cliente.telefono}</a> : '📞 -'}</span>
+                              <span className="cliente-direccion">📍 {cliente?.direccion || '-'}</span>
                               <span>🗺️ {cliente?.zona || '-'}</span>
                             </div>
                           </div>
@@ -560,12 +569,12 @@ export default function Clientes() {
           )}
 
           {clienteDetalle && (
-            <div className="card-accent mt-4">
+            <div className="card-accent mt-4 cliente-detail-panel">
               <div className="font-semibold text-lg mb-2" style={{ color: 'var(--color-text)' }}>
                 {clienteDetalle.nombre}
               </div>
               <div className="text-sm space-y-2" style={{ color: 'var(--color-text-secondary)' }}>
-                <div>📞 <strong>Teléfono:</strong> {clienteDetalle.telefono || 'No registrado'}</div>
+                <div>📞 <strong>Teléfono:</strong> {clienteDetalle.telefono ? <a href={`tel:${clienteDetalle.telefono}`} className="tap-to-call">{clienteDetalle.telefono}</a> : 'No registrado'}</div>
                 <div>📍 <strong>Dirección:</strong> {clienteDetalle.direccion || 'No registrada'}</div>
                 <div>🗺️ <strong>Zona:</strong> {clienteDetalle.zona || 'No registrada'}</div>
 
