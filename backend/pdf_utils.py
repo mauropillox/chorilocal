@@ -146,12 +146,12 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     y -= 45
     
     # Products table header
-    # Column positions
-    col_producto = LEFT_MARGIN + 10
-    col_cant = LEFT_MARGIN + 230
-    col_notas = LEFT_MARGIN + 290  # Annotation column for handwriting
-    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 130
-    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 10
+    # Column positions (letter page = 612pt, margins 40 each, content = 532pt)
+    col_producto = LEFT_MARGIN + 10          # 50  - product name
+    col_cant = PAGE_WIDTH - RIGHT_MARGIN - 210  # 362 - quantity
+    col_notas = PAGE_WIDTH - RIGHT_MARGIN - 160  # 412 - annotation space start
+    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 115  # 457 - price
+    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 10  # 562 - subtotal (right-aligned)
     
     pdf.setFillColor(COLOR_GRAY)
     pdf.setFont("Helvetica-Bold", 9)
