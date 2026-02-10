@@ -55,8 +55,9 @@ def estimate_pedido_height(pedido: Dict[str, Any]) -> float:
     for prod in productos:
         nombre = prod.get('nombre', 'Producto')
         # Each product takes at least one line, maybe more if name wraps
-        lines = len(wrap_text(nombre, 40))
+        lines = len(wrap_text(nombre, 30))
         height += line_height * max(lines, 1)
+        height += 4  # separator line spacing
     
     # Total line + spacing
     height += 35
@@ -145,17 +146,27 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     y -= 45
     
     # Products table header
+    # Column positions
+    col_producto = LEFT_MARGIN + 10
+    col_cant = LEFT_MARGIN + 230
+    col_notas = LEFT_MARGIN + 290  # Annotation column for handwriting
+    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 130
+    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 10
+    
     pdf.setFillColor(COLOR_GRAY)
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(LEFT_MARGIN + 10, y, "PRODUCTO")
-    pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 180, y, "CANT.")
-    pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 120, y, "PRECIO")
-    pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 10, y, "SUBTOTAL")
+    pdf.drawString(col_producto, y, "PRODUCTO")
+    pdf.drawString(col_cant, y, "CANT.")
+    pdf.drawString(col_precio, y, "PRECIO")
+    pdf.drawRightString(col_subtotal, y, "SUBTOTAL")
     
     y -= 5
     pdf.setStrokeColor(HexColor('#e5e7eb'))
     pdf.setLineWidth(0.5)
-    pdf.line(LEFT_MARGIN + 10, y, PAGE_WIDTH - RIGHT_MARGIN - 10, y)
+    pdf.line(col_producto, y, col_subtotal, y)
+    
+    # Remember the top of the product table for vertical annotation lines
+    table_top_y = y
     y -= 12
     
     # Products
@@ -173,28 +184,43 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
         
         # Product name (may wrap)
         pdf.setFillColor(COLOR_DARK)
-        wrapped_name = wrap_text(nombre, 35)
+        wrapped_name = wrap_text(nombre, 30)
         for i, line in enumerate(wrapped_name):
-            pdf.drawString(LEFT_MARGIN + 10, y, line)
+            pdf.drawString(col_producto, y, line)
             if i == 0:
                 # Cantidad, precio, subtotal on first line
                 pdf.setFillColor(COLOR_GRAY)
-                tipo_abbr = {'unidad': 'u', 'caja': 'cj', 'gancho': 'g', 'tira': 't'}.get(tipo, tipo[:2])
-                pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 180, y, f"{cantidad} {tipo_abbr}")
-                pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 120, y, format_currency(precio))
+                tipo_abbr = {'unidad': 'u', 'caja': 'cj', 'gancho': 'g', 'tira': 't', 'kg': 'kg'}.get(tipo, tipo[:2])
+                pdf.drawString(col_cant, y, f"{cantidad} {tipo_abbr}")
+                pdf.drawString(col_precio, y, format_currency(precio))
                 pdf.setFillColor(COLOR_DARK)
-                pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 10, y, format_currency(subtotal))
+                pdf.drawRightString(col_subtotal, y, format_currency(subtotal))
             y -= line_height
+        
+        # Horizontal separator line between products
+        pdf.setStrokeColor(HexColor('#d1d5db'))
+        pdf.setLineWidth(0.3)
+        pdf.line(col_producto, y + 4, col_subtotal, y + 4)
+    
+    # Draw vertical dashed lines for the annotation column (blank space for handwriting)
+    table_bottom_y = y + 4
+    pdf.setStrokeColor(HexColor('#d1d5db'))
+    pdf.setLineWidth(0.4)
+    pdf.setDash(3, 2)  # Dashed border
+    pdf.line(col_notas - 5, table_top_y, col_notas - 5, table_bottom_y)  # Left border
+    pdf.line(col_precio - 8, table_top_y, col_precio - 8, table_bottom_y)  # Right border
+    pdf.setDash()  # Reset to solid lines
     
     # Total line
     y -= 8
     pdf.setStrokeColor(HexColor('#e5e7eb'))
-    pdf.line(LEFT_MARGIN + 10, y + 5, PAGE_WIDTH - RIGHT_MARGIN - 10, y + 5)
+    pdf.setLineWidth(0.5)
+    pdf.line(col_producto, y + 5, col_subtotal, y + 5)
     
     pdf.setFillColor(COLOR_SUCCESS)
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(PAGE_WIDTH - RIGHT_MARGIN - 180, y - 8, "TOTAL:")
-    pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 10, y - 8, format_currency(total))
+    pdf.drawString(col_precio, y - 8, "TOTAL:")
+    pdf.drawRightString(col_subtotal, y - 8, format_currency(total))
     
     y -= 25
     
