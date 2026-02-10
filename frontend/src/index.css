@@ -1490,8 +1490,8 @@ input[type="checkbox"]:focus-visible {
   .form-group input,
   .form-group select,
   .form-group textarea,
-  .panel > input,
-  .panel > select,
+  .panel>input,
+  .panel>select,
   .historial-filters input,
   .historial-filters select {
     min-height: 40px !important;
@@ -1540,17 +1540,20 @@ input[type="checkbox"]:focus-visible {
      HEADER SIMPLIFICADO - Mobile
      ============================================= */
   .header-compact {
-    padding: 0.5rem 0 !important;
-    gap: 0.5rem !important;
+    padding: 0.25rem 0 !important;
+    gap: 0.25rem !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    min-height: auto !important;
   }
 
   .header-brand {
-    flex: 1 !important;
+    flex: 0 0 auto !important;
     min-width: 0 !important;
   }
 
   .header-logo {
-    height: 32px !important;
+    height: 26px !important;
   }
 
   .header-subtitle {
@@ -1627,10 +1630,29 @@ input[type="checkbox"]:focus-visible {
     font-size: 1.2rem !important;
   }
 
-  /* Card items compactos */
+  /* Card items compactos - remove boxy borders on mobile */
   .card-item {
-    padding: 0.625rem !important;
-    margin-bottom: 0.5rem !important;
+    padding: 0.625rem 0.5rem !important;
+    margin-bottom: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .card-item:last-child {
+    border-bottom: none !important;
+  }
+
+  .card-item:active {
+    background: var(--color-bg-hover) !important;
+  }
+
+  /* Selected client card - left accent instead of ring */
+  .card-item.ring-2 {
+    border-left: 3px solid var(--color-primary) !important;
+    background: var(--color-bg-accent) !important;
+    padding-left: 0.5rem !important;
   }
 
   .card-item .font-semibold {
@@ -2102,7 +2124,7 @@ input[type="checkbox"]:focus-visible {
     /* These will flow in the natural grid */
   }
 
-  .pedidos-selected-scroll .card-item > .flex.items-center.gap-2 {
+  .pedidos-selected-scroll .card-item>.flex.items-center.gap-2 {
     display: contents !important;
   }
 
@@ -2600,18 +2622,20 @@ input[type="checkbox"]:focus-visible {
     display: none !important;
   }
 
-  /* --- Productos: list first, form second on mobile --- */
+  /* --- Productos: list first, form second on mobile (grid order) --- */
   .productos-layout {
-    flex-direction: column-reverse !important;
+    grid-template-columns: 1fr !important;
   }
 
   .productos-form-panel {
+    order: 2 !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
   }
 
   .productos-list-panel {
+    order: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -2639,6 +2663,23 @@ input[type="checkbox"]:focus-visible {
   .mobile-more-item:active {
     transform: scale(0.97);
     transition: transform 0.08s;
+  }
+
+  /* --- Historial filters: compact layout --- */
+  .historial-filters .form-group {
+    margin-bottom: 0.25rem !important;
+  }
+
+  .historial-filters .form-group label {
+    font-size: 0.7rem !important;
+    margin-bottom: 1px !important;
+  }
+
+  .historial-filters input,
+  .historial-filters select {
+    min-height: 36px !important;
+    padding: 0.35rem 0.6rem !important;
+    font-size: 0.85rem !important;
   }
 
   /* --- Historial action bar: wrap properly --- */
