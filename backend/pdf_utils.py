@@ -57,7 +57,7 @@ def estimate_pedido_height(pedido: Dict[str, Any]) -> float:
         # Each product takes at least one line, maybe more if name wraps
         lines = len(wrap_text(nombre, 30))
         height += line_height * max(lines, 1)
-        height += 4  # separator line spacing
+        height += 10  # separator line spacing
     
     # Total line + spacing
     height += 35
@@ -198,9 +198,11 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
             y -= line_height
         
         # Horizontal separator line between products
-        pdf.setStrokeColor(HexColor('#d1d5db'))
-        pdf.setLineWidth(0.3)
+        y -= 2  # extra padding below text
+        pdf.setStrokeColor(HexColor('#9ca3af'))
+        pdf.setLineWidth(0.8)
         pdf.line(col_producto, y + 4, col_subtotal, y + 4)
+        y -= 4  # extra padding before next product
     
     # Draw vertical dashed lines for the annotation column (blank space for handwriting)
     table_bottom_y = y + 4
