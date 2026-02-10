@@ -818,18 +818,19 @@ export default function Productos() {
                   </div>
 
                   {/* Paginación superior */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    marginBottom: '12px',
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--color-border)'
-                  }}>
+                  <div className="stock-pagination"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      marginBottom: '12px',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)'
+                    }}>
                     <button
                       onClick={() => setStockPage(Math.max(1, stockPage - 1))}
                       disabled={stockPage === 1}
@@ -943,7 +944,8 @@ export default function Productos() {
                   </div>
 
                   {/* Paginación inferior */}
-                  <div style={{
+                  <div className="stock-pagination"
+                    style={{
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -1081,7 +1083,7 @@ export default function Productos() {
                       const bajo = (p.stock || 0) < (p.stock_minimo || 10);
                       const categoria = categorias.find(c => c.id === p?.categoria_id);
                       return (
-                        <div key={p?.id} className={`card-item ${bajo ? 'stock-bajo-item' : ''}`} style={{ padding: '12px' }}>
+                        <div key={p?.id} className={`card-item producto-card ${bajo ? 'stock-bajo-item' : ''}`}>
                           <div className="flex items-start gap-3">
                             <input
                               type="checkbox"
@@ -1427,7 +1429,7 @@ export default function Productos() {
       {
         editingProducto && (
           <div className="modal-backdrop" onClick={() => !savingEdit && setEditingProducto(null)}>
-            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-box producto-edit-modal" onClick={e => e.stopPropagation()}>
               <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
                 ✏️ Editar Producto
               </h3>

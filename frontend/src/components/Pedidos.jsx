@@ -403,7 +403,7 @@ export default function Pedidos() {
                   ✕ Limpiar
                 </button>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+              <div className="space-y-2 pedidos-selected-scroll overflow-y-auto custom-scrollbar">
                 {productosSeleccionados.map(p => {
                   const itemInfo = itemsConTotales.find(i => i.id === p.id);
                   const sinPrecio = itemInfo && !itemInfo.precioValido;
@@ -447,18 +447,10 @@ export default function Pedidos() {
                           {cantidadInvalida && <span style={{ color: '#ef4444', marginLeft: '8px' }}>⚠️ Cantidad inválida</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 qty-controls">
                         <button
                           onClick={() => decrementarCantidad(p.id)}
-                          className="text-sm font-bold rounded"
-                          style={{
-                            minWidth: '28px',
-                            minHeight: '32px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer'
-                          }}
+                          className="qty-btn qty-btn-minus"
                           title="Restar 0.5"
                           aria-label={`Restar 0.5 a ${p.nombre}`}
                         >
@@ -470,57 +462,42 @@ export default function Pedidos() {
                           min="0.5"
                           value={p.cantidad}
                           onChange={(e) => cambiarCantidad(p.id, e.target.value)}
-                          className="w-14 p-1 text-sm rounded text-center"
-                          style={{ minHeight: '32px', borderColor: cantidadInvalida ? '#ef4444' : '#d1d5db', border: '1px solid' }}
+                          className="qty-input"
+                          style={{ borderColor: cantidadInvalida ? '#ef4444' : '#d1d5db' }}
                           aria-label={`Cantidad de ${p.nombre}`}
                         />
                         <button
                           onClick={() => incrementarCantidad(p.id)}
-                          className="text-sm font-bold rounded"
-                          style={{
-                            minWidth: '28px',
-                            minHeight: '32px',
-                            background: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer'
-                          }}
+                          className="qty-btn qty-btn-plus"
                           title="Sumar 0.5"
                           aria-label={`Sumar 0.5 a ${p.nombre}`}
                         >
                           +
                         </button>
                       </div>
-                      <select value={p.tipo} onChange={(e) => cambiarTipo(p.id, e.target.value)} className="p-1 text-sm rounded" style={{ minHeight: '32px' }} aria-label={`Tipo de ${p.nombre}`}>
+                      <select value={p.tipo} onChange={(e) => cambiarTipo(p.id, e.target.value)} className="tipo-select" aria-label={`Tipo de ${p.nombre}`}>
                         <option value="unidad">Unidad</option>
                         <option value="kg">Kilo</option>
                         <option value="caja">Caja</option>
                         <option value="gancho">Gancho</option>
                         <option value="tira">Tira</option>
                       </select>
-                      <div className="text-sm font-semibold text-right" style={{ minWidth: '80px', color: itemInfo?.subtotal > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                      <div className="subtotal-display" style={{ color: itemInfo?.subtotal > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
                         {itemInfo?.subtotal > 0 ? formatUYU(itemInfo.subtotal) : '-'}
                       </div>
-                      <button onClick={() => eliminarProducto(p.id)} className="btn-danger text-sm px-2 py-1" style={{ minHeight: '32px' }} aria-label={`Eliminar ${p.nombre}`}>✕</button>
+                      <button onClick={() => eliminarProducto(p.id)} className="btn-danger btn-remove-item" aria-label={`Eliminar ${p.nombre}`}>✕</button>
                     </div>
                   );
                 })}
               </div>
 
               {/* Panel Total Estimado */}
-              <div style={{
-                marginTop: '16px',
-                padding: '16px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                borderRadius: '12px',
-                color: '#fff',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.875rem', opacity: 0.9 }}>💰 Total Estimado</span>
-                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{productosSeleccionados.length} producto(s)</span>
+              <div className="pedido-total-panel">
+                <div className="total-header">
+                  <span className="total-label">💰 Total Estimado</span>
+                  <span className="total-count">{productosSeleccionados.length} producto(s)</span>
                 </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.5px' }}>
+                <div className="total-amount">
                   {formatUYU(totalEstimado)}
                 </div>
                 {(() => {
@@ -598,7 +575,7 @@ export default function Pedidos() {
               ref={searchInputRef}
               aria-label="Buscar productos"
             />
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-36" aria-label="Ordenar productos">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="sort-select" aria-label="Ordenar productos">
               <option value="nombre_asc">Nombre ↑</option>
               <option value="nombre_desc">Nombre ↓</option>
               <option value="precio_asc">Precio ↑</option>

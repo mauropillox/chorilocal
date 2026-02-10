@@ -525,18 +525,16 @@ export default function HistorialPedidos() {
       )}
 
       {/* Tabs para Pendientes y Generados */}
-      <div className="flex gap-0 mb-4" style={{ borderRadius: '6px', overflow: 'hidden' }}>
+      <div className="historial-tabs" style={{ borderRadius: '6px', overflow: 'hidden' }}>
         <button
           onClick={() => setActiveTab('pendientes')}
-          className={activeTab === 'pendientes' ? 'btn-warning' : 'btn-ghost'}
-          style={{ flex: 1, borderRadius: '6px 0 0 6px', margin: 0, minHeight: 'auto', padding: '10px' }}
+          className={`historial-tab ${activeTab === 'pendientes' ? 'btn-warning active' : 'btn-ghost'}`}
         >
           ⏳ Pendientes ({pendientes.length})
         </button>
         <button
           onClick={() => setActiveTab('generados')}
-          className={activeTab === 'generados' ? 'btn-success' : 'btn-ghost'}
-          style={{ flex: 1, borderRadius: '0 6px 6px 0', margin: 0, minHeight: 'auto', padding: '10px' }}
+          className={`historial-tab ${activeTab === 'generados' ? 'btn-success active' : 'btn-ghost'}`}
         >
           ✅ Generados ({generados.length})
         </button>
@@ -550,7 +548,7 @@ export default function HistorialPedidos() {
       ) : (
         <>
           {/* Action bar with badges and buttons */}
-          <div className="action-bar">
+          <div className="action-bar historial-action-bar">
             <span className="badge badge-warning">⏳ Pendientes: {pendientes.length}</span>
             <span className="badge badge-success">✅ Generados: {generados.length}</span>
 
@@ -603,7 +601,7 @@ export default function HistorialPedidos() {
           ) : (
             <>
               {/* Paginación superior */}
-              <div className="flex justify-between items-center mb-4 p-3 rounded flex-wrap gap-2" style={{ background: 'var(--color-border-light)' }}>
+              <div className="historial-pagination" style={{ background: 'var(--color-border-light)' }}>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold">
                     Mostrando {startIndex + 1} - {Math.min(endIndex, datosFiltrados.length)} de {datosFiltrados.length}
@@ -832,7 +830,7 @@ export default function HistorialPedidos() {
 
                           {/* Editar productos del pedido pendiente */}
                           {editandoPedido === p.id ? (
-                            <div className="highlight-info mt-3">
+                            <div className="highlight-info mt-3 historial-edit-form">
                               <div className="text-xs font-semibold mb-2" style={{ color: 'var(--color-primary)' }}>Editar productos:</div>
                               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                                 {p.productos.map(item => (
@@ -853,7 +851,7 @@ export default function HistorialPedidos() {
                                   </div>
                                 ))}
                               </div>
-                              <div className="flex items-center gap-2 mt-2">
+                              <div className="historial-add-item">
                                 <select value={nuevoItem.producto_id} onChange={e => setNuevoItem({ ...nuevoItem, producto_id: e.target.value })}
                                   className="flex-1 p-2 border rounded text-sm">
                                   <option value="">+ Producto...</option>
@@ -898,7 +896,7 @@ export default function HistorialPedidos() {
               </div>
 
               {/* Paginación inferior */}
-              <div className="flex justify-between items-center mt-4 p-3 rounded flex-wrap gap-2" style={{ background: 'var(--color-border-light)' }}>
+              <div className="historial-pagination" style={{ background: 'var(--color-border-light)' }}>
                 <div className="flex items-center gap-3">
                   <span className="text-sm">Mostrando {startIndex + 1} - {Math.min(endIndex, datosFiltrados.length)} de {datosFiltrados.length}</span>
                   <div className="flex items-center gap-1">

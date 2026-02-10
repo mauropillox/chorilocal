@@ -370,7 +370,7 @@ export default function Clientes() {
             <select
               value={vendedorId}
               onChange={e => setVendedorId(e.target.value)}
-              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)', color: 'var(--color-text)' }}
+              className="vendedor-form-select"
             >
               <option value="">Sin vendedor asignado</option>
               {vendedores.map(v => (
@@ -478,7 +478,7 @@ export default function Clientes() {
           ) : (
             <>
               {/* Lista visual de clientes */}
-              <div className="space-y-2 mb-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <div className="space-y-2 mb-4 clientes-list-scroll" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {clienteOptions.length === 0 ? (
                   <div className="text-center py-4 text-muted">
                     No se encontraron clientes
@@ -494,7 +494,6 @@ export default function Clientes() {
                         data-cliente-id={c.value}
                         className={`card-item cursor-pointer transition-all ${isSelected ? 'ring-2 ring-blue-500' : 'hover:shadow-md'} ${isChecked ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                         style={{
-                          padding: '10px 12px',
                           backgroundColor: isSelected ? 'var(--color-primary-light)' : isChecked ? 'var(--color-primary-light)' : undefined
                         }}
                       >
@@ -527,13 +526,11 @@ export default function Clientes() {
                               actualizarVendedorCliente(cliente.id, e.target.value);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-xs p-1 rounded"
+                            className="vendedor-inline-select text-xs p-1 rounded"
                             style={{
                               backgroundColor: 'var(--color-bg)',
                               border: '1px solid var(--color-border)',
-                              color: cliente?.vendedor_nombre ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                              minWidth: '140px',
-                              maxWidth: '180px'
+                              color: cliente?.vendedor_nombre ? 'var(--color-primary)' : 'var(--color-text-muted)'
                             }}
                             title="Asignar vendedor"
                           >
@@ -618,12 +615,12 @@ export default function Clientes() {
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <div className="flex gap-2 mt-3 cliente-detail-actions">
                 <button onClick={() => startEditCliente(clienteDetalle.id)} className="btn-secondary">
-                  ✏️ Editar Cliente
+                  ✏️ Editar
                 </button>
                 <button onClick={confirmarEliminar} className="btn-danger">
-                  🗑️ Eliminar Cliente
+                  🗑️ Eliminar
                 </button>
               </div>
             </div>

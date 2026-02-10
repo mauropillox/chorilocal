@@ -1225,6 +1225,173 @@ input[type="checkbox"]:focus-visible {
   background: transparent;
 }
 
+/* =============================================
+   BASE STYLES for new mobile-friendly classes
+   (Applied at all sizes, overridden in media queries)
+   ============================================= */
+.vendedor-form-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+
+.vendedor-inline-select {
+  min-width: 140px;
+  max-width: 180px;
+}
+
+.qty-btn {
+  min-width: 28px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qty-btn-minus {
+  background: #ef4444;
+}
+
+.qty-btn-plus {
+  background: #10b981;
+}
+
+.qty-input {
+  width: 56px;
+  min-height: 32px;
+  padding: 2px 4px;
+  font-size: 0.875rem;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tipo-select {
+  padding: 4px 6px;
+  font-size: 0.8rem;
+  min-height: 32px;
+  border-radius: 6px;
+}
+
+.subtotal-display {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: right;
+  min-width: 80px;
+}
+
+.btn-remove-item {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  min-height: 32px;
+}
+
+.pedido-total-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.total-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.total-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.total-count {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.total-amount {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.sort-select {
+  width: 144px;
+}
+
+.producto-card {
+  padding: 12px;
+}
+
+.producto-edit-modal {
+  max-width: 500px;
+}
+
+/* Historial tabs */
+.historial-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+}
+
+.historial-tab {
+  flex: 1;
+  margin: 0;
+  padding: 10px;
+  min-height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.historial-tab:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.historial-tab:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+/* Historial pagination */
+.historial-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Historial add item */
+.historial-add-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 /* Responsive utilities - Mobile & Tablet (< 1024px) */
 @media (max-width: 1023px) {
   .hide-mobile {
@@ -1400,8 +1567,9 @@ input[type="checkbox"]:focus-visible {
     display: none !important;
   }
 
-  /* Simplify header user area on mobile */
-  .btn-ghost {
+  /* Simplify header user area on mobile - only hide ghost buttons in header */
+  .header-compact .btn-ghost,
+  .header-user .btn-ghost {
     display: none !important;
   }
 
@@ -1673,21 +1841,21 @@ input[type="checkbox"]:focus-visible {
   }
 
   /* Client cards - compact layout */
-  .card-item > div[style*="display: flex"] {
+  .card-item>div[style*="display: flex"] {
     flex-wrap: wrap !important;
     gap: 0.4rem !important;
   }
 
   /* --- HISTORIAL MODULE --- */
   /* Tab buttons compact */
-  .flex > button[style*="flex: 1"] {
+  .flex>button[style*="flex: 1"] {
     font-size: 0.8rem !important;
     padding: 0.5rem !important;
     min-height: 36px !important;
   }
 
   /* Order cards tighter */
-  .card-item > div > div {
+  .card-item>div>div {
     font-size: 0.8rem !important;
   }
 
@@ -1791,6 +1959,448 @@ input[type="checkbox"]:focus-visible {
 
   .gap-2 {
     gap: 0.3rem !important;
+  }
+
+  /* =============================================
+     VENDEDOR SELECT STYLES (Clientes)
+     ============================================= */
+  .vendedor-form-select {
+    width: 100% !important;
+    padding: 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--color-border) !important;
+    background: var(--color-bg-elevated) !important;
+    color: var(--color-text) !important;
+  }
+
+  .vendedor-inline-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Clientes: card items - stack vendedor below content */
+  .card-item .flex.items-start.gap-3 {
+    flex-wrap: wrap !important;
+  }
+
+  /* Clientes list scroll */
+  .clientes-list-scroll {
+    max-height: 50vh !important;
+  }
+
+  /* Clientes detail actions */
+  .cliente-detail-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .cliente-detail-actions button {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  /* =============================================
+     PEDIDOS MODULE - Quantity Controls & Total
+     ============================================= */
+
+  /* Quantity buttons */
+  .qty-btn {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    border: none !important;
+    cursor: pointer !important;
+    color: white !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .qty-btn-minus {
+    background: #ef4444 !important;
+  }
+
+  .qty-btn-plus {
+    background: #10b981 !important;
+  }
+
+  .qty-input {
+    width: 48px !important;
+    min-height: 32px !important;
+    padding: 2px 4px !important;
+    font-size: 0.85rem !important;
+    text-align: center !important;
+    border-radius: 6px !important;
+    border: 1px solid !important;
+  }
+
+  .qty-controls {
+    flex-wrap: nowrap !important;
+    gap: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .tipo-select {
+    padding: 4px !important;
+    font-size: 0.7rem !important;
+    min-height: 32px !important;
+    border-radius: 6px !important;
+    max-width: 70px !important;
+  }
+
+  .subtotal-display {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+    min-width: 60px !important;
+    white-space: nowrap !important;
+  }
+
+  .btn-remove-item {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+    min-height: 28px !important;
+    min-width: 28px !important;
+  }
+
+  /* Selected products scroll area */
+  .pedidos-selected-scroll {
+    max-height: 30vh !important;
+  }
+
+  /* Selected product row - wrap on narrow screens */
+  .pedidos-selected-scroll .card-item {
+    padding: 6px 8px !important;
+  }
+
+  .pedidos-selected-scroll .card-item .flex.items-center.gap-2 {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+
+  /* Total Panel */
+  .pedido-total-panel {
+    margin-top: 12px !important;
+    padding: 12px !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .total-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 4px !important;
+  }
+
+  .total-label {
+    font-size: 0.8rem !important;
+    opacity: 0.9 !important;
+  }
+
+  .total-count {
+    font-size: 0.7rem !important;
+    opacity: 0.7 !important;
+  }
+
+  .total-amount {
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
+  }
+
+  /* Sort select */
+  .sort-select {
+    width: auto !important;
+    max-width: 110px !important;
+    font-size: 0.75rem !important;
+    padding: 6px 4px !important;
+  }
+
+  /* Catalog products list */
+  .panel-catalogo .space-y-2 {
+    max-height: 40vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Product add button in catalog */
+  .panel-catalogo .card-item button {
+    min-width: 36px !important;
+    padding: 6px 10px !important;
+  }
+
+  /* =============================================
+     PRODUCTOS MODULE - Cards & Stock Manager
+     ============================================= */
+
+  .producto-card {
+    padding: 10px !important;
+  }
+
+  .producto-card .flex.items-start.gap-3 {
+    gap: 8px !important;
+  }
+
+  /* Edit/delete buttons in product card */
+  .producto-card .flex.gap-1 {
+    gap: 2px !important;
+  }
+
+  .producto-card .flex.gap-1 button {
+    padding: 4px 8px !important;
+    font-size: 0.85rem !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
+  }
+
+  /* Product edit modal */
+  .producto-edit-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Stock pagination - stack on mobile */
+  .stock-pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .stock-pagination button {
+    min-width: 80px !important;
+    font-size: 0.8rem !important;
+    padding: 6px 10px !important;
+  }
+
+  /* Category badges */
+  .producto-card .inline-flex.items-center {
+    font-size: 0.65rem !important;
+  }
+
+  /* Tags smaller */
+  .producto-card .flex.flex-wrap.gap-1 span {
+    font-size: 0.6rem !important;
+    padding: 1px 4px !important;
+  }
+
+  /* =============================================
+     HISTORIAL MODULE - Tabs, Action Bar, Pagination
+     ============================================= */
+
+  /* Tab buttons */
+  .historial-tabs {
+    display: flex !important;
+    gap: 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .historial-tab {
+    flex: 1 !important;
+    margin: 0 !important;
+    padding: 8px 6px !important;
+    font-size: 0.8rem !important;
+    min-height: 38px !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .historial-tab:first-child {
+    border-radius: 6px 0 0 6px !important;
+  }
+
+  .historial-tab:last-child {
+    border-radius: 0 6px 6px 0 !important;
+  }
+
+  /* Action bar - scrollable horizontally */
+  .historial-action-bar {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 6px !important;
+    padding: 8px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .historial-action-bar > * {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .historial-action-bar .badge {
+    font-size: 0.6rem !important;
+    padding: 3px 6px !important;
+  }
+
+  .historial-action-bar button {
+    font-size: 0.75rem !important;
+    padding: 6px 10px !important;
+    min-height: 32px !important;
+  }
+
+  /* Pagination bars */
+  .historial-pagination {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    border-radius: 6px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .historial-pagination .flex.items-center.gap-3,
+  .historial-pagination .flex.items-center.gap-2,
+  .historial-pagination .flex.items-center.gap-1 {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  .historial-pagination span {
+    font-size: 0.75rem !important;
+  }
+
+  .historial-pagination select {
+    min-height: 30px !important;
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .historial-pagination button {
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+    min-height: 30px !important;
+  }
+
+  /* Edit form inline for historial */
+  .historial-edit-form .space-y-2 {
+    max-height: 35vh !important;
+  }
+
+  .historial-edit-form .flex.items-center.gap-2 {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+
+  .historial-edit-form input[type="number"] {
+    width: 54px !important;
+    min-height: 30px !important;
+    padding: 4px !important;
+  }
+
+  .historial-edit-form select {
+    min-height: 30px !important;
+    padding: 4px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Add item row */
+  .historial-add-item {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-top: 8px !important;
+  }
+
+  .historial-add-item select {
+    flex: 1 1 140px !important;
+    min-height: 34px !important;
+    font-size: 0.8rem !important;
+    padding: 6px !important;
+  }
+
+  .historial-add-item input {
+    width: 60px !important;
+    min-height: 34px !important;
+    font-size: 0.8rem !important;
+    padding: 6px !important;
+  }
+
+  .historial-add-item button {
+    font-size: 0.8rem !important;
+    padding: 6px 12px !important;
+    min-height: 34px !important;
+  }
+
+  /* Order cards - tracking box compact */
+  .card-item .grid.grid-cols-1.gap-1 {
+    font-size: 0.7rem !important;
+  }
+
+  /* Product list inside order card */
+  .card-item div[style*="maxHeight: '80px'"],
+  .card-item div[style*="max-height: 80px"] {
+    max-height: 60px !important;
+  }
+
+  /* Filter bar compact */
+  .grid.grid-cols-1.sm\\:grid-cols-3 input,
+  .grid.grid-cols-1.sm\\:grid-cols-3 select {
+    min-height: 36px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Creator filter */
+  select[style*="minWidth: '200px'"],
+  select[style*="min-width: 200px"] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* =============================================
+     GENERAL IMPROVEMENTS
+     ============================================= */
+
+  /* Prevent horizontal overflow */
+  .main-content {
+    overflow-x: hidden !important;
+  }
+
+  /* Better touch scrolling on all scrollable areas */
+  [style*="overflow"] {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Confirm dialog on mobile */
+  .confirm-dialog {
+    width: 90% !important;
+    max-width: 340px !important;
+  }
+
+  /* Card accent */
+  .card-accent {
+    padding: 8px !important;
+    border-radius: 8px !important;
+  }
+
+  .card-accent .font-semibold {
+    font-size: 0.9rem !important;
+  }
+
+  /* Select styles (react-select) full width */
+  .css-b62m3t-container,
+  [class*="control"] {
+    font-size: 0.85rem !important;
+  }
+
+  /* Hide desktop hint */
+  .hide-desktop {
+    display: flex !important;
   }
 }
 
@@ -2003,6 +2613,50 @@ input[type="checkbox"]:focus-visible {
   /* Form groups slightly more spacious */
   .form-group {
     margin-bottom: 0.5rem !important;
+  }
+
+  /* Tablet: larger qty controls */
+  .qty-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .qty-input {
+    width: 56px !important;
+    min-height: 36px !important;
+  }
+
+  .tipo-select {
+    max-width: 90px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .subtotal-display {
+    min-width: 80px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Tablet: inline vendedor select wider */
+  .vendedor-inline-select {
+    width: auto !important;
+    min-width: 130px !important;
+    max-width: 160px !important;
+  }
+
+  /* Tablet: historial pagination side-by-side */
+  .historial-pagination {
+    justify-content: space-between !important;
+  }
+
+  /* Tablet: selected products scroll taller */
+  .pedidos-selected-scroll {
+    max-height: 35vh !important;
+  }
+
+  /* Tablet: historial action bar wider */
+  .historial-action-bar button {
+    font-size: 0.8rem !important;
+    padding: 8px 14px !important;
   }
 }
 
