@@ -1,19 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState([]);
+  const timersRef = useRef(new Map());
 
   useEffect(() => {
     const handler = (e) => {
       const { message, type = 'info', duration = 3000, undoCallback, showUndo } = e.detail || {};
       const id = Math.random().toString(36).slice(2);
       setToasts((prev) => [...prev, { id, message, type, undoCallback, showUndo }]);
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
         setToasts((prev) => prev.filter(t => t.id !== id));
+        timersRef.current.delete(id);
       }, duration);
+      timersRef.current.set(id, timerId);
     };
     window.addEventListener('toast', handler);
-    return () => window.removeEventListener('toast', handler);
+    return () => {
+      window.removeEventListener('toast', handler);
+      // Clear all pending toast timers
+      timersRef.current.forEach(timerId => clearTimeout(timerId));
+      timersRef.current.clear();
+    };
   }, []);
 
   const handleUndo = (toast) => {

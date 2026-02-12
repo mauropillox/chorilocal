@@ -97,12 +97,21 @@ export default function HistorialPedidos() {
   }, [itemsPerPage]);
 
   useEffect(() => {
-    cargarDatos();
+    let cancelled = false;
+    const loadData = async () => {
+      await cargarDatos();
+    };
+    if (!cancelled) loadData();
     // Load recent productos
     try {
       const recent = JSON.parse(localStorage.getItem('recent_productos') || '[]');
       setRecentProductos(recent);
     } catch (e) { setRecentProductos([]); }
+    return () => {
+      cancelled = true;
+      // Cleanup undo timeout on unmount
+      if (undoDelete?.timeout) clearTimeout(undoDelete.timeout);
+    };
   }, []);
 
   // Handle URL search params (for deep linking from dashboard)

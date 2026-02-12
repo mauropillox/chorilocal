@@ -65,6 +65,7 @@ createRoot(document.getElementById('root')).render(
 import { registerSW } from 'virtual:pwa-register';
 import { toastInfo } from './toast';
 
+let swUpdateInterval = null;
 const updateSW = registerSW({
   onNeedRefresh() {
     // Auto-update: apply new SW immediately
@@ -77,9 +78,10 @@ const updateSW = registerSW({
   },
   onRegisteredSW(swUrl, r) {
     logger.info('SW registered:', swUrl);
-    // Periodic check for updates (every 60 min)
+    // Periodic check for updates (every 60 min) — guard against HMR duplication
     if (r) {
-      setInterval(() => {
+      if (swUpdateInterval) clearInterval(swUpdateInterval);
+      swUpdateInterval = setInterval(() => {
         r.update();
       }, 60 * 60 * 1000);
     }

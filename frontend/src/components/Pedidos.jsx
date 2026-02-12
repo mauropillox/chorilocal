@@ -62,16 +62,17 @@ export default function Pedidos() {
   }, [clienteId, productosSeleccionados.length]);
 
   useEffect(() => {
+    let cancelled = false;
     // Load ofertas activas
     (async () => {
       try {
         const ro = await authFetch(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
-        if (ro.ok) {
+        if (ro.ok && !cancelled) {
           const ofertas = await ro.json();
           setOfertasActivas(ofertas);
         }
       } catch (e) {
-        logger.error('Error cargando ofertas:', e);
+        if (!cancelled) logger.error('Error cargando ofertas:', e);
       }
     })();
 
@@ -85,6 +86,7 @@ export default function Pedidos() {
         if (parsed.notas) setNotas(parsed.notas);
       } catch (e) { logger.warn('Failed to restore draft:', e); }
     }
+    return () => { cancelled = true; };
   }, []);
 
   // Auto-save draft to localStorage
@@ -253,8 +255,7 @@ export default function Pedidos() {
       setProductosSeleccionados([]);
       setNotas('');
       // Recargar productos para actualizar stock
-      const { res: rp, data } = await authFetchJson(`${import.meta.env.VITE_API_URL}/productos`);
-      if (rp.ok && Array.isArray(data)) setProductos(data);
+      refetchProductos();
       setSaving(false);
     } else {
       const err = await res.json().catch(() => ({}));

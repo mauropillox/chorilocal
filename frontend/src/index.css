@@ -5315,13 +5315,29 @@ textarea.error {
   background: var(--color-primary, #3b82f6);
   color: #fff;
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
   animation: pwa-slide-up 0.35s ease-out;
 }
 
+/* On mobile/tablet, lift banner above the bottom nav (~60px) */
+@media (max-width: 1023px) {
+  .pwa-install-banner {
+    bottom: 56px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @keyframes pwa-slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .pwa-install-content {
@@ -5416,6 +5432,14 @@ textarea.error {
   right: 18px;
   bottom: 18px;
   z-index: 3000;
+}
+
+/* On mobile/tablet, lift above bottom nav */
+@media (max-width: 1023px) {
+  .offline-notifier {
+    bottom: 70px;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .offline-notifier-btn {

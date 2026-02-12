@@ -5,11 +5,21 @@ const DB_NAME = 'chorilocal-offline';
 const STORE = 'queue';
 const DB_VERSION = 1;
 
+// Singleton DB connection to prevent connection leaks
+let dbInstance = null;
+
 function openDb() {
+    if (dbInstance) return Promise.resolve(dbInstance);
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onerror = () => reject(req.error);
-        req.onsuccess = () => resolve(req.result);
+        req.onsuccess = () => {
+            dbInstance = req.result;
+            // Reset singleton if the connection closes unexpectedly
+            dbInstance.onclose = () => { dbInstance = null; };
+            dbInstance.onversionchange = () => { dbInstance.close(); dbInstance = null; };
+            resolve(dbInstance);
+        };
         req.onupgradeneeded = () => {
             const db = req.result;
             if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });

@@ -73,21 +73,22 @@ export default function LayoutApp({ onLogout }) {
 
   // Cargar contador de ofertas activas
   useEffect(() => {
+    let cancelled = false;
     const loadOfertasCount = async () => {
       try {
         const res = await authFetch(`${import.meta.env.VITE_API_URL}/ofertas/activas`);
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
           setOfertasCount(data.length);
         }
       } catch (e) {
-        logger.error('Error loading ofertas count:', e);
+        if (!cancelled) logger.error('Error loading ofertas count:', e);
       }
     };
     loadOfertasCount();
     // Refresh every 60 seconds
     const interval = setInterval(loadOfertasCount, 60000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   // Búsqueda global con AbortController para cancelar requests anteriores

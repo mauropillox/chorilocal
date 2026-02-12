@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { fetchConToken } from "../auth";
 import { toastSuccess, toastError } from '../toast';
@@ -28,6 +28,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [loadingUsuarios, setLoadingUsuarios] = useState({});
   const [confirmDelete, setConfirmDelete] = useState({ open: false, username: null });
+  const msgTimerRef = useRef(null);
 
   // Refetch usuarios after mutations
   const cargarUsuarios = () => {
@@ -192,7 +193,8 @@ export default function AdminPanel() {
       setErrorForm(`❌ Error al crear usuario: ${text}`);
     }
 
-    setTimeout(() => setMensaje(""), 4000);
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    msgTimerRef.current = setTimeout(() => setMensaje(""), 4000);
   };
 
   return (

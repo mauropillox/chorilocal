@@ -43,18 +43,20 @@ export default function Clientes() {
 
   // Cargar vendedores para el selector
   useEffect(() => {
+    let cancelled = false;
     const fetchVendedores = async () => {
       try {
         const res = await authFetch(`${import.meta.env.VITE_API_URL}/vendedores`);
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
           setVendedores(data);
         }
       } catch (e) {
-        console.error('Error cargando vendedores:', e);
+        if (!cancelled) console.error('Error cargando vendedores:', e);
       }
     };
     fetchVendedores();
+    return () => { cancelled = true; };
   }, []);
 
   // Handle URL params
@@ -85,7 +87,7 @@ export default function Clientes() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nombre, telefono, direccion, creating]);
+  }, [nombre, telefono, direccion, creating, zona, vendedorId, editingClienteId]);
 
   // Memoized filtered client options for performance
   const clienteOptions = useMemo(() => {
