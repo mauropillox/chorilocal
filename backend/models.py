@@ -178,6 +178,7 @@ class PedidoCreate(BaseModel):
     items: Optional[List[PedidoItemCreate]] = None
     productos: Optional[List[ProductoPedido]] = None
     pdf_generado: Optional[bool] = False
+    idempotency_key: Optional[str] = None  # Client-side UUID to prevent duplicate orders
 
 class PedidoItemDetalle(BaseModel):
     producto_id: int

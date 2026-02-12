@@ -82,6 +82,9 @@ export const useAppStore = create(
                             state.auth.isLoading = false;
                         });
 
+                        // Notify main.jsx to prefetch offline data
+                        try { window.dispatchEvent(new Event('auth:login-success')); } catch (e) { }
+
                         return data;
                     } catch (error) {
                         set(state => {
@@ -496,11 +499,20 @@ export const useAppStore = create(
             {
                 name: 'chorizaurio-store',
                 storage: createJSONStorage(() => localStorage),
-                // Only persist certain parts of state
+                // Persist UI state + entity data for offline resilience
+                // Excludes: productImages (base64 blobs), loadingImageIds, isLoading, errors
                 partialize: (state) => ({
                     ui: {
                         sidebarOpen: state.ui.sidebarOpen,
                         theme: state.ui.theme,
+                    },
+                    entities: {
+                        clientes: state.entities.clientes,
+                        productos: state.entities.productos,
+                        pedidos: state.entities.pedidos,
+                        categorias: state.entities.categorias,
+                        ofertas: state.entities.ofertas,
+                        lastFetched: state.entities.lastFetched,
                     },
                 }),
             }

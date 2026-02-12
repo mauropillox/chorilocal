@@ -165,9 +165,10 @@ async function authFetch(input, init = {}, retryCount = 0) {
       await delay(RETRY_DELAY * (retryCount + 1));
       return authFetch(input, init, retryCount + 1);
     }
-    // If network down and mutating request, attempt to queue
+    // Network error on mutating request — always queue regardless of navigator.onLine
+    // (navigator.onLine is unreliable on mobile: WiFi with no internet = true)
     const method = (init.method || 'GET').toUpperCase();
-    if ((typeof navigator !== 'undefined' && !navigator.onLine) && method !== 'GET') {
+    if (method !== 'GET') {
       try {
         await queueRequest({ method, url: input, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null });
         try { window.dispatchEvent(new CustomEvent('offline-request-queued', { detail: { method, url: input } })); } catch (e) { }

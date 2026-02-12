@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 import io
 import csv
+import time
 
 import db
 import models
@@ -17,6 +18,27 @@ from exceptions import safe_error_handler
 from routers.websocket import broadcast_pedido_change, WSEventType
 
 router = APIRouter()
+
+# --- Idempotency cache (in-memory, TTL 1h) ---
+_idempotency_cache: Dict[str, Any] = {}  # {key: (result_dict, timestamp)}
+_IDEMPOTENCY_TTL = 3600  # 1 hour
+
+def _check_idempotency(key: str):
+    """Return cached result if idempotency key was seen recently, else None."""
+    if key in _idempotency_cache:
+        result, ts = _idempotency_cache[key]
+        if time.time() - ts < _IDEMPOTENCY_TTL:
+            return result
+        del _idempotency_cache[key]
+    return None
+
+def _store_idempotency(key: str, result):
+    """Store result for idempotency key and cleanup expired entries."""
+    now = time.time()
+    expired = [k for k, (_, ts) in _idempotency_cache.items() if now - ts > _IDEMPOTENCY_TTL]
+    for k in expired:
+        del _idempotency_cache[k]
+    _idempotency_cache[key] = (result, now)
 
 
 class NotasUpdate(BaseModel):
@@ -90,6 +112,13 @@ async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_us
     if current_user["rol"] not in ["admin", "vendedor", "administrador", "oficina"]:
         raise HTTPException(status_code=403, detail="No tienes permiso para crear pedidos")
 
+    # --- Idempotency check (header or body field) ---
+    idempotency_key = request.headers.get("X-Idempotency-Key") or pedido.idempotency_key
+    if idempotency_key:
+        cached = _check_idempotency(idempotency_key)
+        if cached is not None:
+            return models.Pedido(**cached)
+
     creado_por = current_user["username"]
     
     # Build pedido dict in the format expected by db.add_pedido
@@ -131,7 +160,7 @@ async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_us
     
     try:
         result = db.add_pedido(pedido_dict, creado_por=creado_por)
-        return models.Pedido(
+        pedido_response = models.Pedido(
             id=result["id"],
             cliente_id=result.get("cliente_id") or (result.get("cliente", {}).get("id")),
             fecha=result.get("fecha"),
@@ -140,6 +169,10 @@ async def crear_pedido(request: Request, pedido: models.PedidoCreate, current_us
             creado_por=creado_por,
             pdf_generado=1 if result.get("pdf_generado") else 0
         )
+        # Store in idempotency cache
+        if idempotency_key:
+            _store_idempotency(idempotency_key, pedido_response.model_dump())
+        return pedido_response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

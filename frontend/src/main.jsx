@@ -89,6 +89,10 @@ const updateSW = registerSW({
 });
 
 import { processQueue } from './offline/sync';
+import { queryClient } from './utils/queryClient.jsx';
+import { authFetchJson } from './authFetch';
+import { CACHE_KEYS } from './utils/queryClient.jsx';
+
 window.addEventListener('online', () => {
   try { processQueue(); } catch (e) { logger.warn('processQueue failed', e); }
 });
@@ -97,3 +101,31 @@ window.addEventListener('online', () => {
 if (navigator.onLine) {
   try { processQueue(); } catch (e) { }
 }
+
+// Prefetch key data on login so it's cached before going offline
+window.addEventListener('auth:login-success', () => {
+  logger.info('Login detected — prefetching offline data');
+  const API = import.meta.env.VITE_API_URL;
+  // Warm React Query cache with essential data
+  queryClient.prefetchQuery({
+    queryKey: CACHE_KEYS.clientes,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${API}/clientes`);
+      return res.ok ? (Array.isArray(data) ? data : (data?.data || [])) : [];
+    },
+  });
+  queryClient.prefetchQuery({
+    queryKey: CACHE_KEYS.productos,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${API}/productos?lite=true`);
+      return res.ok ? (Array.isArray(data) ? data : []) : [];
+    },
+  });
+  queryClient.prefetchQuery({
+    queryKey: CACHE_KEYS.categorias,
+    queryFn: async () => {
+      const { res, data } = await authFetchJson(`${API}/categorias`);
+      return res.ok ? (Array.isArray(data) ? data : []) : [];
+    },
+  });
+});

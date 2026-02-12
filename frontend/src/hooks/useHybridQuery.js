@@ -32,6 +32,8 @@ export const useProductosQuery = (options = {}) => {
     const setProductImagesInStore = useAppStore(state => state.setProductImages);
     const productImages = useAppStore(state => state.entities.productImages);
     const markImagesLoading = useAppStore(state => state.markImagesLoading);
+    const storedProductos = useAppStore(state => state.entities.productos);
+    const lastFetched = useAppStore(state => state.entities.lastFetched.productos);
     const toastShown = useRef(false);
 
     const query = useQuery({
@@ -76,6 +78,9 @@ export const useProductosQuery = (options = {}) => {
             return productos;
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
+        // Hydrate from Zustand persisted data for offline resilience
+        initialData: storedProductos?.length > 0 ? storedProductos : undefined,
+        initialDataUpdatedAt: lastFetched || undefined,
         ...options,
     });
 
@@ -141,6 +146,8 @@ export const useProductosQuery = (options = {}) => {
 export const useClientesQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setClientesInStore = useAppStore(state => state.setClientes);
+    const storedClientes = useAppStore(state => state.entities.clientes);
+    const lastFetched = useAppStore(state => state.entities.lastFetched.clientes);
     const toastShown = useRef(false);
 
     const query = useQuery({
@@ -155,6 +162,9 @@ export const useClientesQuery = (options = {}) => {
             return [];
         },
         staleTime: 1000 * 60 * 5,
+        // Hydrate from Zustand persisted data for offline resilience
+        initialData: storedClientes?.length > 0 ? storedClientes : undefined,
+        initialDataUpdatedAt: lastFetched || undefined,
         ...options,
     });
 
@@ -177,6 +187,8 @@ export const useClientesQuery = (options = {}) => {
 export const useCategoriasQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setCategoriasInStore = useAppStore(state => state.setCategorias);
+    const storedCategorias = useAppStore(state => state.entities.categorias);
+    const lastFetched = useAppStore(state => state.entities.lastFetched.categorias);
     const toastShown = useRef(false);
 
     const query = useQuery({
@@ -191,6 +203,9 @@ export const useCategoriasQuery = (options = {}) => {
             return [];
         },
         staleTime: 1000 * 60 * 10,
+        // Hydrate from Zustand persisted data for offline resilience
+        initialData: storedCategorias?.length > 0 ? storedCategorias : undefined,
+        initialDataUpdatedAt: lastFetched || undefined,
         ...options,
     });
 
@@ -213,6 +228,8 @@ export const useCategoriasQuery = (options = {}) => {
 export const usePedidosQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setPedidosInStore = useAppStore(state => state.setPedidos);
+    const storedPedidos = useAppStore(state => state.entities.pedidos);
+    const lastFetched = useAppStore(state => state.entities.lastFetched.pedidos);
     const toastShown = useRef(false);
 
     const query = useQuery({
@@ -227,6 +244,9 @@ export const usePedidosQuery = (options = {}) => {
             return [];
         },
         staleTime: 1000 * 60 * 2,
+        // Hydrate from Zustand persisted data for offline resilience
+        initialData: storedPedidos?.length > 0 ? storedPedidos : undefined,
+        initialDataUpdatedAt: lastFetched || undefined,
         ...options,
     });
 
@@ -249,6 +269,8 @@ export const usePedidosQuery = (options = {}) => {
 export const useOfertasQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setOfertasInStore = useAppStore(state => state.setOfertas);
+    const storedOfertas = useAppStore(state => state.entities.ofertas);
+    const lastFetched = useAppStore(state => state.entities.lastFetched.ofertas);
     const toastShown = useRef(false);
 
     const query = useQuery({
@@ -263,6 +285,9 @@ export const useOfertasQuery = (options = {}) => {
             return [];
         },
         staleTime: 1000 * 60 * 5,
+        // Hydrate from Zustand persisted data for offline resilience
+        initialData: storedOfertas?.length > 0 ? storedOfertas : undefined,
+        initialDataUpdatedAt: lastFetched || undefined,
         ...options,
     });
 

@@ -245,7 +245,10 @@ export default function Pedidos() {
 
     const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": crypto.randomUUID(),
+      },
       body: JSON.stringify({ cliente, productos: productosForBackend, notas: notas.trim() })
     });
     if (res.ok) {

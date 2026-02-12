@@ -60,9 +60,51 @@ async function remove(id) {
     });
 }
 
+// --- Dead-letter queue (localStorage-backed, for failed 4xx items) ---
+function addToDeadLetter(item, statusCode) {
+    try {
+        const deadLetters = JSON.parse(localStorage.getItem('offline-dead-letters') || '[]');
+        deadLetters.push({
+            method: item.method,
+            url: item.url,
+            body: item.body,
+            failedAt: Date.now(),
+            statusCode,
+            queuedAt: item.ts,
+        });
+        localStorage.setItem('offline-dead-letters', JSON.stringify(deadLetters));
+    } catch (e) { logger.warn('Failed to store dead letter', e); }
+}
+
+export function getDeadLetters() {
+    try { return JSON.parse(localStorage.getItem('offline-dead-letters') || '[]'); } catch { return []; }
+}
+
+export function clearDeadLetters() {
+    localStorage.removeItem('offline-dead-letters');
+}
+
 import { obtenerToken } from '../auth';
 
 export async function queueRequest({ method = 'POST', url, headers = {}, body = null }) {
+    // Duplicate detection: skip if identical request was queued within last 5 seconds
+    try {
+        const items = await getAll();
+        const now = Date.now();
+        const bodyStr = JSON.stringify(body);
+        const isDuplicate = items.some(item =>
+            item.method === method &&
+            item.url === url &&
+            JSON.stringify(item.body) === bodyStr &&
+            now - item.ts < 5000
+        );
+        if (isDuplicate) {
+            logger.info('Duplicate offline request detected, skipping queue');
+            return;
+        }
+    } catch (e) {
+        logger.warn('Dedup check failed, queuing anyway', e);
+    }
     return addToQueue({ method, url, headers, body });
 }
 
@@ -86,9 +128,18 @@ export async function processQueue() {
                 // small delay to avoid hammering
                 await new Promise(r => setTimeout(r, 200));
             } else {
-                // If server rejects (4xx), remove to avoid infinite loop
-                if (res.status >= 400 && res.status < 500) await remove(item.id);
-                // otherwise keep for retry later
+                // If server rejects (4xx), move to dead-letter queue instead of silently dropping
+                if (res.status >= 400 && res.status < 500) {
+                    addToDeadLetter(item, res.status);
+                    await remove(item.id);
+                    // Notify UI about the failure
+                    try {
+                        window.dispatchEvent(new CustomEvent('offline-request-failed', {
+                            detail: { item, statusCode: res.status }
+                        }));
+                    } catch (e) { }
+                }
+                // 5xx: keep for retry later
             }
         } catch (e) {
             // network error: stop processing and try later
@@ -109,4 +160,4 @@ export async function clearQueue() {
     });
 }
 
-export default { queueRequest, processQueue, clearQueue, getAll, remove };
+export default { queueRequest, processQueue, clearQueue, getAll, remove, getDeadLetters, clearDeadLetters };

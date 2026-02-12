@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { processQueue } from '../offline/sync';
+import { queryClient } from '../utils/queryClient';
+import { logger } from '../utils/logger';
 
 export default function ConnectionStatus() {
   const [status, setStatus] = useState('online'); // online, offline, reconnecting
@@ -13,12 +16,19 @@ export default function ConnectionStatus() {
 
   useEffect(() => {
     const handleOnline = () => {
+      const wasOffline = statusRef.current === 'offline' || statusRef.current === 'reconnecting';
       setStatus('online');
       setShowBanner(true);
       // Clear any existing timeout to prevent memory leak
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
       // Hide the "online" banner after 3 seconds
       bannerTimeoutRef.current = setTimeout(() => setShowBanner(false), 3000);
+
+      // On reconnection: process offline queue + refetch stale data
+      if (wasOffline) {
+        try { processQueue(); } catch (e) { logger.warn('processQueue on reconnect failed', e); }
+        try { queryClient.invalidateQueries(); } catch (e) { logger.warn('invalidateQueries on reconnect failed', e); }
+      }
     };
 
     const handleOffline = () => {
@@ -45,7 +55,7 @@ export default function ConnectionStatus() {
         
         if (res.ok) {
           if (statusRef.current === 'offline' || statusRef.current === 'reconnecting') {
-            handleOnline();
+            handleOnline(); // This triggers processQueue + invalidateQueries
           }
         } else {
           if (statusRef.current === 'online') {

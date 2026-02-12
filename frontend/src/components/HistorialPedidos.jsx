@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Select from 'react-select';
 import { authFetch, authFetchJson } from '../authFetch';
 import { toastSuccess, toastError, toastWarn } from '../toast';
+import { usePedidosQuery, useClientesQuery, useProductosQuery } from '../hooks/useHybridQuery';
 import ConfirmDialog from './ConfirmDialog';
 import { getSelectStyles } from '../selectStyles';
 import HelpBanner from './HelpBanner';
@@ -17,9 +18,15 @@ export default function HistorialPedidos() {
   const isOficina = user?.rol === 'oficina';
   const canFilterByUser = isAdmin || isOficina; // admin and oficina can filter by user
 
-  const [pedidos, setPedidos] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [productos, setProductos] = useState([]);
+  // Use React Query hooks for cached, offline-resilient data
+  const { pedidos: pedidosData, isLoading: loadingPedidos, refetch: refetchPedidos } = usePedidosQuery({ showToast: false });
+  const { clientes: clientesData, refetch: refetchClientes } = useClientesQuery({ showToast: false });
+  const { productos: productosData, refetch: refetchProductos } = useProductosQuery({ showToast: false });
+
+  const pedidos = pedidosData || [];
+  const clientes = clientesData || [];
+  const productos = productosData || [];
+
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [generando, setGenerando] = useState(false);
@@ -41,6 +48,7 @@ export default function HistorialPedidos() {
   const [filtroPedidoId, setFiltroPedidoId] = useState(null); // Filtrar por ID específico
   const [filtroCreador, setFiltroCreador] = useState(''); // Filtrar por usuario creador
   const [creadores, setCreadores] = useState([]); // Lista de usuarios que crearon pedidos
+  const initialLoadDone = useRef(false);
 
   // Función para restaurar pedido eliminado (undo)
   const restaurarPedido = async () => {
@@ -98,10 +106,15 @@ export default function HistorialPedidos() {
 
   useEffect(() => {
     let cancelled = false;
-    const loadData = async () => {
-      await cargarDatos();
-    };
-    if (!cancelled) loadData();
+    // Load creators list for filter (admin/oficina only)
+    if (canFilterByUser) {
+      (async () => {
+        try {
+          const creatorsRes = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos/creators`);
+          if (!cancelled && creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
+        } catch (e) { logger.error('Error loading creators:', e); }
+      })();
+    }
     // Load recent productos
     try {
       const recent = JSON.parse(localStorage.getItem('recent_productos') || '[]');
@@ -113,6 +126,29 @@ export default function HistorialPedidos() {
       if (undoDelete?.timeout) clearTimeout(undoDelete.timeout);
     };
   }, []);
+
+  // Show toast once when all data is initially loaded
+  useEffect(() => {
+    if (!loadingPedidos && pedidos.length > 0 && !initialLoadDone.current) {
+      toastSuccess('📜 Historial cargado');
+      initialLoadDone.current = true;
+    }
+  }, [loadingPedidos, pedidos.length]);
+
+  // Refresh data helper — used after mutations (delete, edit, etc.)
+  const refreshData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([refetchPedidos(), refetchClientes(), refetchProductos()]);
+      if (canFilterByUser) {
+        try {
+          const creatorsRes = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos/creators`);
+          if (creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
+        } catch (e) { logger.error('Error loading creators:', e); }
+      }
+    } catch (e) { logger.error('Error refreshing data:', e); }
+    finally { setLoading(false); }
+  }, [refetchPedidos, refetchClientes, refetchProductos, canFilterByUser]);
 
   // Handle URL search params (for deep linking from dashboard)
   useEffect(() => {
@@ -214,39 +250,7 @@ export default function HistorialPedidos() {
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [activeTab, datosPaginados]);
 
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [pedRes, cliRes, prodRes] = await Promise.all([
-        authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/clientes`),
-        authFetchJson(`${import.meta.env.VITE_API_URL}/productos?lite=true`)  // No images for faster load
-      ]);
-
-      if (pedRes.res.ok) setPedidos(Array.isArray(pedRes.data) ? pedRes.data : []);
-      // Handle paginated response from clientes
-      if (cliRes.res.ok) {
-        const cliData = cliRes.data;
-        if (cliData.data) setClientes(cliData.data);
-        else setClientes(Array.isArray(cliData) ? cliData : []);
-      }
-      if (prodRes.res.ok) setProductos(Array.isArray(prodRes.data) ? prodRes.data : []);
-
-      // Load creators list for filter (only for admin/oficina)
-      if (canFilterByUser) {
-        try {
-          const creatorsRes = await authFetchJson(`${import.meta.env.VITE_API_URL}/pedidos/creators`);
-          if (creatorsRes.res.ok) setCreadores(Array.isArray(creatorsRes.data) ? creatorsRes.data : []);
-        } catch (e) { logger.error('Error loading creators:', e); }
-      }
-
-      // Show success toast only on initial load
-      if (!pedidos.length) {
-        toastSuccess('📜 Historial cargado');
-      }
-    } catch (e) { logger.error('Error cargando datos:', e); }
-    finally { setLoading(false); }
-  };
+  const cargarDatos = refreshData;
 
   const exportarCSV = async () => {
     let url = `${import.meta.env.VITE_API_URL}/pedidos/export/csv`;
@@ -558,7 +562,7 @@ export default function HistorialPedidos() {
         </button>
       </div>
 
-      {loading ? (
+      {(loading || loadingPedidos) ? (
         <div className="empty-state">
           <div className="empty-state-icon">⏳</div>
           <div className="empty-state-text">Cargando pedidos...</div>

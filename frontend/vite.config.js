@@ -57,16 +57,20 @@ export default defineConfig({
         // Runtime caching strategies
         runtimeCaching: [
           {
-            // API calls: network-first with fallback
-            urlPattern: /^https:\/\/api\.pedidosfriosur\.com\/.*/i,
+            // API calls: network-first with fallback to cache
+            // Match both the production domain and relative /api paths
+            urlPattern: ({ url }) => {
+              return url.pathname.startsWith('/api') ||
+                     url.origin === 'https://api.pedidosfriosur.com';
+            },
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {
-                maxEntries: 100,
+                maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24, // 24 hours
               },
-              networkTimeoutSeconds: 5,
+              networkTimeoutSeconds: 10, // 10s for slow mobile connections
               cacheableResponse: {
                 statuses: [0, 200],
               },
