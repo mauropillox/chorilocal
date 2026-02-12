@@ -72,13 +72,16 @@ export default function PWAInstallPrompt() {
     return (
         <div className="pwa-install-banner" role="alert">
             <div className="pwa-install-content">
-                <div className="pwa-install-icon">📲</div>
+                <img src="/pwa-icon-192.png" alt="FrioSur" className="pwa-install-logo" />
                 <div className="pwa-install-text">
                     {isIOS ? (
                         <>
                             <strong>Instalá FrioSur</strong>
                             <span>
-                                Tocá <span className="pwa-ios-icon">⬆</span> y luego &quot;Agregar a inicio&quot;
+                                1. Tocá <span className="pwa-ios-share">⬆</span> (Compartir)
+                            </span>
+                            <span>
+                                2. &quot;Agregar a pantalla de inicio&quot;
                             </span>
                         </>
                     ) : (
@@ -89,7 +92,11 @@ export default function PWAInstallPrompt() {
                     )}
                 </div>
                 <div className="pwa-install-actions">
-                    {!isIOS && (
+                    {isIOS ? (
+                        <button className="pwa-install-btn" onClick={handleDismiss}>
+                            Entendido
+                        </button>
+                    ) : (
                         <button className="pwa-install-btn" onClick={handleInstall}>
                             Instalar
                         </button>

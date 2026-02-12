@@ -5349,9 +5349,13 @@ textarea.error {
   margin: 0 auto;
 }
 
-.pwa-install-icon {
-  font-size: 1.75rem;
+.pwa-install-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
 }
 
 .pwa-install-text {
@@ -5372,10 +5376,11 @@ textarea.error {
   opacity: 0.9;
 }
 
-.pwa-ios-icon {
+.pwa-ios-share {
   display: inline-block;
   font-size: 1.1em;
   vertical-align: middle;
+  color: #fff;
 }
 
 .pwa-install-actions {

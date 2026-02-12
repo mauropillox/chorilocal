@@ -36,16 +36,16 @@ export default function ToastContainer() {
   };
 
   return (
-    <div 
-      className="toast-container" 
-      role="status" 
-      aria-live="polite" 
+    <div
+      className="toast-container"
+      role="status"
+      aria-live="polite"
       aria-atomic="false"
       aria-label="Notificaciones"
     >
       {toasts.map(t => (
-        <div 
-          key={t.id} 
+        <div
+          key={t.id}
           className={`toast toast-${t.type}`}
           role="alert"
           aria-live={t.type === 'error' ? 'assertive' : 'polite'}
@@ -53,16 +53,16 @@ export default function ToastContainer() {
           <span className="toast-message">{t.message}</span>
           <div className="toast-actions">
             {t.showUndo && t.undoCallback && (
-              <button 
-                onClick={() => handleUndo(t)} 
+              <button
+                onClick={() => handleUndo(t)}
                 className="toast-undo-btn"
                 aria-label="Deshacer acción"
               >
                 ↩️ Deshacer
               </button>
             )}
-            <button 
-              onClick={() => dismissToast(t.id)} 
+            <button
+              onClick={() => dismissToast(t.id)}
               className="toast-close-btn"
               aria-label="Cerrar notificación"
             >
