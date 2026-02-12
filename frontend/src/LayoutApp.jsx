@@ -27,6 +27,7 @@ import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
 import OfflineNotifier from './components/OfflineNotifier';
 import OfflineQueue from './components/OfflineQueue';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { logger } from './utils/logger';
 // import { useWebSocket } from './hooks/useWebSocket'; // Disabled - Render free tier doesn't support WebSocket
 
@@ -378,6 +379,9 @@ export default function LayoutApp({ onLogout }) {
 
         {/* Offline notifier */}
         <OfflineNotifier />
+
+        {/* PWA install prompt */}
+        <PWAInstallPrompt />
 
         {/* Navegación principal - COMPACTA CON DROPDOWNS */}
         <nav className="nav-main" role="navigation" aria-label="Navegación principal">

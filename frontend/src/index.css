@@ -5302,3 +5302,195 @@ textarea.error {
     font-size: 0.8rem;
   }
 }
+
+/* ==================================
+   PWA Install Prompt
+   ================================== */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4000;
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+  padding: 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
+  animation: pwa-slide-up 0.35s ease-out;
+}
+
+@keyframes pwa-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.pwa-install-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pwa-install-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.pwa-install-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-text strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.pwa-install-text span {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.pwa-ios-icon {
+  display: inline-block;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+.pwa-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-install-btn {
+  background: #fff;
+  color: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.1s;
+}
+
+.pwa-install-btn:active {
+  transform: scale(0.96);
+}
+
+.pwa-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.25rem;
+  padding: 8px;
+  cursor: pointer;
+  line-height: 1;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.pwa-dismiss-btn:hover,
+.pwa-dismiss-btn:active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ==================================
+   Offline Notifier (floating button)
+   ================================== */
+.offline-notifier {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 3000;
+}
+
+.offline-notifier-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  color: var(--color-text, #1e293b);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s;
+}
+
+.offline-notifier-btn:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.offline-notifier-badge {
+  background: var(--color-danger, #ef4444);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+/* ==================================
+   Offline Queue Page
+   ================================== */
+.offline-queue-page {
+  padding: 16px;
+}
+
+.offline-queue-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.offline-queue-list {
+  display: grid;
+  gap: 8px;
+}
+
+.offline-queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.offline-queue-item-info {
+  max-width: 70%;
+}
+
+.offline-queue-item-method {
+  font-weight: 600;
+}
+
+.offline-queue-item-time {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.offline-queue-item-body {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+
+.offline-queue-item-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -99,4 +99,4 @@ export async function clearQueue() {
     });
 }
 
-export default { queueRequest, processQueue, clearQueue, getAll };
+export default { queueRequest, processQueue, clearQueue, getAll, remove };

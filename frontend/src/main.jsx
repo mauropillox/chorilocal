@@ -61,10 +61,30 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// Register service worker and online handler for queue processing
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').catch(e => logger.warn('SW registration failed', e));
-}
+// Register PWA service worker via vite-plugin-pwa (auto-update)
+import { registerSW } from 'virtual:pwa-register';
+import { toastInfo } from './toast';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Auto-update: apply new SW immediately
+    updateSW(true);
+    toastInfo('✨ App actualizada');
+  },
+  onOfflineReady() {
+    logger.info('App ready to work offline');
+    toastInfo('📱 App lista para usar sin conexión');
+  },
+  onRegisteredSW(swUrl, r) {
+    logger.info('SW registered:', swUrl);
+    // Periodic check for updates (every 60 min)
+    if (r) {
+      setInterval(() => {
+        r.update();
+      }, 60 * 60 * 1000);
+    }
+  },
+});
 
 import { processQueue } from './offline/sync';
 window.addEventListener('online', () => {

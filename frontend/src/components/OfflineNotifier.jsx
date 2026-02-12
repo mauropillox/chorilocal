@@ -26,15 +26,14 @@ export default function OfflineNotifier() {
     if (count === 0) return null;
 
     return (
-        <div style={{ position: 'fixed', right: '18px', bottom: '18px', zIndex: 3000 }}>
+        <div className="offline-notifier">
             <button
                 onClick={() => navigate('/offline-queue')}
-                className="btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px' }}
+                className="offline-notifier-btn"
                 title="Ver solicitudes en cola"
             >
                 📨 Cola offline
-                <span style={{ background: 'var(--color-danger)', color: '#fff', borderRadius: 12, padding: '2px 8px', fontWeight: 700 }}>{count}</span>
+                <span className="offline-notifier-badge">{count}</span>
             </button>
         </div>
     );

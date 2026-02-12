@@ -44,9 +44,9 @@ export default function OfflineQueue() {
     };
 
     return (
-        <div style={{ padding: 16 }}>
+        <div className="offline-queue-page">
             <h2>Cola offline</h2>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div className="offline-queue-actions">
                 <button onClick={resendAll} className="btn-primary" disabled={processing}>{processing ? '⏳ Procesando...' : 'Reenviar cola'}</button>
                 <button onClick={clearAll} className="btn-ghost">Limpiar cola</button>
             </div>
@@ -54,16 +54,16 @@ export default function OfflineQueue() {
             {items.length === 0 ? (
                 <div className="empty-state">No hay items en la cola</div>
             ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
+                <div className="offline-queue-list">
                     {items.map(it => (
                         <div key={it.id} className="card-item">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ maxWidth: '70%' }}>
-                                    <div style={{ fontWeight: 600 }}>{it.method} — {it.url}</div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{it.ts ? new Date(it.ts).toLocaleString() : ''}</div>
-                                    {it.body && <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(it.body, null, 2)}</pre>}
+                            <div className="offline-queue-item">
+                                <div className="offline-queue-item-info">
+                                    <div className="offline-queue-item-method">{it.method} — {it.url}</div>
+                                    <div className="offline-queue-item-time">{it.ts ? new Date(it.ts).toLocaleString() : ''}</div>
+                                    {it.body && <pre className="offline-queue-item-body">{JSON.stringify(it.body, null, 2)}</pre>}
                                 </div>
-                                <div style={{ display: 'flex', gap: 8 }}>
+                                <div className="offline-queue-item-actions">
                                     <button onClick={() => removeItem(it.id)} className="btn-ghost">Eliminar</button>
                                 </div>
                             </div>
