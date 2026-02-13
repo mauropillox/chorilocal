@@ -87,17 +87,20 @@ export default function PWAInstallPrompt() {
             return;
         }
 
-        // Check dismiss timestamp
-        const dismissed = localStorage.getItem('pwa-install-dismissed');
-        if (dismissed) {
-            const dismissedAt = parseInt(dismissed, 10);
-            const sevenDays = 7 * 24 * 60 * 60 * 1000;
-            if (Date.now() - dismissedAt < sevenDays) return;
-        }
-
-        // iOS detection
+        // iOS detection (must be before dismiss check — dismiss period differs)
         const isiOS = detectIsIOS();
         setIsIOS(isiOS);
+
+        // Check dismiss timestamp — use versioned key so old dismissals don't block new banners
+        const DISMISS_KEY = 'pwa-install-dismissed-v2';
+        const dismissed = localStorage.getItem(DISMISS_KEY);
+        if (dismissed) {
+            const dismissedAt = parseInt(dismissed, 10);
+            // iOS: only hide for 1 day (users need to see this more)
+            // Android/desktop: hide for 7 days
+            const hideMs = isiOS ? (1 * 24 * 60 * 60 * 1000) : (7 * 24 * 60 * 60 * 1000);
+            if (Date.now() - dismissedAt < hideMs) return;
+        }
 
         if (isiOS) {
             // Show manual instructions for iOS (no beforeinstallprompt)
@@ -128,7 +131,7 @@ export default function PWAInstallPrompt() {
     }, [deferredPrompt]);
 
     const handleDismiss = useCallback(() => {
-        localStorage.setItem('pwa-install-dismissed', String(Date.now()));
+        localStorage.setItem('pwa-install-dismissed-v2', String(Date.now()));
         setShowBanner(false);
     }, []);
 
