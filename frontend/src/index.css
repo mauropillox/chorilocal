@@ -5448,8 +5448,13 @@ textarea.error {
 }
 
 @keyframes pwa-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .pwa-ios-modal {
@@ -5463,8 +5468,15 @@ textarea.error {
 }
 
 @keyframes pwa-modal-pop {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .pwa-ios-modal-header {
@@ -5515,6 +5527,50 @@ textarea.error {
   color: var(--color-primary, #3b82f6);
   font-size: 1.2em;
   vertical-align: middle;
+}
+
+.pwa-ios-share-icon-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #f0f0f0;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 1.1em;
+  color: var(--color-primary, #3b82f6);
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.pwa-ios-plus-icon {
+  display: inline-block;
+  font-size: 1.1em;
+  color: var(--color-primary, #3b82f6);
+  vertical-align: middle;
+}
+
+.pwa-ios-step-note {
+  background: #fff7ed;
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  padding: 8px 10px !important;
+  margin-left: 0;
+}
+
+.pwa-ios-step-note .pwa-ios-step-num {
+  background: #f59e0b;
+  font-size: 0.9rem;
+}
+
+[data-theme="dark"] .pwa-ios-step-note {
+  background: #2d2006;
+}
+
+[data-theme="dark"] .pwa-ios-share-icon-box {
+  background: #334155;
+  border-color: #475569;
 }
 
 .pwa-ios-modal-note {

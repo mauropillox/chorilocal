@@ -38,11 +38,15 @@ export function IOSInstallModal({ open, onClose }) {
                     </div>
                     <div className="pwa-ios-step">
                         <span className="pwa-ios-step-num">2</span>
-                        <span>Tocá el botón <strong>Compartir</strong> <span className="pwa-ios-share-icon">⬆</span> (abajo en la barra de Safari)</span>
+                        <span>Buscá este ícono <span className="pwa-ios-share-icon-box">⬆</span> en la barra de abajo de Safari y tocalo</span>
+                    </div>
+                    <div className="pwa-ios-step pwa-ios-step-note">
+                        <span className="pwa-ios-step-num">!</span>
+                        <span>Ojo: dice &quot;Compartir&quot; pero <strong>NO</strong> es para compartir. Es el único lugar donde Apple pone la opción de instalar.</span>
                     </div>
                     <div className="pwa-ios-step">
                         <span className="pwa-ios-step-num">3</span>
-                        <span>Deslizá hacia abajo y tocá <strong>&quot;Agregar a pantalla de inicio&quot;</strong></span>
+                        <span>En el menú que se abre, deslizá hacia abajo y tocá <strong>&quot;Agregar a pantalla de inicio&quot;</strong> <span className="pwa-ios-plus-icon">⊕</span></span>
                     </div>
                     <div className="pwa-ios-step">
                         <span className="pwa-ios-step-num">4</span>
@@ -50,7 +54,7 @@ export function IOSInstallModal({ open, onClose }) {
                     </div>
                 </div>
                 <p className="pwa-ios-modal-note">
-                    ¡Listo! La app aparecerá en tu pantalla como un ícono. 
+                    ¡Listo! La app aparecerá en tu pantalla como un ícono.
                     Funciona sin internet y se abre pantalla completa.
                 </p>
                 <button className="pwa-install-btn pwa-ios-modal-ok" onClick={onClose}>
