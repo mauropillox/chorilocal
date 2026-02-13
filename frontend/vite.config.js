@@ -61,7 +61,7 @@ export default defineConfig({
             // Match both the production domain and relative /api paths
             urlPattern: ({ url }) => {
               return url.pathname.startsWith('/api') ||
-                     url.origin === 'https://api.pedidosfriosur.com';
+                url.origin === 'https://api.pedidosfriosur.com';
             },
             handler: 'NetworkFirst',
             options: {

@@ -47,12 +47,12 @@ export default function ConnectionStatus() {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
+
         const res = await fetch(`${import.meta.env.VITE_API_URL}/health`, {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
-        
+
         if (res.ok) {
           if (statusRef.current === 'offline' || statusRef.current === 'reconnecting') {
             handleOnline(); // This triggers processQueue + invalidateQueries
@@ -76,7 +76,7 @@ export default function ConnectionStatus() {
 
     // Check API health every 30 seconds
     const interval = setInterval(checkApiHealth, 30000);
-    
+
     // Initial check
     if (!navigator.onLine) {
       handleOffline();
@@ -106,11 +106,11 @@ export default function ConnectionStatus() {
       <span className={status === 'reconnecting' ? 'pulse' : ''}>{msg.icon}</span>
       <span>{msg.text}</span>
       {status === 'offline' && (
-        <button 
-          onClick={() => window.location.reload()} 
-          style={{ 
-            background: 'rgba(255,255,255,0.2)', 
-            border: 'none', 
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
             padding: '4px 12px',
             borderRadius: '6px',
             cursor: 'pointer',

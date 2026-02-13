@@ -1,6 +1,67 @@
 import { useEffect, useState, useCallback } from 'react';
 
 /**
+ * Detect if running on iOS (iPhone/iPad/iPod or iPad with desktop UA)
+ */
+export function detectIsIOS() {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Detect if app is already installed as PWA (standalone mode)
+ */
+export function detectIsInstalled() {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(display-mode: standalone)').matches || !!window.navigator.standalone;
+}
+
+/**
+ * iOS Install Instructions Modal — can be triggered from anywhere
+ */
+export function IOSInstallModal({ open, onClose }) {
+    if (!open) return null;
+
+    return (
+        <div className="pwa-ios-modal-backdrop" onClick={onClose}>
+            <div className="pwa-ios-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="pwa-ios-modal-header">
+                    <img src="/pwa-icon-192.png" alt="FrioSur" className="pwa-install-logo" />
+                    <strong>Instalar FrioSur en tu iPhone</strong>
+                    <button className="pwa-dismiss-btn" onClick={onClose} aria-label="Cerrar" style={{ color: '#666' }}>✕</button>
+                </div>
+                <div className="pwa-ios-modal-steps">
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">1</span>
+                        <span>Abrí la app en <strong>Safari</strong> (no Chrome ni otro navegador)</span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">2</span>
+                        <span>Tocá el botón <strong>Compartir</strong> <span className="pwa-ios-share-icon">⬆</span> (abajo en la barra de Safari)</span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">3</span>
+                        <span>Deslizá hacia abajo y tocá <strong>&quot;Agregar a pantalla de inicio&quot;</strong></span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">4</span>
+                        <span>Tocá <strong>&quot;Agregar&quot;</strong> arriba a la derecha</span>
+                    </div>
+                </div>
+                <p className="pwa-ios-modal-note">
+                    ¡Listo! La app aparecerá en tu pantalla como un ícono. 
+                    Funciona sin internet y se abre pantalla completa.
+                </p>
+                <button className="pwa-install-btn pwa-ios-modal-ok" onClick={onClose}>
+                    Entendido
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
  * PWA Install Prompt — shows a dismissible banner encouraging
  * users to install the app to their home screen.
  * - Captures the `beforeinstallprompt` event
@@ -13,10 +74,11 @@ export default function PWAInstallPrompt() {
     const [showBanner, setShowBanner] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
+    const [showIOSModal, setShowIOSModal] = useState(false);
 
     useEffect(() => {
         // Already installed as PWA?
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        if (detectIsInstalled()) {
             setIsInstalled(true);
             return;
         }
@@ -30,8 +92,7 @@ export default function PWAInstallPrompt() {
         }
 
         // iOS detection
-        const ua = window.navigator.userAgent;
-        const isiOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isiOS = detectIsIOS();
         setIsIOS(isiOS);
 
         if (isiOS) {
@@ -70,42 +131,40 @@ export default function PWAInstallPrompt() {
     if (isInstalled || !showBanner) return null;
 
     return (
-        <div className="pwa-install-banner" role="alert">
-            <div className="pwa-install-content">
-                <img src="/pwa-icon-192.png" alt="FrioSur" className="pwa-install-logo" />
-                <div className="pwa-install-text">
-                    {isIOS ? (
-                        <>
-                            <strong>Instalá FrioSur</strong>
-                            <span>
-                                1. Tocá <span className="pwa-ios-share">⬆</span> (Compartir)
-                            </span>
-                            <span>
-                                2. &quot;Agregar a pantalla de inicio&quot;
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <strong>Instalá FrioSur</strong>
-                            <span>Acceso rápido desde tu pantalla de inicio</span>
-                        </>
-                    )}
-                </div>
-                <div className="pwa-install-actions">
-                    {isIOS ? (
-                        <button className="pwa-install-btn" onClick={handleDismiss}>
-                            Entendido
+        <>
+            <div className="pwa-install-banner" role="alert">
+                <div className="pwa-install-content">
+                    <img src="/pwa-icon-192.png" alt="FrioSur" className="pwa-install-logo" />
+                    <div className="pwa-install-text">
+                        {isIOS ? (
+                            <>
+                                <strong>Instalá FrioSur</strong>
+                                <span>Tocá acá para ver cómo instalarlo</span>
+                            </>
+                        ) : (
+                            <>
+                                <strong>Instalá FrioSur</strong>
+                                <span>Acceso rápido desde tu pantalla de inicio</span>
+                            </>
+                        )}
+                    </div>
+                    <div className="pwa-install-actions">
+                        {isIOS ? (
+                            <button className="pwa-install-btn" onClick={() => setShowIOSModal(true)}>
+                                Ver pasos
+                            </button>
+                        ) : (
+                            <button className="pwa-install-btn" onClick={handleInstall}>
+                                Instalar
+                            </button>
+                        )}
+                        <button className="pwa-dismiss-btn" onClick={handleDismiss} aria-label="Cerrar">
+                            ✕
                         </button>
-                    ) : (
-                        <button className="pwa-install-btn" onClick={handleInstall}>
-                            Instalar
-                        </button>
-                    )}
-                    <button className="pwa-dismiss-btn" onClick={handleDismiss} aria-label="Cerrar">
-                        ✕
-                    </button>
+                    </div>
                 </div>
             </div>
-        </div>
+            {isIOS && <IOSInstallModal open={showIOSModal} onClose={() => { setShowIOSModal(false); handleDismiss(); }} />}
+        </>
     );
 }

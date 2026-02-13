@@ -27,7 +27,7 @@ import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
 import OfflineNotifier from './components/OfflineNotifier';
 import OfflineQueue from './components/OfflineQueue';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWAInstallPrompt, { detectIsIOS, detectIsInstalled, IOSInstallModal } from './components/PWAInstallPrompt';
 import { logger } from './utils/logger';
 // import { useWebSocket } from './hooks/useWebSocket'; // Disabled - Render free tier doesn't support WebSocket
 
@@ -70,6 +70,10 @@ export default function LayoutApp({ onLogout }) {
   const [searching, setSearching] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showIOSInstall, setShowIOSInstall] = useState(false);
+
+  // Show "Instalar App" in menu on iOS when not already installed
+  const showInstallOption = detectIsIOS() && !detectIsInstalled();
 
   // Cargar contador de ofertas activas
   useEffect(() => {
@@ -621,6 +625,11 @@ export default function LayoutApp({ onLogout }) {
               <Link to="/ofertas" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>
                 🎁 Ofertas {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
               </Link>
+              {showInstallOption && (
+                <button className="mobile-more-item" onClick={() => { setMobileMoreOpen(false); setShowIOSInstall(true); }}>
+                  📲 Instalar App
+                </button>
+              )}
               {isAdmin && (
                 <>
                   <Link to="/hoja-ruta" className="mobile-more-item" onClick={() => setMobileMoreOpen(false)}>🚚 Hoja de Ruta</Link>
@@ -639,6 +648,9 @@ export default function LayoutApp({ onLogout }) {
           </>
         )}
       </nav>
+
+      {/* iOS Install Instructions Modal */}
+      <IOSInstallModal open={showIOSInstall} onClose={() => setShowIOSInstall(false)} />
     </div>
   );
 }
