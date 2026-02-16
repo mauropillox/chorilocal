@@ -498,6 +498,7 @@ export const useAppStore = create(
             }),
             {
                 name: 'chorizaurio-store',
+                version: 2, // Bump to invalidate old corrupted persisted state
                 storage: createJSONStorage(() => localStorage),
                 // Persist UI state + entity data for offline resilience
                 // Excludes: productImages (base64 blobs), loadingImageIds, isLoading, errors
@@ -515,6 +516,19 @@ export const useAppStore = create(
                         lastFetched: state.entities.lastFetched,
                     },
                 }),
+                // Deep merge entities so non-persisted fields (productImages, loadingImageIds, isLoading, errors)
+                // are preserved from initial state instead of being destroyed by shallow merge
+                merge: (persistedState, currentState) => {
+                    if (!persistedState) return currentState;
+                    return {
+                        ...currentState,
+                        ...persistedState,
+                        entities: {
+                            ...currentState.entities,
+                            ...(persistedState.entities || {}),
+                        },
+                    };
+                },
             }
         )
     )

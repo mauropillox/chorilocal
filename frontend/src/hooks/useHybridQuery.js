@@ -30,8 +30,8 @@ export const useProductosQuery = (options = {}) => {
     const queryClient = useQueryClient();
     const setProductosInStore = useAppStore(state => state.setProductos);
     const setProductImagesInStore = useAppStore(state => state.setProductImages);
-    const productImages = useAppStore(state => state.entities.productImages);
-    const markImagesLoading = useAppStore(state => state.markImagesLoading);
+    const productImages = useAppStore(state => state.entities.productImages) || {};
+    const markImagesLoading = useAppStore(state => state.markImagesLoading) || (() => {});
     const storedProductos = useAppStore(state => state.entities.productos);
     const lastFetched = useAppStore(state => state.entities.lastFetched.productos);
     const toastShown = useRef(false);
@@ -88,7 +88,9 @@ export const useProductosQuery = (options = {}) => {
     // Uses getState() to always read the latest loadingImageIds, making this callback stable
     const loadImagesForIds = useCallback(async (ids) => {
         // Read latest state directly from store to avoid stale closures
-        const { loadingImageIds: currentLoadingIds, productImages: currentImages } = useAppStore.getState().entities;
+        const entities = useAppStore.getState().entities;
+        const currentLoadingIds = entities.loadingImageIds || {};
+        const currentImages = entities.productImages || {};
 
         // Filter out already loaded or in-progress images
         const idsToLoad = ids.filter(id => !currentLoadingIds[id] && !(id in currentImages));
