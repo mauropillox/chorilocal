@@ -27,7 +27,7 @@ import ThemeToggle from './components/ThemeToggle';
 import authFetch from './authFetch';
 import OfflineNotifier from './components/OfflineNotifier';
 import OfflineQueue from './components/OfflineQueue';
-import PWAInstallPrompt, { detectIsIOS, detectIsInstalled, IOSInstallModal } from './components/PWAInstallPrompt';
+import PWAInstallPrompt, { detectIsIOS, detectIsInstalled, IOSInstallModal, AndroidInstallModal, getDeferredPrompt, clearDeferredPrompt } from './components/PWAInstallPrompt';
 import { logger } from './utils/logger';
 // import { useWebSocket } from './hooks/useWebSocket'; // Disabled - Render free tier doesn't support WebSocket
 
@@ -71,9 +71,11 @@ export default function LayoutApp({ onLogout }) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
+  const [showAndroidInstall, setShowAndroidInstall] = useState(false);
 
-  // Show "Instalar App" in menu on iOS when not already installed
-  const showInstallOption = detectIsIOS() && !detectIsInstalled();
+  // Show "Instalar App" in menu on ANY platform when not already installed
+  const showInstallOption = !detectIsInstalled();
+  const isIOS = detectIsIOS();
 
   // Cargar contador de ofertas activas
   useEffect(() => {
@@ -626,7 +628,23 @@ export default function LayoutApp({ onLogout }) {
                 🎁 Ofertas {ofertasCount > 0 && <span className="badge-count badge-ofertas">{ofertasCount}</span>}
               </Link>
               {showInstallOption && (
-                <button className="mobile-more-item" onClick={() => { setMobileMoreOpen(false); setShowIOSInstall(true); }}>
+                <button className="mobile-more-item" onClick={async () => {
+                  setMobileMoreOpen(false);
+                  if (isIOS) {
+                    setShowIOSInstall(true);
+                  } else {
+                    // Try native install prompt first
+                    const prompt = getDeferredPrompt();
+                    if (prompt) {
+                      prompt.prompt();
+                      const { outcome } = await prompt.userChoice;
+                      clearDeferredPrompt();
+                      if (outcome === 'accepted') return;
+                    }
+                    // Fallback: show manual instructions
+                    setShowAndroidInstall(true);
+                  }
+                }}>
                   📲 Instalar App
                 </button>
               )}
@@ -649,8 +667,9 @@ export default function LayoutApp({ onLogout }) {
         )}
       </nav>
 
-      {/* iOS Install Instructions Modal */}
+      {/* Install Instructions Modals */}
       <IOSInstallModal open={showIOSInstall} onClose={() => setShowIOSInstall(false)} />
+      <AndroidInstallModal open={showAndroidInstall} onClose={() => setShowAndroidInstall(false)} />
     </div>
   );
 }

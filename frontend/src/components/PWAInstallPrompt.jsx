@@ -1,6 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
 
 /**
+ * Global store for the beforeinstallprompt event
+ * This allows triggering install from anywhere (e.g., the "Más" menu)
+ */
+let _deferredInstallPrompt = null;
+
+export function getDeferredPrompt() {
+    return _deferredInstallPrompt;
+}
+
+export function clearDeferredPrompt() {
+    _deferredInstallPrompt = null;
+}
+
+// Capture the event as early as possible at module level
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        _deferredInstallPrompt = e;
+    });
+}
+
+/**
  * Detect if running on iOS (iPhone/iPad/iPod or iPad with desktop UA)
  */
 export function detectIsIOS() {
@@ -66,6 +88,51 @@ export function IOSInstallModal({ open, onClose }) {
 }
 
 /**
+ * Android Install Instructions Modal — manual fallback when
+ * beforeinstallprompt is not available
+ */
+export function AndroidInstallModal({ open, onClose }) {
+    if (!open) return null;
+
+    return (
+        <div className="pwa-ios-modal-backdrop" onClick={onClose}>
+            <div className="pwa-ios-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="pwa-ios-modal-header">
+                    <img src="/pwa-icon-192.png" alt="FrioSur" className="pwa-install-logo" />
+                    <strong>Instalar FrioSur en tu Android</strong>
+                    <button className="pwa-dismiss-btn" onClick={onClose} aria-label="Cerrar" style={{ color: '#666' }}>✕</button>
+                </div>
+                <div className="pwa-ios-modal-steps">
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">1</span>
+                        <span>Abrí la página <strong>www.pedidosfriosur.com</strong> en <strong>Chrome</strong></span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">2</span>
+                        <span>Tocá los <strong>3 puntitos</strong> <span className="pwa-ios-share-icon-box">⋮</span> arriba a la derecha</span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">3</span>
+                        <span>Buscá y tocá <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla de inicio"</strong></span>
+                    </div>
+                    <div className="pwa-ios-step">
+                        <span className="pwa-ios-step-num">4</span>
+                        <span>Tocá <strong>"Instalar"</strong> en el cartel que aparece</span>
+                    </div>
+                </div>
+                <p className="pwa-ios-modal-note">
+                    ¡Listo! La app aparecerá en tu pantalla como un ícono.
+                    Funciona sin internet y se abre pantalla completa.
+                </p>
+                <button className="pwa-install-btn pwa-ios-modal-ok" onClick={onClose}>
+                    Entendido
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
  * PWA Install Prompt — shows a dismissible banner encouraging
  * users to install the app to their home screen.
  * - Captures the `beforeinstallprompt` event
@@ -108,9 +175,17 @@ export default function PWAInstallPrompt() {
             return;
         }
 
+        // Check if we already captured the event at module level
+        if (_deferredInstallPrompt) {
+            setDeferredPrompt(_deferredInstallPrompt);
+            setShowBanner(true);
+            return;
+        }
+
         // Standard install prompt (Chrome, Edge, Samsung Internet)
         const handler = (e) => {
             e.preventDefault();
+            _deferredInstallPrompt = e;
             setDeferredPrompt(e);
             setShowBanner(true);
         };
@@ -127,6 +202,7 @@ export default function PWAInstallPrompt() {
             setIsInstalled(true);
         }
         setDeferredPrompt(null);
+        _deferredInstallPrompt = null;
         setShowBanner(false);
     }, [deferredPrompt]);
 

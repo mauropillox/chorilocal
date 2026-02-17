@@ -31,7 +31,7 @@ export const useProductosQuery = (options = {}) => {
     const setProductosInStore = useAppStore(state => state.setProductos);
     const setProductImagesInStore = useAppStore(state => state.setProductImages);
     const productImages = useAppStore(state => state.entities.productImages) || {};
-    const markImagesLoading = useAppStore(state => state.markImagesLoading) || (() => {});
+    const markImagesLoading = useAppStore(state => state.markImagesLoading) || (() => { });
     const storedProductos = useAppStore(state => state.entities.productos);
     const lastFetched = useAppStore(state => state.entities.lastFetched.productos);
     const toastShown = useRef(false);
