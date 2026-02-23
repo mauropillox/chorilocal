@@ -2115,7 +2115,8 @@ input[type="checkbox"]:focus-visible {
 
   /* Selected products scroll area */
   .pedidos-selected-scroll {
-    max-height: 30vh !important;
+    max-height: 40vh !important;
+    overflow-y: auto !important;
   }
 
   /* Selected product row — compact card on mobile */
