@@ -987,6 +987,15 @@ input[type="checkbox"]:focus-visible {
   scrollbar-color: var(--color-border) var(--color-bg-secondary);
 }
 
+/* Overflow utilities (not using Tailwind) */
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+}
+
 /* Drag & Drop Zone */
 .drag-active {
   border-color: var(--color-primary);
@@ -2887,6 +2896,7 @@ input[type="checkbox"]:focus-visible {
   /* Tablet: selected products scroll taller */
   .pedidos-selected-scroll {
     max-height: 35vh !important;
+    overflow-y: auto !important;
   }
 
   /* Tablet: historial action bar wider */
@@ -2960,6 +2970,14 @@ input[type="checkbox"]:focus-visible {
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+
+  .overflow-y-auto {
+    overflow-y: auto;
+  }
+
+  .overflow-x-auto {
+    overflow-x: auto;
   }
 }
 
