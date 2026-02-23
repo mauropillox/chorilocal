@@ -503,8 +503,8 @@ export default function Pedidos() {
                 })}
               </div>
 
-              {/* Panel Total Estimado */}
-              <div className="pedido-total-panel">
+              {/* Panel Total Estimado — hidden on mobile (redundant with sticky bar) */}
+              <div className="pedido-total-panel hide-mobile">
                 <div className="total-header">
                   <span className="total-label">💰 Total Estimado</span>
                   <span className="total-count">{productosSeleccionados.length} producto(s)</span>
@@ -529,30 +529,30 @@ export default function Pedidos() {
                   </div>
                 )}
               </div>
+
+              {/* Notas del Pedido — inside products block so it appears at the end */}
+              <div className="mt-4">
+                <label htmlFor="pedido-notas" className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
+                  📝 Notas / Observaciones (opcional)
+                </label>
+                <textarea
+                  id="pedido-notas"
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                  placeholder="Ej: Entregar antes de las 15:00, dejar en portería, etc."
+                  className="w-full p-3 border rounded-lg text-sm"
+                  style={{
+                    background: 'var(--color-bg)',
+                    color: 'var(--color-text)',
+                    border: '2px solid var(--color-border)',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                  rows="3"
+                />
+              </div>
             </div>
           )}
-
-          {/* Notas del Pedido */}
-          <div className="mt-4">
-            <label htmlFor="pedido-notas" className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-              📝 Notas / Observaciones (opcional)
-            </label>
-            <textarea
-              id="pedido-notas"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Ej: Entregar antes de las 15:00, dejar en portería, etc."
-              className="w-full p-3 border rounded-lg text-sm"
-              style={{
-                background: 'var(--color-bg)',
-                color: 'var(--color-text)',
-                border: '2px solid var(--color-border)',
-                minHeight: '80px',
-                resize: 'vertical'
-              }}
-              rows="3"
-            />
-          </div>
 
           <button
             onClick={guardarPedido}
