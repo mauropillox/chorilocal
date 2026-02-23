@@ -332,7 +332,7 @@ export default function Pedidos() {
         <div className="panel panel-datos">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Datos del Pedido</h3>
 
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group" style={{ position: 'relative', zIndex: showClienteSuggestions ? 100 : 'auto' }}>
             <label htmlFor="cliente-search">Cliente *</label>
             <input
               id="cliente-search"
