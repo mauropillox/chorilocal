@@ -2106,10 +2106,11 @@ input[type="checkbox"]:focus-visible {
   }
 
   .btn-remove-item {
-    padding: 4px 8px !important;
-    font-size: 0.75rem !important;
-    min-height: 28px !important;
-    min-width: 28px !important;
+    padding: 6px 10px !important;
+    font-size: 0.85rem !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 8px !important;
   }
 
   /* Selected products scroll area */
@@ -2117,42 +2118,28 @@ input[type="checkbox"]:focus-visible {
     max-height: 30vh !important;
   }
 
-  /* Selected product row - 2-line grid on mobile */
+  /* Selected product row — compact card on mobile */
   .pedidos-selected-scroll .card-item {
     padding: 8px !important;
-    display: grid !important;
-    grid-template-columns: 44px 1fr !important;
-    grid-template-rows: auto auto !important;
-    gap: 4px 8px !important;
-    align-items: center !important;
-  }
-
-  /* Image spans both rows */
-  .pedidos-selected-scroll .card-item .product-image-sm,
-  .pedidos-selected-scroll .card-item .product-image-placeholder-sm {
-    grid-row: 1 / 3 !important;
-  }
-
-  /* Name+price on first row */
-  .pedidos-selected-scroll .card-item .flex-1.min-w-0 {
-    grid-column: 2 !important;
-  }
-
-  /* Controls on second row, spanning full width */
-  .pedidos-selected-scroll .card-item .qty-controls,
-  .pedidos-selected-scroll .card-item .tipo-select,
-  .pedidos-selected-scroll .card-item .subtotal-display,
-  .pedidos-selected-scroll .card-item .btn-remove-item {
-    /* These will flow in the natural grid */
-  }
-
-  .pedidos-selected-scroll .card-item>.flex.items-center.gap-2 {
-    display: contents !important;
-  }
-
-  .pedidos-selected-scroll .card-item .flex.items-center.gap-1.qty-controls {
     display: flex !important;
-    grid-column: 2 !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    align-items: stretch !important;
+  }
+
+  /* Row 1: image + name + price — horizontal */
+  .pedidos-selected-scroll .card-item .pedido-item-top {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  /* Row 2: qty + tipo + subtotal + remove — horizontal */
+  .pedidos-selected-scroll .card-item .pedido-item-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
   }
 
   /* Total Panel */
@@ -5320,11 +5307,11 @@ textarea.error {
   animation: pwa-slide-up 0.35s ease-out;
 }
 
-/* On mobile/tablet, lift banner above the bottom nav (~60px) */
+/* On mobile/tablet, lift banner above the bottom nav + cart summary */
 @media (max-width: 1023px) {
   .pwa-install-banner {
-    bottom: 56px;
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    bottom: 120px;
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 }
 

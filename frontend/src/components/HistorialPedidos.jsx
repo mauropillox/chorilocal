@@ -1044,7 +1044,7 @@ export default function HistorialPedidos() {
       )}
 
       {undoDelete && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-4 animate-slideUp">
+        <div className="fixed left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-4 animate-slideUp" style={{ bottom: '140px', zIndex: 5000 }}>
           <span>Pedido eliminado</span>
           <button onClick={restaurarPedido} className="font-semibold underline hover:opacity-80">
             ↶ Deshacer

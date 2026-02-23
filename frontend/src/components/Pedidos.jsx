@@ -421,83 +421,89 @@ export default function Pedidos() {
                   const sinPrecio = itemInfo && !itemInfo.precioValido;
                   const cantidadInvalida = itemInfo && !itemInfo.cantidadValida;
                   return (
-                    <div key={p.id} className="card-item flex items-center gap-2 p-2" style={sinPrecio || cantidadInvalida ? { borderLeft: '3px solid #ef4444' } : {}}>
-                      {p.imagen_url ? (
-                        <img
-                          src={p.imagen_url}
-                          alt={p.nombre}
-                          className="product-image-sm"
-                          onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
-                        />
-                      ) : null}
-                      <div className="product-image-placeholder-sm" style={{ display: p.imagen_url ? 'none' : 'flex' }}>📦</div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm truncate font-medium block" style={{ color: 'var(--color-text)' }}>
-                          {p.nombre}
-                          {itemInfo?.descuento > 0 && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-bold"
-                              style={{ background: '#10b981', color: 'white' }}>
-                              🎉 -{itemInfo.descuento}%
-                            </span>
-                          )}
-                        </span>
-                        <div className="text-xs" style={{ color: sinPrecio ? '#ef4444' : 'var(--color-text-muted)' }}>
-                          {sinPrecio ? '⚠️ Sin precio' : (
-                            <>
-                              {itemInfo?.descuento > 0 ? (
-                                <>
-                                  <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{formatUYU(p.precio)}</span>
-                                  {' → '}
-                                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatUYU(itemInfo.precioFinal)}</span>
-                                  {' /u'}
-                                </>
-                              ) : (
-                                `${formatUYU(p.precio)} /u`
-                              )}
-                            </>
-                          )}
-                          {cantidadInvalida && <span style={{ color: '#ef4444', marginLeft: '8px' }}>⚠️ Cantidad inválida</span>}
+                    <div key={p.id} className="card-item p-2" style={sinPrecio || cantidadInvalida ? { borderLeft: '3px solid #ef4444' } : {}}>
+                      {/* Row 1: Image + Name + Price */}
+                      <div className="pedido-item-top flex items-center gap-2">
+                        {p.imagen_url ? (
+                          <img
+                            src={p.imagen_url}
+                            alt={p.nombre}
+                            className="product-image-sm"
+                            onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'); }}
+                          />
+                        ) : null}
+                        <div className="product-image-placeholder-sm" style={{ display: p.imagen_url ? 'none' : 'flex' }}>📦</div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm truncate font-medium block" style={{ color: 'var(--color-text)' }}>
+                            {p.nombre}
+                            {itemInfo?.descuento > 0 && (
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-bold"
+                                style={{ background: '#10b981', color: 'white' }}>
+                                🎉 -{itemInfo.descuento}%
+                              </span>
+                            )}
+                          </span>
+                          <div className="text-xs" style={{ color: sinPrecio ? '#ef4444' : 'var(--color-text-muted)' }}>
+                            {sinPrecio ? '⚠️ Sin precio' : (
+                              <>
+                                {itemInfo?.descuento > 0 ? (
+                                  <>
+                                    <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{formatUYU(p.precio)}</span>
+                                    {' → '}
+                                    <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatUYU(itemInfo.precioFinal)}</span>
+                                    {' /u'}
+                                  </>
+                                ) : (
+                                  `${formatUYU(p.precio)} /u`
+                                )}
+                              </>
+                            )}
+                            {cantidadInvalida && <span style={{ color: '#ef4444', marginLeft: '8px' }}>⚠️ Cantidad inválida</span>}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 qty-controls">
-                        <button
-                          onClick={() => decrementarCantidad(p.id)}
-                          className="qty-btn qty-btn-minus"
-                          title="Restar 0.5"
-                          aria-label={`Restar 0.5 a ${p.nombre}`}
-                        >
-                          −
-                        </button>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          value={p.cantidad}
-                          onChange={(e) => cambiarCantidad(p.id, e.target.value)}
-                          className="qty-input"
-                          style={{ borderColor: cantidadInvalida ? '#ef4444' : '#d1d5db' }}
-                          aria-label={`Cantidad de ${p.nombre}`}
-                        />
-                        <button
-                          onClick={() => incrementarCantidad(p.id)}
-                          className="qty-btn qty-btn-plus"
-                          title="Sumar 0.5"
-                          aria-label={`Sumar 0.5 a ${p.nombre}`}
-                        >
-                          +
-                        </button>
+                      {/* Row 2: Qty controls + Tipo + Subtotal + Remove */}
+                      <div className="pedido-item-controls flex items-center gap-2">
+                        <div className="flex items-center gap-1 qty-controls">
+                          <button
+                            onClick={() => decrementarCantidad(p.id)}
+                            className="qty-btn qty-btn-minus"
+                            title="Restar 0.5"
+                            aria-label={`Restar 0.5 a ${p.nombre}`}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0.5"
+                            value={p.cantidad}
+                            onChange={(e) => cambiarCantidad(p.id, e.target.value)}
+                            className="qty-input"
+                            style={{ borderColor: cantidadInvalida ? '#ef4444' : '#d1d5db' }}
+                            aria-label={`Cantidad de ${p.nombre}`}
+                          />
+                          <button
+                            onClick={() => incrementarCantidad(p.id)}
+                            className="qty-btn qty-btn-plus"
+                            title="Sumar 0.5"
+                            aria-label={`Sumar 0.5 a ${p.nombre}`}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <select value={p.tipo} onChange={(e) => cambiarTipo(p.id, e.target.value)} className="tipo-select" aria-label={`Tipo de ${p.nombre}`}>
+                          <option value="unidad">Unic</option>
+                          <option value="kg">Kg</option>
+                          <option value="caja">Caja</option>
+                          <option value="gancho">Ganch</option>
+                          <option value="tira">Tira</option>
+                        </select>
+                        <div className="subtotal-display flex-1" style={{ color: itemInfo?.subtotal > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                          {itemInfo?.subtotal > 0 ? formatUYU(itemInfo.subtotal) : '-'}
+                        </div>
+                        <button onClick={() => eliminarProducto(p.id)} className="btn-danger btn-remove-item" aria-label={`Eliminar ${p.nombre}`}>✕</button>
                       </div>
-                      <select value={p.tipo} onChange={(e) => cambiarTipo(p.id, e.target.value)} className="tipo-select" aria-label={`Tipo de ${p.nombre}`}>
-                        <option value="unidad">Unidad</option>
-                        <option value="kg">Kilo</option>
-                        <option value="caja">Caja</option>
-                        <option value="gancho">Gancho</option>
-                        <option value="tira">Tira</option>
-                      </select>
-                      <div className="subtotal-display" style={{ color: itemInfo?.subtotal > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
-                        {itemInfo?.subtotal > 0 ? formatUYU(itemInfo.subtotal) : '-'}
-                      </div>
-                      <button onClick={() => eliminarProducto(p.id)} className="btn-danger btn-remove-item" aria-label={`Eliminar ${p.nombre}`}>✕</button>
                     </div>
                   );
                 })}
