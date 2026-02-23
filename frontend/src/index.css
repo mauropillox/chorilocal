@@ -1002,19 +1002,23 @@ input[type="checkbox"]:focus-visible {
 
 /* Max-height utilities (Tailwind-compatible) */
 .max-h-48 {
-  max-height: 12rem; /* 192px */
+  max-height: 12rem;
+  /* 192px */
 }
 
 .max-h-64 {
-  max-height: 16rem; /* 256px */
+  max-height: 16rem;
+  /* 256px */
 }
 
 .max-h-80 {
-  max-height: 20rem; /* 320px */
+  max-height: 20rem;
+  /* 320px */
 }
 
 .max-h-96 {
-  max-height: 24rem; /* 384px */
+  max-height: 24rem;
+  /* 384px */
 }
 
 /* Drag & Drop Zone */
@@ -2143,10 +2147,10 @@ input[type="checkbox"]:focus-visible {
     border-radius: 8px !important;
   }
 
-  /* Selected products scroll area */
+  /* Selected products area — no max-height on mobile, page scrolls naturally */
   .pedidos-selected-scroll {
-    max-height: 40vh !important;
-    overflow-y: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
   }
 
   /* Selected product row — compact card on mobile */
@@ -2914,10 +2918,10 @@ input[type="checkbox"]:focus-visible {
     justify-content: space-between !important;
   }
 
-  /* Tablet: selected products scroll taller */
+  /* Tablet: no nested scroll either, page scrolls */
   .pedidos-selected-scroll {
-    max-height: 35vh !important;
-    overflow-y: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
   }
 
   /* Tablet: historial action bar wider */
