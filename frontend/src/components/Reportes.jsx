@@ -726,7 +726,7 @@ export default function Reportes() {
           {reporteProductos.sin_ventas?.length > 0 && (
             <div className="panel">
               <h3 className="font-bold mb-4">⚠️ Productos Sin Ventas en el Período ({reporteProductos.sin_ventas.length})</h3>
-              <div className="overflow-x-auto" style={{ maxHeight: '300px' }}>
+              <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 <table className="w-full text-sm">
                   <thead className="sticky top-0">
                     <tr className="table-header-light">

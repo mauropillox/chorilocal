@@ -996,6 +996,27 @@ input[type="checkbox"]:focus-visible {
   overflow-x: auto;
 }
 
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Max-height utilities (Tailwind-compatible) */
+.max-h-48 {
+  max-height: 12rem; /* 192px */
+}
+
+.max-h-64 {
+  max-height: 16rem; /* 256px */
+}
+
+.max-h-80 {
+  max-height: 20rem; /* 320px */
+}
+
+.max-h-96 {
+  max-height: 24rem; /* 384px */
+}
+
 /* Drag & Drop Zone */
 .drag-active {
   border-color: var(--color-primary);
