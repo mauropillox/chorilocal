@@ -2119,32 +2119,47 @@ input[type="checkbox"]:focus-visible {
 
   .qty-controls {
     flex-wrap: nowrap !important;
-    gap: 3px !important;
+    gap: 2px !important;
     flex-shrink: 0 !important;
   }
 
+  .qty-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 1rem !important;
+  }
+
+  .qty-input {
+    width: 40px !important;
+    min-height: 34px !important;
+    font-size: 0.85rem !important;
+  }
+
   .tipo-select {
-    padding: 4px !important;
-    font-size: 0.7rem !important;
+    padding: 2px !important;
+    font-size: 0.65rem !important;
     min-height: 32px !important;
     border-radius: 6px !important;
-    max-width: 70px !important;
+    max-width: 55px !important;
+    flex-shrink: 0 !important;
   }
 
   .subtotal-display {
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
     text-align: right !important;
-    min-width: 60px !important;
+    min-width: 0 !important;
     white-space: nowrap !important;
+    flex-shrink: 1 !important;
   }
 
   .btn-remove-item {
-    padding: 6px 10px !important;
-    font-size: 0.85rem !important;
-    min-height: 36px !important;
-    min-width: 36px !important;
-    border-radius: 8px !important;
+    padding: 4px 8px !important;
+    font-size: 0.8rem !important;
+    min-height: 34px !important;
+    min-width: 34px !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
   }
 
   /* Selected products area — no max-height on mobile, page scrolls naturally */
@@ -2169,12 +2184,13 @@ input[type="checkbox"]:focus-visible {
     gap: 8px !important;
   }
 
-  /* Row 2: qty + tipo + subtotal + remove — horizontal */
+  /* Row 2: qty + tipo + subtotal + remove — horizontal, wraps if needed */
   .pedidos-selected-scroll .card-item .pedido-item-controls {
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    overflow: hidden !important;
   }
 
   /* Total Panel */
