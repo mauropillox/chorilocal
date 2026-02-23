@@ -1,23 +1,29 @@
 import { useEffect, useRef } from 'react';
 
 const atajos = [
-  { grupo: 'Navegación', items: [
-    { keys: ['Ctrl', '1'], desc: 'Ir a Clientes' },
-    { keys: ['Ctrl', '2'], desc: 'Ir a Productos' },
-    { keys: ['Ctrl', '3'], desc: 'Ir a Pedidos' },
-    { keys: ['Ctrl', '4'], desc: 'Ir a Historial' },
-    { keys: ['Ctrl', '5'], desc: 'Ir a Dashboard' },
-    { keys: ['Ctrl', '6'], desc: 'Ir a Categorías' },
-  ]},
-  { grupo: 'Acciones', items: [
-    { keys: ['Ctrl', 'K'], desc: 'Buscar (global)' },
-    { keys: ['Ctrl', 'N'], desc: 'Nuevo elemento' },
-    { keys: ['Escape'], desc: 'Cerrar modal/buscar' },
-  ]},
-  { grupo: 'Ayuda', items: [
-    { keys: ['Ctrl', '?'], desc: 'Mostrar esta ayuda' },
-    { keys: ['F1'], desc: 'Mostrar esta ayuda' },
-  ]},
+  {
+    grupo: 'Navegación', items: [
+      { keys: ['Ctrl', '1'], desc: 'Ir a Clientes' },
+      { keys: ['Ctrl', '2'], desc: 'Ir a Productos' },
+      { keys: ['Ctrl', '3'], desc: 'Ir a Pedidos' },
+      { keys: ['Ctrl', '4'], desc: 'Ir a Historial' },
+      { keys: ['Ctrl', '5'], desc: 'Ir a Dashboard' },
+      { keys: ['Ctrl', '6'], desc: 'Ir a Categorías' },
+    ]
+  },
+  {
+    grupo: 'Acciones', items: [
+      { keys: ['Ctrl', 'K'], desc: 'Buscar (global)' },
+      { keys: ['Ctrl', 'N'], desc: 'Nuevo elemento' },
+      { keys: ['Escape'], desc: 'Cerrar modal/buscar' },
+    ]
+  },
+  {
+    grupo: 'Ayuda', items: [
+      { keys: ['Ctrl', '?'], desc: 'Mostrar esta ayuda' },
+      { keys: ['F1'], desc: 'Mostrar esta ayuda' },
+    ]
+  },
 ];
 
 export default function KeyboardShortcutsModal({ isOpen, onClose }) {
@@ -50,7 +56,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 4000,
         padding: '1rem'
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -90,9 +96,9 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
 
         {atajos.map(grupo => (
           <div key={grupo.grupo} style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ 
-              fontSize: '0.75rem', 
-              textTransform: 'uppercase', 
+            <h3 style={{
+              fontSize: '0.75rem',
+              textTransform: 'uppercase',
               letterSpacing: '0.05em',
               color: 'var(--color-text-muted)',
               marginBottom: '0.5rem',
@@ -139,9 +145,9 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
           </div>
         ))}
 
-        <p style={{ 
-          fontSize: '0.75rem', 
-          color: 'var(--color-text-muted)', 
+        <p style={{
+          fontSize: '0.75rem',
+          color: 'var(--color-text-muted)',
           textAlign: 'center',
           margin: '1rem 0 0 0'
         }}>

@@ -1224,7 +1224,8 @@ export default function HojaRuta() {
                     {/* Edit zona modal overlay */}
                     {editingClienteZona && (
                         <div
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+                            style={{ zIndex: 4000 }}
                             onClick={() => setEditingClienteZona(null)}
                             role="dialog"
                             aria-modal="true"
@@ -1699,8 +1700,8 @@ export default function HojaRuta() {
                                                                             {/* Dropdown menu */}
                                                                             {showActions && (
                                                                                 <div
-                                                                                    className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg py-1 min-w-[160px]"
-                                                                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+                                                                                    className="absolute right-0 top-full mt-1 rounded-lg shadow-lg py-1 min-w-[160px]"
+                                                                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', zIndex: 1000 }}
                                                                                     onMouseLeave={() => setShowActionsForId(null)}
                                                                                 >
                                                                                     <button
