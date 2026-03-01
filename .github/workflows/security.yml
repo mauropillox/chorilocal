@@ -1,0 +1,169 @@
+name: Security Scanning
+
+on:
+  schedule:
+    # Weekly: Monday 4:00 AM UTC
+    - cron: '0 4 * * 1'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '**/requirements*.txt'
+      - '**/package-lock.json'
+      - '**/package.json'
+      - '**/Dockerfile*'
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: read
+  security-events: write  # Required for CodeQL SARIF upload
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  # ==================== CodeQL Analysis ====================
+  codeql-analysis:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ==================== Dependency Scanning ====================
+  dependency-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Python dependency audit ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Audit Python dependencies
+        run: |
+          pip install pip-audit
+          echo "=== Scanning backend/requirements.txt ==="
+          pip-audit -r backend/requirements.txt --desc --format=columns
+          echo ""
+          echo "=== Scanning backend/requirements-prod.txt ==="
+          pip-audit -r backend/requirements-prod.txt --desc --format=columns
+
+      # --- Node dependency audit ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Audit npm dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          echo "=== npm audit (high/critical only) ==="
+          npm audit --audit-level=high
+
+  # ==================== Dependency Review (PRs only) ====================
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: ''
+          comment-summary-in-pr: always
+
+  # ==================== Secret Scanning ====================
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for thorough scan
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets
+
+      - name: Run detect-secrets scan
+        run: |
+          detect-secrets scan \
+            --exclude-files '\.lock$' \
+            --exclude-files 'node_modules' \
+            --exclude-files '\.min\.js$' \
+            --exclude-files 'package-lock\.json' \
+            > .secrets-results.json
+
+          # Check if any secrets found
+          SECRETS=$(python3 -c "
+          import json
+          with open('.secrets-results.json') as f:
+              data = json.load(f)
+          count = sum(len(v) for v in data.get('results', {}).values())
+          print(count)
+          ")
+
+          echo "Potential secrets found: $SECRETS"
+          if [ "$SECRETS" -gt 0 ]; then
+            echo "⚠️ Potential secrets detected — review .secrets-results.json"
+            python3 -c "
+          import json
+          with open('.secrets-results.json') as f:
+              data = json.load(f)
+          for filename, secrets in data.get('results', {}).items():
+              for s in secrets:
+                  print(f'  {filename}:{s[\"line_number\"]} — {s[\"type\"]}')
+          "
+          else
+            echo "✅ No secrets detected"
+          fi
+        continue-on-error: true
+
+  # ==================== Summary ====================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run date: $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY

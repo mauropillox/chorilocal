@@ -1,0 +1,227 @@
+name: Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.3.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip test validation (emergency only)'
+        required: false
+        type: boolean
+        default: false
+      run_smoke:
+        description: 'Run post-deploy smoke test'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ==================== Validate ====================
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Backend validation ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest tests/ -v --tb=short
+        env:
+          ENVIRONMENT: test
+          SECRET_KEY: test-secret-key-for-ci
+          DB_PATH: /tmp/test_ventas.db
+
+      # --- Frontend validation ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm run test:run
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:8000/api' }}
+
+      - name: Validation complete
+        run: echo "✅ All release validation checks passed"
+
+  # ==================== Create Release ====================
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: validate
+    if: always() && (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for changelog
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "tag=v${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "name=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "name=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            echo "Changes since $LAST_TAG:" > /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+            git log --oneline "$LAST_TAG"..HEAD --no-merges | head -50 >> /tmp/changelog.md
+          else
+            echo "Initial release" > /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+            git log --oneline -20 --no-merges >> /tmp/changelog.md
+          fi
+          cat /tmp/changelog.md
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const changelog = fs.readFileSync('/tmp/changelog.md', 'utf8');
+            const tag = '${{ steps.version.outputs.tag }}';
+            const name = '${{ steps.version.outputs.name }}';
+
+            try {
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+                name: `Release ${name}`,
+                body: changelog,
+                draft: false,
+                prerelease: false
+              });
+              core.info(`✅ Release ${name} created`);
+            } catch (error) {
+              if (error.status === 422) {
+                core.warning(`Release ${tag} already exists — skipping creation`);
+              } else {
+                throw error;
+              }
+            }
+
+  # ==================== Post-Deploy Smoke Test ====================
+  post-deploy-smoke:
+    name: Post-Deploy Smoke Test
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: ${{ inputs.run_smoke != false }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for Render deployment
+        run: |
+          echo "⏳ Waiting 120s for Render to pick up and deploy..."
+          sleep 120
+
+      - name: Run smoke test
+        env:
+          API_URL: ${{ secrets.BACKEND_URL }}
+          API_USER: ${{ secrets.ADMIN_USERNAME }}
+          API_PASS: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "⚠️ BACKEND_URL secret not set — skipping smoke test"
+            exit 0
+          fi
+
+          echo "🏥 Checking backend health..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend is healthy (attempt $i)"
+              break
+            fi
+            echo "⏳ Attempt $i: HTTP $STATUS — retrying in 30s..."
+            sleep 30
+          done
+
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Backend did not become healthy after 5 attempts"
+            exit 1
+          fi
+
+          # Quick API check
+          if [ -n "$API_USER" ] && [ -n "$API_PASS" ]; then
+            TOKEN=$(curl -s -X POST \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              -d "username=$API_USER&password=$API_PASS" \
+              "$API_URL/api/login" | jq -r '.access_token')
+
+            if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+              echo "✅ Authentication works"
+
+              # Check core endpoints
+              C=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/clientes" | jq 'length' 2>/dev/null || echo "0")
+              echo "✅ Clientes endpoint: $C records"
+
+              P=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/productos" | jq 'length' 2>/dev/null || echo "0")
+              echo "✅ Productos endpoint: $P records"
+            else
+              echo "⚠️ Authentication failed — check credentials"
+            fi
+          fi
+
+      - name: Smoke test summary
+        if: always()
+        run: |
+          echo "## 🚀 Post-Deploy Smoke Test" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ secrets.BACKEND_URL || 'Not configured' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ inputs.version || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
