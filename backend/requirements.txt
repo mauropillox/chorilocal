@@ -1,4 +1,4 @@
-fastapi==0.115.12
+fastapi==0.121.0
 uvicorn==0.34.0
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.4.0
@@ -6,7 +6,7 @@ pydantic==2.11.0
 pydantic-core==2.33.0
 six==1.17.0
 slowapi==0.1.9
-python-multipart==0.0.20
+python-multipart==0.0.22
 reportlab==4.2.5
 openpyxl==3.1.2
 bcrypt==4.0.1
@@ -15,7 +15,7 @@ bcrypt==4.0.1
 psycopg2-binary==2.9.9
 
 # Monitoring & Error Tracking
-sentry-sdk[fastapi]==1.38.0
+sentry-sdk[fastapi]==1.45.1
 structlog==24.1.0
 
 # Testing (dev dependencies - exclude in production builds)
@@ -23,5 +23,5 @@ pytest==8.3.4
 pytest-asyncio==0.25.0
 httpx==0.28.1
 pytest-mock==3.12.0
-requests==2.31.0
+requests==2.32.4
 playwright==1.48.0
