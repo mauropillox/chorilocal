@@ -1,0 +1,220 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    # Weekly: Sunday 3:00 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ==================== Dependency Freshness ====================
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check Python dependency vulnerabilities
+        run: |
+          pip install pip-audit
+          echo "### Backend (requirements.txt)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          pip-audit -r backend/requirements.txt --desc --format=columns 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check npm dependency vulnerabilities
+        working-directory: frontend
+        run: |
+          npm ci
+          echo "### Frontend (npm audit)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          npm audit --audit-level=moderate 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ==================== Production Smoke Test ====================
+  prod-smoke:
+    name: Production Smoke Test
+    runs-on: ubuntu-latest
+    # Only runs if secrets are configured
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Health endpoint check
+        run: |
+          BACKEND="${{ secrets.BACKEND_URL }}"
+          if [ -z "$BACKEND" ]; then
+            echo "⚠️ BACKEND_URL secret not set — skipping smoke test"
+            exit 0
+          fi
+
+          echo "🏥 Checking health endpoint..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BACKEND/health" || echo "000")
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Backend is healthy (HTTP $STATUS)"
+          elif [ "$STATUS" = "000" ]; then
+            echo "⚠️ Backend unreachable (timeout/DNS) — may be sleeping on Render free tier"
+          else
+            echo "❌ Backend returned HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: API response check
+        run: |
+          BACKEND="${{ secrets.BACKEND_URL }}"
+          [ -z "$BACKEND" ] && exit 0
+
+          # Check login endpoint exists (don't actually login)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 -X POST "$BACKEND/api/login" || echo "000")
+          if [ "$STATUS" = "422" ] || [ "$STATUS" = "400" ]; then
+            echo "✅ Login endpoint reachable (expects credentials)"
+          elif [ "$STATUS" = "000" ]; then
+            echo "⚠️ API unreachable"
+          else
+            echo "ℹ️ Login endpoint returned HTTP $STATUS"
+          fi
+
+      - name: Smoke test summary
+        if: always()
+        run: |
+          echo "## 🏥 Production Smoke Test" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ secrets.BACKEND_URL || 'Not configured' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== Backup Restore Verification ====================
+  backup-restore-verify:
+    name: Backup Restore Verification
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and verify latest backup
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$ADMIN_USERNAME" ]; then
+            echo "⚠️ Backup secrets not configured — skipping restore verification"
+            exit 0
+          fi
+
+          mkdir -p /tmp/backup-verify
+
+          echo "🔐 Logging in..."
+          TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=$ADMIN_USERNAME&password=$ADMIN_PASSWORD" \
+            "$BACKEND_URL/api/login" | jq -r '.access_token')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Login failed — cannot verify backup"
+            exit 1
+          fi
+
+          echo "📦 Creating fresh backup on server..."
+          BACKUP_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            "$BACKEND_URL/api/admin/backup-now")
+
+          BACKUP_FILENAME=$(echo $BACKUP_RESPONSE | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+          if [ -z "$BACKUP_FILENAME" ]; then
+            echo "❌ Could not create backup"
+            exit 1
+          fi
+
+          echo "⬇️ Downloading: $BACKUP_FILENAME"
+          curl -L -H "Authorization: Bearer $TOKEN" \
+            -o "/tmp/backup-verify/$BACKUP_FILENAME" \
+            "$BACKEND_URL/api/admin/backups/$BACKUP_FILENAME"
+
+          if [ ! -s "/tmp/backup-verify/$BACKUP_FILENAME" ]; then
+            echo "❌ Downloaded backup is empty"
+            exit 1
+          fi
+
+          echo "� Checking backup file size..."
+          FILESIZE=$(stat -c%s "/tmp/backup-verify/$BACKUP_FILENAME")
+          if [ "$FILESIZE" -lt 10240 ]; then
+            echo "❌ Backup file too small: ${FILESIZE} bytes (minimum 10KB)"
+            exit 1
+          fi
+          echo "✅ Backup size OK: ${FILESIZE} bytes"
+
+          echo "�🔍 Verifying SQLite integrity..."
+          INTEGRITY=$(sqlite3 "/tmp/backup-verify/$BACKUP_FILENAME" "PRAGMA integrity_check;" 2>&1)
+          if [ "$INTEGRITY" = "ok" ]; then
+            echo "✅ Database integrity check passed"
+          else
+            echo "❌ Integrity check failed: $INTEGRITY"
+            exit 1
+          fi
+
+          echo "📊 Database statistics:"
+          sqlite3 "/tmp/backup-verify/$BACKUP_FILENAME" "
+            SELECT 'Tables: ' || COUNT(*) FROM sqlite_master WHERE type='table';
+            SELECT 'Usuarios: ' || COUNT(*) FROM usuarios;
+            SELECT 'Clientes: ' || COUNT(*) FROM clientes;
+            SELECT 'Productos: ' || COUNT(*) FROM productos;
+            SELECT 'Pedidos: ' || COUNT(*) FROM pedidos;
+          " 2>/dev/null || echo "⚠️ Could not read table counts"
+
+          echo "🔒 Checking critical table has data..."
+          USUARIO_COUNT=$(sqlite3 "/tmp/backup-verify/$BACKUP_FILENAME" "SELECT COUNT(*) FROM usuarios;" 2>/dev/null || echo "0")
+          if [ "$USUARIO_COUNT" -eq 0 ] 2>/dev/null; then
+            echo "❌ CRITICAL: usuarios table has 0 rows — possible data loss"
+            exit 1
+          fi
+          echo "✅ usuarios table has $USUARIO_COUNT rows"
+
+          SIZE=$(ls -lh "/tmp/backup-verify/$BACKUP_FILENAME" | awk '{print $5}')
+          echo "📁 Backup size: $SIZE"
+
+      - name: Restore verification summary
+        if: always()
+        run: |
+          echo "## 💾 Backup Restore Verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== Summary ====================
+  health-summary:
+    name: Health Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, prod-smoke, backup-restore-verify]
+    if: always()
+
+    steps:
+      - name: Overall summary
+        run: |
+          echo "## 📋 Weekly Health Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production Smoke | ${{ needs.prod-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backup Restore | ${{ needs.backup-restore-verify.result }} |" >> $GITHUB_STEP_SUMMARY

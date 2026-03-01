@@ -6,6 +6,13 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch: # Manual trigger option
 
+permissions:
+  contents: read
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
     name: Backup Database
@@ -55,7 +62,7 @@ jobs:
           if [ -z "$BACKUP_FILENAME" ]; then
             echo "❌ Error: No se pudo crear backup"
             echo "Failed to create backup at $(date)" > backups/backup_failed.log
-            exit 0
+            exit 1
           fi
           
           echo "✅ Backup creado: $BACKUP_FILENAME"
@@ -71,8 +78,9 @@ jobs:
             echo "✅ Backup descargado exitosamente"
             ls -lh backups/
           else
-            echo "⚠️ Backup falló o está vacío"
+            echo "❌ Backup falló o está vacío"
             echo "Backup failed at $(date)" > backups/backup_failed.log
+            exit 1
           fi
       
       - name: Upload backup to GitHub Artifacts
