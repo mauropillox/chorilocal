@@ -28,11 +28,13 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Check Python dependency vulnerabilities
+        # CVE-2024-23342 (ecdsa): no fix available, risk accepted. Review: 2026-06-01.
         run: |
           pip install pip-audit
           echo "### Backend (requirements.txt)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          pip-audit -r backend/requirements.txt --desc --format=columns 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          pip-audit -r backend/requirements.txt --desc --format=columns \
+            --ignore-vuln CVE-2024-23342 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Set up Node.js
