@@ -65,13 +65,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Audit Python dependencies
+        # CVE-2024-23342 (ecdsa): Minerva timing attack. python-ecdsa project
+        # considers side-channel attacks out of scope; no fix planned.
+        # We use python-jose[cryptography] which delegates to cryptography, not ecdsa,
+        # for all ECDSA operations. Risk accepted. Review date: 2026-06-01.
         run: |
           pip install pip-audit
           echo "=== Scanning backend/requirements.txt ==="
-          pip-audit -r backend/requirements.txt --desc --format=columns
+          pip-audit -r backend/requirements.txt --desc --format=columns \
+            --ignore-vuln CVE-2024-23342
           echo ""
           echo "=== Scanning backend/requirements-prod.txt ==="
-          pip-audit -r backend/requirements-prod.txt --desc --format=columns
+          pip-audit -r backend/requirements-prod.txt --desc --format=columns \
+            --ignore-vuln CVE-2024-23342
 
       # --- Node dependency audit ---
       - name: Set up Node.js
