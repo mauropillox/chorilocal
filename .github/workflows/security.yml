@@ -5,7 +5,7 @@ on:
     # Weekly: Monday 4:00 AM UTC
     - cron: '0 4 * * 1'
   pull_request:
-    branches: [main, master]
+    branches: [main]
     paths:
       - '**/requirements*.txt'
       - '**/package-lock.json'
