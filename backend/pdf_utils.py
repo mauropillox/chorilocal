@@ -58,7 +58,7 @@ def estimate_pedido_height(pedido: Dict[str, Any]) -> float:
     for prod in productos:
         nombre = prod.get('nombre', 'Producto')
         # Each product takes at least one line, maybe more if name wraps
-        lines = len(wrap_text(nombre, 35))
+        lines = len(wrap_text(nombre, 38))
         height += line_height * max(lines, 1)
         height += 5  # separator line spacing
     
@@ -149,18 +149,19 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     y -= 28
     
     # Products table header
-    # Column positions (letter page = 612pt, margins 30 each, content = 552pt)
-    col_producto = LEFT_MARGIN + 5
-    col_cant = PAGE_WIDTH - RIGHT_MARGIN - 215
-    col_notas = PAGE_WIDTH - RIGHT_MARGIN - 165
-    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 115
-    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 5
+    # Column right-edges for right-aligned numeric columns
+    col_producto = LEFT_MARGIN + 5                      # 35  product name (left-aligned)
+    col_cant = LEFT_MARGIN + 340                        # 370 quantity (right-aligned)
+    col_notas_l = LEFT_MARGIN + 345                     # 375 annotation area left border
+    col_notas_r = PAGE_WIDTH - RIGHT_MARGIN - 95        # 487 annotation area right border
+    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 80         # 502 price (right-aligned)
+    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 5        # 577 subtotal (right-aligned)
     
     pdf.setFillColor(COLOR_GRAY)
     pdf.setFont("Helvetica-Bold", 7)
     pdf.drawString(col_producto, y, "PRODUCTO")
-    pdf.drawString(col_cant, y, "CANT.")
-    pdf.drawString(col_precio, y, "PRECIO")
+    pdf.drawRightString(col_cant, y, "CANT.")
+    pdf.drawRightString(col_precio, y, "PRECIO")
     pdf.drawRightString(col_subtotal, y, "SUBTOTAL")
     
     y -= 4
@@ -187,15 +188,15 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
         
         # Product name (may wrap)
         pdf.setFillColor(COLOR_DARK)
-        wrapped_name = wrap_text(nombre, 35)
+        wrapped_name = wrap_text(nombre, 38)
         for i, line in enumerate(wrapped_name):
             pdf.drawString(col_producto, y, line)
             if i == 0:
-                # Cantidad, precio, subtotal on first line
+                # Cantidad, precio, subtotal on first line — all right-aligned
                 pdf.setFillColor(COLOR_GRAY)
                 tipo_abbr = {'unidad': 'u', 'caja': 'cj', 'gancho': 'g', 'tira': 't', 'kg': 'kg'}.get(tipo, tipo[:2])
-                pdf.drawString(col_cant, y, f"{cantidad} {tipo_abbr}")
-                pdf.drawString(col_precio, y, format_currency(precio))
+                pdf.drawRightString(col_cant, y, f"{cantidad} {tipo_abbr}")
+                pdf.drawRightString(col_precio, y, format_currency(precio))
                 pdf.setFillColor(COLOR_DARK)
                 pdf.drawRightString(col_subtotal, y, format_currency(subtotal))
             y -= line_height
@@ -212,8 +213,8 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     pdf.setStrokeColor(HexColor('#d1d5db'))
     pdf.setLineWidth(0.4)
     pdf.setDash(3, 2)  # Dashed border
-    pdf.line(col_notas - 5, table_top_y, col_notas - 5, table_bottom_y)  # Left border
-    pdf.line(col_precio - 8, table_top_y, col_precio - 8, table_bottom_y)  # Right border
+    pdf.line(col_notas_l, table_top_y, col_notas_l, table_bottom_y)  # Left border
+    pdf.line(col_notas_r, table_top_y, col_notas_r, table_bottom_y)  # Right border
     pdf.setDash()  # Reset to solid lines
     
     # Total line
@@ -224,7 +225,7 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     
     pdf.setFillColor(COLOR_SUCCESS)
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(col_precio, y - 5, "TOTAL:")
+    pdf.drawRightString(col_precio, y - 5, "TOTAL:")
     pdf.drawRightString(col_subtotal, y - 5, format_currency(total))
     
     y -= 18
