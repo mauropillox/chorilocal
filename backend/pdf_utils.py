@@ -14,15 +14,15 @@ import textwrap
 
 # Page dimensions
 PAGE_WIDTH, PAGE_HEIGHT = letter
-LEFT_MARGIN = 40
-RIGHT_MARGIN = 40
-TOP_MARGIN = 50
-BOTTOM_MARGIN = 60
+LEFT_MARGIN = 30
+RIGHT_MARGIN = 30
+TOP_MARGIN = 35
+BOTTOM_MARGIN = 35
 
 # Content area
 CONTENT_WIDTH = PAGE_WIDTH - LEFT_MARGIN - RIGHT_MARGIN
 CONTENT_TOP = PAGE_HEIGHT - TOP_MARGIN
-CONTENT_BOTTOM = BOTTOM_MARGIN + 20
+CONTENT_BOTTOM = BOTTOM_MARGIN + 15
 
 # Colors
 COLOR_PRIMARY = HexColor('#6366f1')  # Indigo
@@ -45,31 +45,34 @@ def format_currency(value: float) -> str:
 
 def estimate_pedido_height(pedido: Dict[str, Any]) -> float:
     """Estimate the height needed to render a complete pedido block."""
-    line_height = 16
+    line_height = 12
     
-    # Header (cliente + fecha): ~40px
-    height = 45
+    # Header (cliente + fecha badge)
+    height = 28
+    
+    # Table header row
+    height += 14
     
     # Products
     productos = pedido.get('productos', [])
     for prod in productos:
         nombre = prod.get('nombre', 'Producto')
         # Each product takes at least one line, maybe more if name wraps
-        lines = len(wrap_text(nombre, 30))
+        lines = len(wrap_text(nombre, 35))
         height += line_height * max(lines, 1)
-        height += 10  # separator line spacing
+        height += 5  # separator line spacing
     
     # Total line + spacing
-    height += 35
+    height += 22
     
     # Notas/Aclaraciones (if present)
     notas = pedido.get('notas', '')
     if notas and notas.strip():
-        wrapped_notas = wrap_text(notas.strip(), 80)
-        height += 12 + (12 * min(len(wrapped_notas), 3)) + 5  # Header + lines + spacing
+        wrapped_notas = wrap_text(notas.strip(), 90)
+        height += 10 + (10 * min(len(wrapped_notas), 3)) + 3
     
     # Bottom separator
-    height += 15
+    height += 8
     
     return height
 
@@ -78,26 +81,26 @@ def draw_header(pdf: canvas.Canvas, page_num: int, total_pages: int, fecha_gener
     """Draw page header with title and page number."""
     # Title
     pdf.setFillColor(COLOR_PRIMARY)
-    pdf.setFont("Helvetica-Bold", 16)
+    pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(LEFT_MARGIN, CONTENT_TOP, "FRIOSUR")
     
     # Subtitle
     pdf.setFillColor(COLOR_GRAY)
-    pdf.setFont("Helvetica", 10)
-    pdf.drawString(LEFT_MARGIN, CONTENT_TOP - 18, "Lista de Pedidos")
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(LEFT_MARGIN + 55, CONTENT_TOP, "Lista de Pedidos")
     
     # Generation date
     pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN, CONTENT_TOP, f"Generado: {fecha_generacion}")
     
     # Horizontal line
     pdf.setStrokeColor(COLOR_LIGHT_GRAY)
-    pdf.setLineWidth(1)
-    pdf.line(LEFT_MARGIN, CONTENT_TOP - 30, PAGE_WIDTH - RIGHT_MARGIN, CONTENT_TOP - 30)
+    pdf.setLineWidth(0.5)
+    pdf.line(LEFT_MARGIN, CONTENT_TOP - 14, PAGE_WIDTH - RIGHT_MARGIN, CONTENT_TOP - 14)
     
     # Page number at bottom
     pdf.setFillColor(COLOR_GRAY)
-    pdf.setFont("Helvetica", 9)
-    pdf.drawCentredString(PAGE_WIDTH / 2, 30, f"Página {page_num} de {total_pages}")
+    pdf.setFont("Helvetica", 8)
+    pdf.drawCentredString(PAGE_WIDTH / 2, 20, f"Página {page_num} de {total_pages}")
 
 
 def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_dict: Dict[int, str]) -> float:
@@ -105,7 +108,7 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     Draw a single pedido block starting at y position.
     Returns the new y position after drawing.
     """
-    line_height = 16
+    line_height = 12
     
     # Get cliente info
     cliente_id = pedido.get('cliente_id')
@@ -124,56 +127,56 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     
     # Header background
     pdf.setFillColor(COLOR_LIGHT_GRAY)
-    pdf.roundRect(LEFT_MARGIN, y - 30, CONTENT_WIDTH, 35, 5, fill=True, stroke=False)
+    pdf.roundRect(LEFT_MARGIN, y - 20, CONTENT_WIDTH, 24, 3, fill=True, stroke=False)
     
     # Pedido number badge
     pdf.setFillColor(COLOR_PRIMARY)
-    pdf.roundRect(LEFT_MARGIN + 5, y - 25, 70, 22, 3, fill=True, stroke=False)
+    pdf.roundRect(LEFT_MARGIN + 3, y - 17, 55, 18, 2, fill=True, stroke=False)
     pdf.setFillColor(HexColor('#ffffff'))
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(LEFT_MARGIN + 12, y - 18, f"#{pedido_id}")
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawString(LEFT_MARGIN + 9, y - 12, f"#{pedido_id}")
     
     # Cliente name
     pdf.setFillColor(COLOR_DARK)
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(LEFT_MARGIN + 85, y - 18, cliente_nombre[:40])
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(LEFT_MARGIN + 65, y - 12, cliente_nombre[:45])
     
     # Fecha
     pdf.setFillColor(COLOR_GRAY)
-    pdf.setFont("Helvetica", 9)
-    pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 10, y - 18, fecha)
+    pdf.setFont("Helvetica", 8)
+    pdf.drawRightString(PAGE_WIDTH - RIGHT_MARGIN - 5, y - 12, fecha)
     
-    y -= 45
+    y -= 28
     
     # Products table header
-    # Column positions (letter page = 612pt, margins 40 each, content = 532pt)
-    col_producto = LEFT_MARGIN + 10          # 50  - product name
-    col_cant = PAGE_WIDTH - RIGHT_MARGIN - 210  # 362 - quantity
-    col_notas = PAGE_WIDTH - RIGHT_MARGIN - 160  # 412 - annotation space start
-    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 115  # 457 - price
-    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 10  # 562 - subtotal (right-aligned)
+    # Column positions (letter page = 612pt, margins 30 each, content = 552pt)
+    col_producto = LEFT_MARGIN + 5
+    col_cant = PAGE_WIDTH - RIGHT_MARGIN - 215
+    col_notas = PAGE_WIDTH - RIGHT_MARGIN - 165
+    col_precio = PAGE_WIDTH - RIGHT_MARGIN - 115
+    col_subtotal = PAGE_WIDTH - RIGHT_MARGIN - 5
     
     pdf.setFillColor(COLOR_GRAY)
-    pdf.setFont("Helvetica-Bold", 9)
+    pdf.setFont("Helvetica-Bold", 7)
     pdf.drawString(col_producto, y, "PRODUCTO")
     pdf.drawString(col_cant, y, "CANT.")
     pdf.drawString(col_precio, y, "PRECIO")
     pdf.drawRightString(col_subtotal, y, "SUBTOTAL")
     
-    y -= 5
+    y -= 4
     pdf.setStrokeColor(HexColor('#e5e7eb'))
     pdf.setLineWidth(0.5)
     pdf.line(col_producto, y, col_subtotal, y)
     
     # Remember the top of the product table for vertical annotation lines
     table_top_y = y
-    y -= 12
+    y -= 10
     
     # Products
     productos = pedido.get('productos', [])
     total = 0
     
-    pdf.setFont("Helvetica", 10)
+    pdf.setFont("Helvetica", 8)
     for prod in productos:
         nombre = prod.get('nombre', 'Producto')
         cantidad = prod.get('cantidad', 1)
@@ -184,7 +187,7 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
         
         # Product name (may wrap)
         pdf.setFillColor(COLOR_DARK)
-        wrapped_name = wrap_text(nombre, 30)
+        wrapped_name = wrap_text(nombre, 35)
         for i, line in enumerate(wrapped_name):
             pdf.drawString(col_producto, y, line)
             if i == 0:
@@ -198,11 +201,11 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
             y -= line_height
         
         # Horizontal separator line between products
-        y -= 2  # extra padding below text
+        y -= 1
         pdf.setStrokeColor(HexColor('#9ca3af'))
-        pdf.setLineWidth(0.8)
-        pdf.line(col_producto, y + 4, col_subtotal, y + 4)
-        y -= 4  # extra padding before next product
+        pdf.setLineWidth(0.5)
+        pdf.line(col_producto, y + 3, col_subtotal, y + 3)
+        y -= 2
     
     # Draw vertical dashed lines for the annotation column (blank space for handwriting)
     table_bottom_y = y + 4
@@ -214,35 +217,35 @@ def draw_pedido(pdf: canvas.Canvas, pedido: Dict[str, Any], y: float, clientes_d
     pdf.setDash()  # Reset to solid lines
     
     # Total line
-    y -= 8
+    y -= 4
     pdf.setStrokeColor(HexColor('#e5e7eb'))
     pdf.setLineWidth(0.5)
-    pdf.line(col_producto, y + 5, col_subtotal, y + 5)
+    pdf.line(col_producto, y + 3, col_subtotal, y + 3)
     
     pdf.setFillColor(COLOR_SUCCESS)
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(col_precio, y - 8, "TOTAL:")
-    pdf.drawRightString(col_subtotal, y - 8, format_currency(total))
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(col_precio, y - 5, "TOTAL:")
+    pdf.drawRightString(col_subtotal, y - 5, format_currency(total))
     
-    y -= 25
+    y -= 18
     
     # Notas/Aclaraciones (if present)
     notas = pedido.get('notas', '')
     if notas and notas.strip():
         pdf.setFillColor(COLOR_GRAY)
-        pdf.setFont("Helvetica-Bold", 9)
-        pdf.drawString(LEFT_MARGIN + 10, y, "ACLARACIONES:")
-        y -= 12
-        pdf.setFont("Helvetica", 9)
+        pdf.setFont("Helvetica-Bold", 7)
+        pdf.drawString(LEFT_MARGIN + 5, y, "ACLARACIONES:")
+        y -= 10
+        pdf.setFont("Helvetica", 7)
         pdf.setFillColor(COLOR_DARK)
         # Wrap notes if too long
-        wrapped_notas = wrap_text(notas.strip(), 80)
+        wrapped_notas = wrap_text(notas.strip(), 90)
         for line in wrapped_notas[:3]:  # Max 3 lines of notes
-            pdf.drawString(LEFT_MARGIN + 10, y, line)
-            y -= 12
-        y -= 5
+            pdf.drawString(LEFT_MARGIN + 5, y, line)
+            y -= 10
+        y -= 3
     
-    y -= 10  # Spacing after pedido
+    y -= 5  # Spacing after pedido
     
     return y
 
@@ -267,7 +270,7 @@ def generar_pdf_multiple(pedidos: List[Dict[str, Any]], clientes: List[Dict[str,
     pages = []
     current_page = []
     current_height = 0
-    available_height = CONTENT_TOP - CONTENT_BOTTOM - 50  # -50 for header
+    available_height = CONTENT_TOP - CONTENT_BOTTOM - 25  # -25 for compact header
     
     for pedido in pedidos:
         pedido_height = estimate_pedido_height(pedido)
@@ -296,7 +299,7 @@ def generar_pdf_multiple(pedidos: List[Dict[str, Any]], clientes: List[Dict[str,
         draw_header(pdf, page_num, total_pages, fecha_generacion)
         
         # Starting Y position (below header)
-        y = CONTENT_TOP - 50
+        y = CONTENT_TOP - 25
         
         # Draw each pedido
         for pedido in page_pedidos:
