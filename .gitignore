@@ -203,6 +203,8 @@ quick-b2b-test.sh
 test-complete-workflow.sh
 test-p1-security.sh
 testlocal.sh
+test-comprehensive.sh
+test_p4_implementations.py
 # Production-specific scripts (security: keep local only)
 check-backups-prod.sh
 *-prod.sh
@@ -219,6 +221,36 @@ QUICK_TEST_REFERENCE.txt
 
 # Archive documentation (old/completed docs)
 docs/archive/
+docs/*REPORT*.md
+docs/*REVIEW*.md
+docs/*SUMMARY*.md
+docs/*COMPLETE*.md
+docs/*SESSION*.md
+docs/*IMPLEMENTATION*.md
+docs/*IMPROVEMENTS*.md
+docs/*AUDIT*.md
+docs/*TEST*.md
+docs/*MEJORAS*.md
+docs/*FASE*.md
+docs/*VERIFICATION*.md
+docs/*RECOMMENDATIONS*.md
+docs/*TODO*.md
+docs/*INDEX*.md
+docs/*DECISIONS*.md
+docs/*FIX*.md
+docs/*PRODUCTION*.md
+docs/*LAUNCH*.md
+docs/*READY*.md
+docs/*SUCCESS*.md
+docs/*NEXT*.md
+docs/*PRIORITY*.md
+docs/*OPTIMIZATIONS*.md
+docs/*PLAN*.md
+docs/*PHASE*.md
+# Keep functional docs:
+# docs/CICD.md, docs/DEPLOYMENT_GUIDE.md, docs/DEPLOYMENT_RUNBOOK.md
+# docs/QUICK_START.md, docs/ROADMAP.md, docs/SECRET_ROTATION.md
+# docs/START_HERE.md, docs/SISTEMA_DESCUENTOS.md, docs/OFFLINE_ARCHITECTURE.md
 IMPLEMENTATION_COMPLETE.md
 MANUAL_VERIFICATION_GUIDE.md
 PRODUCTION_CHECKLIST.md
@@ -244,3 +276,16 @@ scripts/test/
 # Test output files
 junit.xml
 test-results.json
+
+# ChatGPT / AI session context docs (local reference only)
+CHATGPT_*.md
+
+# Root-level report/session docs (not part of the app)
+COMPREHENSIVE_TEAM_REVIEW*.md
+EXECUTIVE_SUMMARY_TEAM_REVIEW.md
+IMPLEMENTATION_GUIDE_CRITICAL_FIXES.md
+QUICK_REFERENCE_CARD.md
+README_TEAM_REVIEW_INDEX.md
+SESSION_COMPLETE.md
+TEAM_REVIEW_COMPLETE.md
+USERGUIDE_BRIEF_FOR_CHATGPT.md
