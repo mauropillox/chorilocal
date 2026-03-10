@@ -258,11 +258,13 @@ async def bootstrap_database(x_bootstrap_token: str = Header(None)):
                     status_code=500,
                     detail="CRITICAL: ADMIN_PASSWORD must be set in production environment"
                 )
-            
-            # Fallback for development only
+
+            # In development, also require ADMIN_PASSWORD — no hardcoded fallback
             if not admin_password:
-                admin_password = "admin420"
-                logger.warning("Using default admin password - NOT FOR PRODUCTION")
+                raise HTTPException(
+                    status_code=500,
+                    detail="ADMIN_PASSWORD environment variable is required. Set it in your .env file."
+                )
             
             admin_hash = bcrypt.hash(admin_password)
             

@@ -71,7 +71,7 @@ This will run all 8 tests and show you the results.
 
 ### Option 2: Manual UI Test
 1. Go to https://www.pedidosfriosur.com
-2. Login with admin/admin420
+2. Login with your admin credentials (set via ADMIN_PASSWORD env var)
 3. Go to Productos
 4. Click "Editar Stock" on any product
 5. Change the stock value

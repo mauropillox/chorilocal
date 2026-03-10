@@ -181,7 +181,7 @@ def run_concurrency_test(num_users=3):
     try:
         response = requests.post(
             f"{BACKEND_URL}/api/login",
-            data={"username": "admin", "password": "admin420"},
+            data={"username": os.getenv("TEST_USER", "admin"), "password": os.getenv("ADMIN_PASSWORD", "")},
             timeout=5
         )
         if response.status_code != 200:

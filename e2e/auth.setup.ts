@@ -14,16 +14,24 @@ setup('authenticate', async ({ page, request }) => {
         ? process.env.PROD_URL || 'https://www.pedidosfriosur.com'
         : 'http://localhost:5173';
 
-    // Use test credentials
+    // Use test credentials from environment variables
     const credentials = isProd
         ? {
             username: process.env.PROD_TEST_USER || 'admin',
-            password: process.env.PROD_TEST_PASSWORD || 'admin420',
+            password: process.env.PROD_TEST_PASSWORD,
         }
         : {
-            username: 'admin',
-            password: 'admin123',
+            username: process.env.TEST_USER || 'admin',
+            password: process.env.TEST_PASSWORD || process.env.ADMIN_PASSWORD,
         };
+
+    if (!credentials.password) {
+        throw new Error(
+            isProd
+                ? 'PROD_TEST_PASSWORD env var is required for production E2E tests'
+                : 'TEST_PASSWORD or ADMIN_PASSWORD env var is required for E2E tests. Set it in your .env file.'
+        );
+    }
 
     console.log('🔐 Authenticating:', credentials.username, 'on', baseURL);
     console.log('📝 Env vars:', {

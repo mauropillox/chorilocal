@@ -9,9 +9,13 @@ import os
 from datetime import datetime
 
 # Configuración
-SQLITE_PATH = "/home/mauro/dev/chorizaurio/data/ventas.db"
-# URL de PostgreSQL de Render (External URL)
-POSTGRES_URL = "postgresql://chorizaurio_db_user:W3ICkw87ke2mFnMt2XnooF0eUu5GNSpy@dpg-d5fjs09r0fns73bsku10-a.oregon-postgres.render.com/chorizaurio_db?sslmode=require"
+SQLITE_PATH = os.getenv("SQLITE_PATH", "/home/mauro/dev/chorizaurio/data/ventas.db")
+# URL de PostgreSQL de Render (External URL) — must be set via environment variable
+POSTGRES_URL = os.getenv("POSTGRES_URL")
+if not POSTGRES_URL:
+    print("ERROR: POSTGRES_URL environment variable is required.")
+    print("Usage: POSTGRES_URL='postgresql://user:pass@host/db' python migrate_to_render.py")
+    exit(1)
 
 def get_sqlite_conn():
     return sqlite3.connect(SQLITE_PATH)

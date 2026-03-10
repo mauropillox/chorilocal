@@ -124,7 +124,7 @@ Frontend disponible en: `http://localhost:5173`
 
 **Default Admin:**
 - Username: `admin`
-- Password: `admin123` (cambiar en producción)
+- Password: set via `ADMIN_PASSWORD` in your `.env` file
 
 ---
 

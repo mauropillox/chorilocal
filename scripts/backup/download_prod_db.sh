@@ -6,7 +6,7 @@ set -euo pipefail
 
 API="https://api.pedidosfriosur.com"
 USERNAME="${PROD_USER:-admin}"
-PASSWORD="${PROD_PASS:-admin420}"
+PASSWORD="${PROD_PASS:?ERROR: PROD_PASS environment variable is required. Usage: PROD_PASS=xxx ./download_prod_db.sh}"
 BACKUP_DIR="backups/prod_data"
 LOCAL_DB="data/ventas.db"
 
