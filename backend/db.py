@@ -510,12 +510,16 @@ def ensure_schema() -> None:
     Para PostgreSQL: el esquema se crea durante la migración inicial.
     Esta función verifica y añade columnas faltantes.
     """
+    # Clear column cache before AND after schema changes.
+    # Before: essential when DB path changes between calls (e.g. test fixtures).
+    # After: ensures runtime queries see newly-added columns.
+    clear_column_cache()
+
     if is_postgres():
         _ensure_schema_postgres()
     else:
         _ensure_schema_sqlite()
 
-    # Clear column cache since schema may have changed
     clear_column_cache()
 
 
