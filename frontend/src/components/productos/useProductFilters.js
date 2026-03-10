@@ -107,15 +107,12 @@ export function useProductFilters(productos, productosTags) {
         return list;
     }, [busqueda, showAll, productos, filtroStockBajo, filtroTipo, categoriaFiltro, tagFiltro, precioMin, precioMax, productosTags]);
 
-    // Computed: stock bajo count
-    const stockBajoCount = useMemo(() => {
-        return productos.filter(p => (p.stock || 0) < (p.stock_minimo || 10)).length;
-    }, [productos]);
-
-    // Stock bajo products
+    // Stock bajo products (single pass, count derived from length)
     const productosStockBajo = useMemo(() => {
         return productos.filter(p => (p.stock || 0) < (p.stock_minimo || 10));
     }, [productos]);
+
+    const stockBajoCount = productosStockBajo.length;
 
     // Reset filters
     const resetFilters = useCallback(() => {

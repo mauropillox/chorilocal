@@ -577,9 +577,10 @@ export const useBulkUpdatePedidosEstado = () => {
             const previousPedidos = queryClient.getQueryData(CACHE_KEYS.pedidos);
 
             // Optimistically update all selected pedidos
+            const idSet = new Set(ids);
             queryClient.setQueryData(CACHE_KEYS.pedidos, (old = []) =>
                 old.map(p =>
-                    ids.includes(p.id)
+                    idSet.has(p.id)
                         ? { ...p, estado: nuevoEstado }
                         : p
                 )

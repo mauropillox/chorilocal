@@ -382,21 +382,37 @@ VALID_TABLES = {
     'oferta_productos', 'tags', 'productos_tags', 'repartidores'
 }
 
+# Cache for table column names — populated on first access, cleared after migrations
+_COLUMN_CACHE: Dict[str, List[str]] = {}
+
+
+def clear_column_cache() -> None:
+    """Clear cached table column names. Call after schema migrations."""
+    _COLUMN_CACHE.clear()
+
+
 def _table_columns(cur, table: str) -> List[str]:
-    """Get column names for a table (works with SQLite and PostgreSQL)"""
+    """Get column names for a table (works with SQLite and PostgreSQL).
+    Results are cached in-memory for performance — schema doesn't change at runtime."""
     # Validar nombre de tabla contra lista blanca
     if table not in VALID_TABLES:
         raise ValueError(f"Tabla no válida: {table}")
-    
+
+    if table in _COLUMN_CACHE:
+        return _COLUMN_CACHE[table]
+
     if is_postgres():
         cur.execute("""
-            SELECT column_name FROM information_schema.columns 
+            SELECT column_name FROM information_schema.columns
             WHERE table_name = %s ORDER BY ordinal_position
         """, (table,))
-        return [r[0] for r in cur.fetchall()]
+        cols = [r[0] for r in cur.fetchall()]
     else:
         cur.execute(f"PRAGMA table_info({table})")
-        return [r[1] for r in cur.fetchall()]
+        cols = [r[1] for r in cur.fetchall()]
+
+    _COLUMN_CACHE[table] = cols
+    return cols
 
 
 def _has_column(cur, table: str, col: str) -> bool:
@@ -494,13 +510,13 @@ def ensure_schema() -> None:
     Para PostgreSQL: el esquema se crea durante la migración inicial.
     Esta función verifica y añade columnas faltantes.
     """
-    # En PostgreSQL, las tablas ya fueron creadas por migrate_simple.py
-    # Solo verificamos columnas faltantes
     if is_postgres():
         _ensure_schema_postgres()
-        return
-    
-    _ensure_schema_sqlite()
+    else:
+        _ensure_schema_sqlite()
+
+    # Clear column cache since schema may have changed
+    clear_column_cache()
 
 
 def _ensure_schema_postgres() -> None:

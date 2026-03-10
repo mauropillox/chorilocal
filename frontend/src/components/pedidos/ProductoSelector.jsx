@@ -33,8 +33,8 @@ const ProductoSelector = forwardRef(function ProductoSelector({
         return ids;
     }, [ofertasActivas]);
 
-    // Filter and sort products
-    const productosFiltrados = useMemo(() => {
+    // Filter, sort, and track total count before slicing
+    const { productosFiltrados, totalFiltrados } = useMemo(() => {
         let filtered = productos.filter(p =>
             p.nombre.toLowerCase().includes(busqueda.toLowerCase())
         );
@@ -57,17 +57,14 @@ const ProductoSelector = forwardRef(function ProductoSelector({
                 break;
         }
 
+        const total = filtered.length;
+
         // Limit display unless showAll
         if (!showAll && filtered.length > 12) {
-            return filtered.slice(0, 12);
+            return { productosFiltrados: filtered.slice(0, 12), totalFiltrados: total };
         }
-        return filtered;
+        return { productosFiltrados: filtered, totalFiltrados: total };
     }, [productos, busqueda, sortBy, showAll]);
-
-    const totalFiltrados = useMemo(() =>
-        productos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase())).length,
-        [productos, busqueda]
-    );
 
     return (
         <div className="producto-selector">

@@ -27,6 +27,12 @@ export default function HistorialPedidos() {
   const clientes = clientesData || [];
   const productos = productosData || [];
 
+  // Map-based lookup for O(1) client access instead of O(n) array.find
+  const clientesMap = useMemo(() =>
+    new Map(clientes.map(c => [c.id, c])),
+    [clientes]
+  );
+
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [generando, setGenerando] = useState(false);
@@ -188,11 +194,11 @@ export default function HistorialPedidos() {
   const coincideTexto = useCallback((p) => {
     const q = busquedaTexto.trim().toLowerCase();
     if (!q) return true;
-    const cliente = clientes.find(c => c.id === p.cliente_id);
+    const cliente = clientesMap.get(p.cliente_id);
     const clienteNombre = (cliente?.nombre || '').toLowerCase();
     const productosStr = (p.productos || []).map(x => x.nombre.toLowerCase()).join(' ');
     return clienteNombre.includes(q) || productosStr.includes(q);
-  }, [busquedaTexto, clientes]);
+  }, [busquedaTexto, clientesMap]);
 
   // Filtro de pedidos antiguos (+24 horas)
   const esAntiguo = useCallback((p) => {
@@ -671,7 +677,7 @@ export default function HistorialPedidos() {
               {/* Lista de pedidos paginados */}
               <div className="space-y-3">
                 {datosPaginados.map(p => {
-                  const cliente = clientes.find(c => c.id === p.cliente_id);
+                  const cliente = clientesMap.get(p.cliente_id);
                   const sinCliente = !cliente;
 
                   return (
