@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authFetchJson } from '../authFetch';
 import { toast, toastSuccess, toastError } from '../toast';
 import { CACHE_KEYS } from '../utils/queryClient';
+import { logger } from '../utils/logger';
 import ConfirmDialog from './ConfirmDialog';
 import HelpBanner from './HelpBanner';
 
@@ -46,6 +47,7 @@ export default function Usuarios() {
         toastError('Error al cambiar estado');
       }
     } catch (e) {
+      logger.error('Error toggling usuario activo:', e);
       toastError('Error de conexión');
     }
   };
@@ -85,6 +87,7 @@ export default function Usuarios() {
         toastError('Error al eliminar usuario');
       }
     } catch (e) {
+      logger.error('Error eliminando usuario:', e);
       toastError('Error de conexión');
     } finally {
       setConfirmDelete({ open: false, user: null });
@@ -127,6 +130,7 @@ export default function Usuarios() {
         toastError(data?.detail || 'Error al resetear contraseña');
       }
     } catch (e) {
+      logger.error('Error reseteando password:', e);
       toastError('Error de conexión');
     }
   };

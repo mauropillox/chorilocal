@@ -43,6 +43,7 @@ function App() {
         setLogueado(true);
       }
     } catch (e) {
+      console.error('[App] Token decode failed, logging out:', e);
       borrarToken();
       setLogueado(false);
     }

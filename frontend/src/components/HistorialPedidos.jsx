@@ -125,7 +125,7 @@ export default function HistorialPedidos() {
     try {
       const recent = JSON.parse(localStorage.getItem('recent_productos') || '[]');
       setRecentProductos(recent);
-    } catch (e) { setRecentProductos([]); }
+    } catch (e) { logger.error('Error parsing recent productos from localStorage:', e); setRecentProductos([]); }
     return () => {
       cancelled = true;
       // Cleanup undo timeout on unmount
@@ -290,6 +290,7 @@ export default function HistorialPedidos() {
         toastError('Error al asignar cliente');
       }
     } catch (err) {
+      logger.error('Error asignando cliente a pedido:', err);
       toastError('Error de conexión al asignar cliente');
     }
   };
@@ -311,6 +312,7 @@ export default function HistorialPedidos() {
         toastError('Error al actualizar notas');
       }
     } catch (err) {
+      logger.error('Error actualizando notas pedido:', err);
       toastError('Error de conexión al actualizar notas');
     }
   };
@@ -348,6 +350,7 @@ export default function HistorialPedidos() {
         toastError('Error al eliminar pedido');
       }
     } catch (err) {
+      logger.error('Error eliminando pedido:', err);
       toastError('Error de conexión al eliminar pedido');
     }
     setEliminando(null);
@@ -371,6 +374,7 @@ export default function HistorialPedidos() {
         toastError('Error al verificar stock');
       }
     } catch (err) {
+      logger.error('Error verificando stock:', err);
       toastError('Error de conexión al verificar stock');
     }
   };
@@ -383,14 +387,14 @@ export default function HistorialPedidos() {
         body: JSON.stringify({ producto_id: productoId, cantidad: parseFloat(cantidad) || 0, tipo })
       });
       if (res.ok) { await cargarDatos(); toastSuccess('Ítem actualizado'); } else toastError('Error al actualizar ítem');
-    } catch (err) { alert('Error de conexión al actualizar ítem'); }
+    } catch (err) { logger.error('Error actualizando ítem:', err); toastError('Error de conexión al actualizar ítem'); }
   };
 
   const eliminarItem = async (pedidoId, productoId) => {
     try {
       const res = await authFetch(`${import.meta.env.VITE_API_URL}/pedidos/${pedidoId}/items/${productoId}`, { method: 'DELETE' });
       if (res.ok) { await cargarDatos(); toastSuccess('Ítem eliminado'); } else toastError('Error al eliminar ítem');
-    } catch (err) { alert('Error de conexión al eliminar ítem'); }
+    } catch (err) { logger.error('Error eliminando ítem:', err); toastError('Error de conexión al eliminar ítem'); }
   };
 
   const agregarItem = async (pedidoId) => {
@@ -406,7 +410,7 @@ export default function HistorialPedidos() {
         const err = await res.json().catch(() => ({}));
         toastError(err.detail?.detail || err.detail || 'Error al agregar producto');
       }
-    } catch (err) { toastError('Error de conexión al agregar producto'); }
+    } catch (err) { logger.error('Error agregando item a pedido:', err); toastError('Error de conexión al agregar producto'); }
   };
 
   const toggleSelection = (id) => {

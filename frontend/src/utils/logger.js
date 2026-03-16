@@ -53,9 +53,7 @@ export const logger = {
      * Log warning messages - only in development
      */
     warn: (message, ...args) => {
-        if (isDev) {
-            console.warn(`[WARN] ${message}`, ...args);
-        }
+        console.warn(`[WARN] ${message}`, ...args);
     },
 
     /**

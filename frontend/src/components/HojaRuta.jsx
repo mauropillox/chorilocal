@@ -235,6 +235,7 @@ export default function HojaRuta() {
                 toastError('Error al actualizar zona');
             }
         } catch (e) {
+            logger.error('Error asignando zona cliente:', e);
             toastError('Error de conexión');
         }
     };
@@ -253,6 +254,7 @@ export default function HojaRuta() {
                 toastError('Error al desactivar');
             }
         } catch (e) {
+            logger.error('Error eliminando repartidor:', e);
             toastError('Error de conexión');
         }
     };
@@ -490,6 +492,7 @@ export default function HojaRuta() {
                 toastError('Error al asignar');
             }
         } catch (e) {
+            logger.error('Error asignando repartidor:', e);
             toastError('Error de conexión');
         }
         setAsignandoRepartidor(null);
@@ -538,6 +541,7 @@ export default function HojaRuta() {
                 toastError(err.detail || 'Error generando PDF');
             }
         } catch (e) {
+            logger.error('Error generando PDF hoja ruta:', e);
             toastError('Error de conexión');
         } finally {
             setGenerandoPDF(false);

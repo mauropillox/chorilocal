@@ -21,7 +21,7 @@ export default function OfflineQueue() {
             await sync.remove(id);
             toastSuccess('Elemento removido');
             await load();
-        } catch (e) { toastError('Error removiendo item'); }
+        } catch (e) { logger.error('Error removiendo item offline:', e); toastError('Error removiendo item'); }
     };
 
     const resendAll = async () => {
@@ -30,7 +30,7 @@ export default function OfflineQueue() {
             await sync.processQueue();
             toastSuccess('Reenvío completado (intentos realizados)');
             await load();
-        } catch (e) { toastError('Error reintentando cola'); }
+        } catch (e) { logger.error('Error reintentando cola offline:', e); toastError('Error reintentando cola'); }
         setProcessing(false);
     };
 
@@ -39,7 +39,7 @@ export default function OfflineQueue() {
             await sync.clearQueue();
             toastSuccess('Cola limpiada');
             await load();
-        } catch (e) { toastError('Error limpiando cola'); }
+        } catch (e) { logger.error('Error limpiando cola offline:', e); toastError('Error limpiando cola'); }
     };
 
     return (
