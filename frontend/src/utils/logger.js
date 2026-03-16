@@ -36,10 +36,10 @@ export const logger = {
      * - Production: sends to Sentry
      */
     error: (message, ...args) => {
-        if (isDev) {
-            console.error(`[ERROR] ${message}`, ...args);
-        } else {
-            // Production: send to Sentry
+        // ALWAYS log errors to console for diagnostics
+        console.error(`[ERROR] ${message}`, ...args);
+        if (!isDev) {
+            // Production: also send to Sentry
             getSentry().then(s => {
                 if (s && s.captureException) {
                     const error = args[0] instanceof Error ? args[0] : new Error(String(message));

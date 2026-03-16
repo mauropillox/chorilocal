@@ -113,8 +113,21 @@ export default function Pedidos() {
   }, []);
 
   const agregarProducto = (producto) => {
-    if (!productosSeleccionados.some(p => p.id === producto.id)) {
-      setProductosSeleccionados([...productosSeleccionados, { ...producto, cantidad: 1, tipo: 'unidad' }]);
+    try {
+      if (!producto || typeof producto.id === 'undefined') {
+        logger.error('agregarProducto: producto inválido', producto);
+        console.error('[Pedidos] agregarProducto: producto inválido', producto);
+        toastError('Error: producto inválido');
+        return;
+      }
+      if (!productosSeleccionados.some(p => p.id === producto.id)) {
+        console.log('[Pedidos] Agregando producto:', { id: producto.id, nombre: producto.nombre, precio: producto.precio, stock: producto.stock });
+        setProductosSeleccionados([...productosSeleccionados, { ...producto, cantidad: 1, tipo: 'unidad' }]);
+      }
+    } catch (err) {
+      console.error('[Pedidos] Error en agregarProducto:', err, { producto });
+      logger.error('agregarProducto crashed', err);
+      toastError('Error al agregar producto: ' + (err.message || err));
     }
   };
 
@@ -175,29 +188,35 @@ export default function Pedidos() {
 
   // Calcular total estimado en vivo (memoizado para evitar recálculos)
   const { items: itemsConTotales, total: totalEstimado } = useMemo(() => {
-    let total = 0;
-    const items = productosSeleccionados.map(p => {
-      const precioOriginal = parseFloat(p.precio);
-      const cantidad = parseFloat(p.cantidad);
-      const descuento = obtenerDescuento(p.id);
-      const precioFinal = calcularPrecioFinal(precioOriginal, p.id);
-      const precioValido = !isNaN(precioOriginal) && precioOriginal > 0;
-      const cantidadValida = !isNaN(cantidad) && cantidad > 0;
-      const subtotal = precioValido && cantidadValida ? precioFinal * cantidad : 0;
-      if (cantidadValida) total += subtotal;
-      return {
-        id: p.id,
-        nombre: p.nombre,
-        cantidad,
-        precio: precioOriginal,
-        precioFinal,
-        descuento,
-        subtotal,
-        precioValido,
-        cantidadValida
-      };
-    });
-    return { items, total };
+    try {
+      let total = 0;
+      const items = productosSeleccionados.map(p => {
+        const precioOriginal = parseFloat(p.precio) || 0;
+        const cantidad = parseFloat(p.cantidad) || 0;
+        const descuento = obtenerDescuento(p.id);
+        const precioFinal = calcularPrecioFinal(precioOriginal, p.id) || 0;
+        const precioValido = !isNaN(precioOriginal) && precioOriginal > 0;
+        const cantidadValida = !isNaN(cantidad) && cantidad > 0;
+        const subtotal = precioValido && cantidadValida ? precioFinal * cantidad : 0;
+        if (cantidadValida) total += subtotal;
+        return {
+          id: p.id,
+          nombre: p.nombre || '(sin nombre)',
+          cantidad,
+          precio: precioOriginal,
+          precioFinal,
+          descuento,
+          subtotal,
+          precioValido,
+          cantidadValida
+        };
+      });
+      return { items, total };
+    } catch (err) {
+      console.error('[Pedidos] Error en itemsConTotales:', err, { productosSeleccionados, ofertasActivas });
+      logger.error('itemsConTotales crashed', err);
+      return { items: [], total: 0 };
+    }
   }, [productosSeleccionados, ofertasActivas]);
 
   // Formato moneda UYU
@@ -279,15 +298,21 @@ export default function Pedidos() {
 
   // Memoizar productos filtrados para evitar recálculos
   const productosFiltrados = useMemo(() => {
-    if (!debouncedBusqueda.trim() && !showAll) return [];
-    let list = productos.slice();
-    const q = debouncedBusqueda.trim().toLowerCase();
-    if (q) list = list.filter(p => p.nombre.toLowerCase().includes(q));
-    if (sortBy === 'nombre_asc') list.sort((a, b) => a.nombre.localeCompare(b.nombre));
-    if (sortBy === 'nombre_desc') list.sort((a, b) => b.nombre.localeCompare(a.nombre));
-    if (sortBy === 'precio_asc') list.sort((a, b) => a.precio - b.precio);
-    if (sortBy === 'precio_desc') list.sort((a, b) => b.precio - a.precio);
-    return list;
+    try {
+      if (!debouncedBusqueda.trim() && !showAll) return [];
+      let list = productos.filter(p => p && p.nombre); // Filter out corrupt entries
+      const q = debouncedBusqueda.trim().toLowerCase();
+      if (q) list = list.filter(p => p.nombre.toLowerCase().includes(q));
+      if (sortBy === 'nombre_asc') list.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      if (sortBy === 'nombre_desc') list.sort((a, b) => (b.nombre || '').localeCompare(a.nombre || ''));
+      if (sortBy === 'precio_asc') list.sort((a, b) => (a.precio || 0) - (b.precio || 0));
+      if (sortBy === 'precio_desc') list.sort((a, b) => (b.precio || 0) - (a.precio || 0));
+      return list;
+    } catch (err) {
+      console.error('[Pedidos] Error en productosFiltrados:', err, { productosCount: productos?.length, debouncedBusqueda, sortBy });
+      logger.error('productosFiltrados crashed', err);
+      return [];
+    }
   }, [debouncedBusqueda, showAll, productos, sortBy]);
 
   // Get IDs for image loading - memoized to prevent loops
@@ -657,7 +682,7 @@ export default function Pedidos() {
                         {descuento > 0 ? (
                           <>
                             <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>${p.precio}</span>
-                            <span className="font-semibold" style={{ color: '#10b981' }}>${precioFinal.toFixed(2)}</span>
+                            <span className="font-semibold" style={{ color: '#10b981' }}>${(precioFinal || 0).toFixed(2)}</span>
                           </>
                         ) : (
                           <span className="font-medium" style={{ color: 'var(--color-success)' }}>${p.precio}</span>
