@@ -41,3 +41,5 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://api.pedidosfriosur.com/api
+      - key: VITE_SENTRY_DSN
+        sync: false
