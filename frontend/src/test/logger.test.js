@@ -71,13 +71,13 @@ describe('logger.js', () => {
       vi.resetModules();
     });
 
-    it('should NOT log warnings to console in production', async () => {
+    it('should log warnings to console in production', async () => {
       const { logger } = await import('../utils/logger');
       const consoleSpy = vi.spyOn(console, 'warn');
       
       logger.warn('Test warning');
       
-      expect(consoleSpy).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('[WARN] Test warning');
     });
 
     it('should NOT log info to console in production', async () => {
