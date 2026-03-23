@@ -16,7 +16,8 @@ from typing import Dict, Set, List, Any
 import json
 import asyncio
 from datetime import datetime
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import PyJWTError as JWTError
 
 from deps import SECRET_KEY, ALGORITHM
 from logging_config import get_logger

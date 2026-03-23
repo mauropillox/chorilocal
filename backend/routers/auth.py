@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime, timedelta, timezone
 from typing import List
 import logging
-from jose import jwt
+import jwt
 
 import db
 import models
